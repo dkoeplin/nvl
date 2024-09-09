@@ -87,9 +87,9 @@ template <U64 N> class Box {
         Pos<N> step_;
     };
 
-    class pos_iterable {
+    class pos_range {
       public:
-        pos_iterable() : box_(kUnitBox), step_(Pos<N>::fill(1)), empty_(true) {}
+        pos_range() : box_(kUnitBox), step_(Pos<N>::fill(1)), empty_(true) {}
 
         pure pos_iterator begin() const {
             return empty_ ? pos_iterator::end(box_, step_) : pos_iterator::begin(box_, step_);
@@ -104,7 +104,7 @@ template <U64 N> class Box {
 
       private:
         friend class Box;
-        explicit pos_iterable(const Box &box, const Pos<N> &step) : box_(box), step_(step), empty_(false) {
+        explicit pos_range(const Box &box, const Pos<N> &step) : box_(box), step_(step), empty_(false) {
             for (U64 i = 0; i < N; i++) {
                 ASSERT(step_[i] != 0, "Invalid iterator step size of 0");
                 ASSERT(step_[i] > 0, "TODO: Support negative step");
@@ -174,9 +174,9 @@ template <U64 N> class Box {
         Pos<N> shape_;
     };
 
-    class box_iterable {
+    class box_range {
       public:
-        box_iterable() : box_(kUnitBox), shape_(Pos<N>::fill(1)), empty_(true) {}
+        box_range() : box_(kUnitBox), shape_(Pos<N>::fill(1)), empty_(true) {}
 
         pure box_iterator begin() const {
             return empty_ ? box_iterator::end(box_, shape_) : box_iterator::begin(box_, shape_);
@@ -185,7 +185,7 @@ template <U64 N> class Box {
 
       private:
         friend class Box;
-        explicit box_iterable(const Box &box, const Pos<N> &shape) : box_(box), shape_(shape), empty_(false) {
+        explicit box_range(const Box &box, const Pos<N> &shape) : box_(box), shape_(shape), empty_(false) {
             for (U64 i = 0; i < N; i++) {
                 ASSERT(shape_[i] != 0, "Invalid iterator shape size of 0");
                 ASSERT(shape_[i] > 0, "TODO: Support negative step");
@@ -233,16 +233,16 @@ template <U64 N> class Box {
     pure Box clamp(const I64 grid) const { return Box::presorted(min.clamp_down(grid), max.clamp_up(grid)); }
 
     /// Returns an iterator over points in this box with the given `step` size in each dimension.
-    pure pos_iterable pos_iter(const I64 step = 1) const { return pos_iterable(*this, Pos<N>::fill(step)); }
+    pure pos_range pos_iter(const I64 step = 1) const { return pos_range(*this, Pos<N>::fill(step)); }
 
     /// Returns an iterator over points in this box with the given multidimensional `step` size.
-    pure pos_iterable pos_iter(const Pos<N> &step) const { return pos_iterable(*this, step); }
+    pure pos_range pos_iter(const Pos<N> &step) const { return pos_range(*this, step); }
 
     /// Returns an iterator over sub-boxes with the given `step` size in each dimension.
-    pure box_iterable box_iter(const I64 step) const { return box_iterable(*this, Pos<N>::fill(step)); }
+    pure box_range box_iter(const I64 step) const { return box_range(*this, Pos<N>::fill(step)); }
 
     /// Returns an iterator over sub-boxes with the given multidimensional `step` size.
-    pure box_iterable box_iter(const Pos<N> &shape) const { return box_iterable(*this, shape); }
+    pure box_range box_iter(const Pos<N> &shape) const { return box_range(*this, shape); }
 
     /// Provides iteration over all points in this box.
     pure pos_iterator begin() const { return pos_iterator::begin(*this); }
@@ -371,3 +371,7 @@ template <U64 N> pure Box<N> circumscribe(const Box<N> &a, const Box<N> &b) {
 }
 
 } // namespace nox
+
+template <U64 N> struct std::hash<nox::Box<N>> {
+    pure U64 operator()(const nox::Box<N> &a) const { return nox::sip_hash(a); }
+};

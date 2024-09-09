@@ -45,7 +45,7 @@ template <typename Value> class List : std::vector<Value> {
     pure bool is_empty() const { return parent::empty(); }
 
     List<Value> &append(const List<Value> &rhs) {
-        insert(begin(), rhs.begin(), rhs.end());
+        insert(end(), rhs.begin(), rhs.end());
         return *this;
     }
 
