@@ -34,6 +34,21 @@ TEST(TestRTree, create) {
     EXPECT_EQ(tree.nodes(), 1);
 }
 
+TEST(TestRTree, divide) {
+    RTree<2, LabeledBox> tree({.max_entries = 2});
+    const LabeledBox b0 {0, {{5, 5}, {100, 100}}};
+    const LabeledBox b1 {1, {{3000, 1200}, {3014, 1215}}};
+    tree.insert(b0);
+    tree.insert(b1);
+    EXPECT_EQ(tree.size(), 2);
+    EXPECT_EQ(tree.nodes(), 1);
+    const Map<Box<2>, Set<U64>> expected {
+                {Box<2>({0, 0}, {1023, 1023}), Set<U64>{0}},
+                {Box<2>({2048, 1024}, {3071, 2047}), Set<U64>{1}}
+    };
+    EXPECT_EQ(tree.testing().collect_ids(), expected);
+}
+
 TEST(TestRTree, subdivide) {
     RTree<2, LabeledBox> tree({.max_entries = 2});
     const LabeledBox b0 {0, {{0, 5}, {10, 20}}};
@@ -59,5 +74,6 @@ TEST(TestRTree, subdivide) {
     const List<LabeledBox> elements (range.begin(), range.end());
     EXPECT_THAT(elements, UnorderedElementsAre(b0, b1, b2));
 }
+
 
 } // namespace

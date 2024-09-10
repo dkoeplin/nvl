@@ -23,14 +23,17 @@ template <typename Value> struct get_id {
 
 // Needs to be defined outside the class due to some clang oddities
 struct RTreeOptions {
-    /// Determines the maximum number of entries per node. Nodes are split above this threshold.
+    /// Maximum number of entries per node. Nodes are split above this threshold.
     U64 max_entries = 10;
 
-    /// Determines the numeric base used for the grid size when creating nodes.
+    /// Numeric base used for the grid size when creating nodes.
     U64 grid_base = 2;
 
-    /// Determines the minimum grid size. Nodes are not split below this threshold.
-    U64 grid_min = 4;
+    /// Minimum grid size (grid_base ^ min_grid_exp). Nodes are not split below this threshold.
+    U64 min_grid_exp = 2;
+
+    /// Initial grid size of the root. (grid_base ^ root_grid_exp)
+    U64 root_grid_exp = 10;
 };
 
 template <U64 N,                               // Number of dimensions for each value
@@ -40,9 +43,10 @@ template <U64 N,                               // Number of dimensions for each 
 class RTree {
   public:
     using Options = RTreeOptions;
-    explicit RTree(const Options &opts = Options()) : options_(opts) {
-        // TODO: Make this more generic/adaptive?
-        root_ = next_node(None, 1024, {});
+    explicit RTree(const Options &opts = Options())
+        : options_(opts), grid_min_(std::pow(options_.grid_base, options_.min_grid_exp)) {
+
+        root_ = next_node(None, std::pow(options_.grid_base, options_.root_grid_exp), {});
     }
     explicit RTree(const List<Value> &values, Options opts = Options()) : RTree(opts) {
         for (const auto &value : values) {
@@ -100,7 +104,7 @@ class RTree {
         }
 
         void balance() {
-            if (grid <= tree->options_.grid_min)
+            if (grid <= tree->grid_min_)
                 return; // Can't further balance
 
             for (auto &[pos, _] : map.unordered()) {
@@ -109,7 +113,7 @@ class RTree {
         }
 
         void balance(const Pos<N> &pos) {
-            if (grid <= tree->options_.grid_min)
+            if (grid <= tree->grid_min_)
                 return; // Can't further balance
             balance_pos(pos);
         }
@@ -426,7 +430,6 @@ class RTree {
     pure typename Map<U64, Value>::const_iterator begin() const { return values_.begin(); }
     pure typename Map<U64, Value>::const_iterator end() const { return values_.end(); }
 
-
     struct Testing {
         static std::ostream &indented(U64 n) {
             for (U64 i = 0; i < n; i++) {
@@ -470,7 +473,7 @@ class RTree {
             Map<Box<N>, Set<U64>> ids;
             for (const auto &[node, pos] : tree.entries_in(tree.bounds_.value_or(Box<N>::kUnitBox))) {
                 if (auto *entry = node->get(pos); entry && entry->kind == Node::Entry::kList) {
-                    const Box<N> box (pos, pos + node->grid - 1);
+                    const Box<N> box(pos, pos + node->grid - 1);
                     for (const auto &value : entry->list) {
                         ids[box].insert(value->id);
                     }
@@ -515,7 +518,7 @@ class RTree {
     }
 
     pure bool should_increase_depth(const U64 size, const U64 grid) const {
-        return size > options_.max_entries && grid > options_.grid_min;
+        return size > options_.max_entries && grid > grid_min_;
     }
 
     point_range points_in(const Box<N> &box) { return point_range(*this, box); }
@@ -564,6 +567,7 @@ class RTree {
     }
 
     const Options options_;
+    const U64 grid_min_;
     Maybe<Box<N>> bounds_ = None;
 
     // Nodes keep references to the values stored in the above map to avoid storing two copies of each value.

@@ -232,10 +232,6 @@ TEST(TestPos, hash) {
     EXPECT_EQ(map[a], 4);
     EXPECT_EQ(map[b], 5);
     EXPECT_EQ(hash(a), hash(c));
-
-    std::cout << "std::hash(" << a << ") = " << std::hash<Pos<5>>()(a) << std::endl;
-    std::cout << "std::hash(" << b << ") = " << std::hash<Pos<5>>()(b) << std::endl;
-    std::cout << "std::hash(" << c << ") = " << std::hash<Pos<5>>()(c) << std::endl;
 }
 
 } // namespace
