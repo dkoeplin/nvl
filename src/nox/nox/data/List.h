@@ -8,7 +8,8 @@
 
 namespace nox {
 
-template <typename Value> class List : std::vector<Value> {
+template <typename Value>
+class List : std::vector<Value> {
   public:
     using parent = std::vector<Value>;
     using value_type = typename std::vector<Value>::value_type;
@@ -18,6 +19,7 @@ template <typename Value> class List : std::vector<Value> {
     using const_reverse_iterator = typename std::vector<Value>::const_reverse_iterator;
 
     using parent::parent;
+    List() = default;
 
     pure bool operator==(const List &other) const {
         return size() == other.size() && std::equal(begin(), end(), other.begin());

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <nox/data/Range.h>
+
 #include <functional>
 
 #include "nox/data/List.h"
@@ -44,6 +46,19 @@ template <U64 N> class Box {
         using difference_type = std::ptrdiff_t;            // TODO: This likely isn't right
         using iterator_category = std::input_iterator_tag; // TODO: This may not be right
 
+        static pos_iterator empty() { return pos_iterator(kUnitBox, None, Pos<N>::fill(1)); }
+
+        static pos_iterator begin(const Box &box, const Pos<N> &step = Pos<N>::fill(1)) {
+            for (U64 i = 0; i < N; i++) {
+                ASSERT(step[i] != 0, "Invalid iterator step size of 0");
+                ASSERT(step[i] > 0, "TODO: Support negative step");
+            }
+            return pos_iterator(box, box.min, step);
+        }
+        static pos_iterator end(const Box &box, const Pos<N> &step = Pos<N>::fill(1)) {
+            return pos_iterator(box, None, step);
+        }
+
         const Pos<N> &operator*() const { return pos_.value(); }
         const Pos<N> *operator->() const { return &pos_.value(); }
         pos_iterator &operator++() {
@@ -70,50 +85,12 @@ template <U64 N> class Box {
         pure bool operator!=(const pos_iterator &rhs) const { return !(*this == rhs); }
 
       private:
-        friend class Box;
-        friend class pos_iterable;
-        static pos_iterator begin(const Box &box, const Pos<N> &step = Pos<N>::fill(1)) {
-            return pos_iterator(box, box.min, step);
-        }
-        static pos_iterator end(const Box &box, const Pos<N> &step = Pos<N>::fill(1)) {
-            return pos_iterator(box, None, step);
-        }
-
         explicit pos_iterator(const Box &box, const Maybe<Pos<N>> &pos, const Pos<N> &step)
             : box_(box), pos_(pos), step_(step) {}
 
         Box box_;
         Maybe<Pos<N>> pos_;
         Pos<N> step_;
-    };
-
-    class pos_range {
-      public:
-        pos_range() : box_(kUnitBox), step_(Pos<N>::fill(1)), empty_(true) {}
-
-        pure pos_iterator begin() const {
-            return empty_ ? pos_iterator::end(box_, step_) : pos_iterator::begin(box_, step_);
-        }
-        pure pos_iterator end() const { return pos_iterator::end(box_, step_); }
-
-        /// Returns true if all points in this iterator meet the given condition.
-        pure bool all(const std::function<bool(Pos<N>)> &cond) const { return std::all_of(begin(), end(), cond); }
-
-        /// Returns true if at least one point in this iterator meets the given condition.
-        pure bool exists(const std::function<bool(Pos<N>)> &cond) const { return std::any_of(begin(), end(), cond); }
-
-      private:
-        friend class Box;
-        explicit pos_range(const Box &box, const Pos<N> &step) : box_(box), step_(step), empty_(false) {
-            for (U64 i = 0; i < N; i++) {
-                ASSERT(step_[i] != 0, "Invalid iterator step size of 0");
-                ASSERT(step_[i] > 0, "TODO: Support negative step");
-            }
-        }
-
-        Box box_;
-        Pos<N> step_;
-        bool empty_;
     };
 
     class box_iterator {
@@ -123,6 +100,20 @@ template <U64 N> class Box {
         using reference = Box &;
         using difference_type = std::ptrdiff_t;
         using iterator_category = std::input_iterator_tag;
+
+        static box_iterator empty() { return box_iterator(kUnitBox, None, Pos<N>::fill(1)); }
+
+        static box_iterator begin(const Box &box, const Pos<N> &shape = Pos<N>::fill(1)) {
+            for (U64 i = 0; i < N; i++) {
+                ASSERT(shape[i] != 0, "Invalid iterator shape size of 0");
+                ASSERT(shape[i] > 0, "TODO: Support negative step");
+            }
+            return box_iterator(box, Box::presorted(box.min, box.min + shape - 1), shape);
+        }
+
+        static box_iterator end(const Box &box, const Pos<N> &shape = Pos<N>::fill(1)) {
+            return box_iterator(box, None, shape);
+        }
 
         const Box &operator*() const { return current_.value(); }
         const Box *operator->() { return &current_.value(); }
@@ -151,22 +142,7 @@ template <U64 N> class Box {
         }
         pure bool operator!=(const box_iterator &rhs) const { return !(*this == rhs); }
 
-        /// Returns true if all boxes in this iterator meet the given condition.
-        pure bool all(const std::function<bool(Box)> &cond) const { return std::all_of(begin(), end(), cond); }
-
-        /// Returns true if at least one box in this iterator meets the given condition.
-        pure bool exists(const std::function<bool(Box)> &cond) const { return std::any_of(begin(), end(), cond); }
-
       private:
-        friend class Box;
-        friend class box_iterable;
-        static box_iterator begin(const Box &box, const Pos<N> &shape = Pos<N>::fill(1)) {
-            return box_iterator(box, Box::presorted(box.min, box.min + shape - 1), shape);
-        }
-        static box_iterator end(const Box &box, const Pos<N> &shape = Pos<N>::fill(1)) {
-            return box_iterator(box, None, shape);
-        }
-
         explicit box_iterator(const Box &box, const Maybe<Box> &cur, const Pos<N> &shape)
             : box_(box), current_(cur), shape_(shape) {}
         Box box_;
@@ -174,28 +150,8 @@ template <U64 N> class Box {
         Pos<N> shape_;
     };
 
-    class box_range {
-      public:
-        box_range() : box_(kUnitBox), shape_(Pos<N>::fill(1)), empty_(true) {}
-
-        pure box_iterator begin() const {
-            return empty_ ? box_iterator::end(box_, shape_) : box_iterator::begin(box_, shape_);
-        }
-        pure box_iterator end() const { return box_iterator::end(box_, shape_); }
-
-      private:
-        friend class Box;
-        explicit box_range(const Box &box, const Pos<N> &shape) : box_(box), shape_(shape), empty_(false) {
-            for (U64 i = 0; i < N; i++) {
-                ASSERT(shape_[i] != 0, "Invalid iterator shape size of 0");
-                ASSERT(shape_[i] > 0, "TODO: Support negative step");
-            }
-        }
-
-        Box box_;
-        Pos<N> shape_;
-        bool empty_;
-    };
+    using pos_range = Range<pos_iterator>;
+    using box_range = Range<box_iterator>;
 
     explicit Box() = default;
 

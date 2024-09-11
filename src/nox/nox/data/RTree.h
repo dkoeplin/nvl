@@ -2,206 +2,111 @@
 
 #include "nox/data/List.h"
 #include "nox/data/Map.h"
+#include "nox/data/Range.h"
 #include "nox/data/Ref.h"
 #include "nox/data/Set.h"
 #include "nox/geo/Box.h"
 #include "nox/geo/Pos.h"
 #include "nox/macros/Aliases.h"
 #include "nox/macros/ReturnIf.h"
+#include "nox/traits/GetBox.h"
+#include "nox/traits/GetID.h"
 
 namespace nox {
 
-template <U64 N, typename Value> struct get_box {
-    virtual ~get_box() = default;
-    pure virtual Box<N> operator()(const Value &value) const { return value.box; }
+namespace detail {
+
+template <U64 N, typename Value>
+struct Node {
+    struct Parent {
+        Node *node; // The parent node
+        Box<N> box; // Bounds in reference to the parent's grid
+    };
+
+    struct Entry {
+        enum Kind { kNode, kList };
+        Kind kind = kList;
+        Node *node = nullptr;
+        List<Ref<Value>> list;
+    };
+
+    Node() = default;
+    Node(const Node &) = delete;
+    Node &operator=(const Node &) = delete;
+
+    pure bool operator==(const Node &rhs) const { return id == rhs.id; }
+    pure bool operator!=(const Node &rhs) const { return !(*this == rhs); }
+
+    pure Entry *get(const Pos<N> &pos) const { return map.get(pos.clamp_down(grid)); }
+
+    void init_list(const Pos<N> &pos, Value &value) { map[pos].list.emplace_back(value); }
+
+    pure typename Box<N>::pos_range pos_iter(const Box<N> &vol) const {
+        return vol.clamp(grid).pos_iter(Pos<N>::fill(grid));
+    }
+
+    U64 id = -1;
+    Maybe<Parent> parent;
+    I64 grid = -1;
+    Map<Pos<N>, Entry> map;
 };
 
-template <typename Value> struct get_id {
-    virtual ~get_id() = default;
-    pure virtual U64 operator()(const Value &value) const { return value.id; }
+template <U64 N, typename Value>
+struct Work {
+    using Node = Node<N, Value>;
+
+    explicit Work(Node *node, const Box<N> &volume) : node(node), vol(volume) {}
+
+    pure std::pair<Node *, Pos<N>> pair() const {
+        ASSERT(node != nullptr && pair_iter.has_value(), "Attempted to dereference an empty iterator.");
+        return {node, *pair_iter.value()};
+    }
+
+    pure Value &value() const {
+        ASSERT(node != nullptr && list_iter.has_value(), "Attempted to dereference an empty iterator.");
+        return list_iter.value()->raw();
+    }
+
+    bool operator==(const Work &rhs) const {
+        return node == rhs.node && vol == rhs.vol && list_iter == rhs.list_iter && pair_iter == rhs.pair_iter;
+    }
+    bool operator!=(const Work &rhs) const { return !(*this == rhs); }
+
+    Node *node;
+    Box<N> vol;
+
+    // 1) Iterating across values
+    Maybe<typename List<Ref<Value>>::iterator> list_iter = None;
+    Maybe<typename List<Ref<Value>>::iterator> list_end = None;
+
+    // 2) Iterating within a node - (node, pos) pairs
+    Maybe<typename Box<N>::pos_iterator> pair_iter = None;
+    Maybe<typename Box<N>::pos_iterator> pair_end = None;
 };
 
-// Needs to be defined outside the class due to some clang oddities
-struct RTreeOptions {
-    /// Maximum number of entries per node. Nodes are split above this threshold.
-    U64 max_entries = 10;
+} // namespace detail
 
-    /// Numeric base used for the grid size when creating nodes.
-    U64 grid_base = 2;
-
-    /// Minimum grid size (grid_base ^ min_grid_exp). Nodes are not split below this threshold.
-    U64 min_grid_exp = 2;
-
-    /// Initial grid size of the root. (grid_base ^ root_grid_exp)
-    U64 root_grid_exp = 10;
-};
-
-template <U64 N,                               // Number of dimensions for each value
-          typename Value,                      // Value type
-          typename GetBox = get_box<N, Value>, // Fetches the associated volume for a value
-          typename GetID = get_id<Value>>      // Fetches the associated ID for a value
+template <U64 N,                                      /// Number of dimensions for each value
+          typename Value,                             /// Value type
+          U64 max_entries = 10,                       /// Maximum number of entries per node.
+          U64 grid_exp_min = 2,                       /// Minimum grid size (grid_base ^ min_grid_exp).
+          U64 grid_exp_max = 10,                      /// Initial grid size of the root. (grid_base ^ root_grid_exp)
+          typename GetBox = traits::GetBox<N, Value>, /// Fetches the associated volume for a value
+          typename GetID = traits::GetID<Value>>      /// Fetches the associated ID for a value
 class RTree {
-  public:
-    using Options = RTreeOptions;
-    explicit RTree(const Options &opts = Options())
-        : options_(opts), grid_min_(std::pow(options_.grid_base, options_.min_grid_exp)) {
-
-        root_ = next_node(None, std::pow(options_.grid_base, options_.root_grid_exp), {});
-    }
-    explicit RTree(const List<Value> &values, Options opts = Options()) : RTree(opts) {
-        for (const auto &value : values) {
-            insert(value);
-        }
-    }
-
   private:
-    friend struct Node;
     friend struct Testing;
-
-    struct Node {
-        struct Parent {
-            Node *node; // The parent node
-            Box<N> box; // Bounds in reference to the parent's grid
-        };
-
-        struct Entry {
-            enum Kind { kNode, kList };
-            Kind kind = kList;
-            Node *node = nullptr;
-            List<Ref<Value>> list;
-        };
-
-        struct iterator {};
-
-        Node() = default;
-        Node(const Node &) = delete;
-        Node &operator=(const Node &) = delete;
-        Node &operator=(Node &&) = delete;
-
-        pure Entry *get(const Pos<N> &pos) const { return map.get(pos.clamp_down(grid)); }
-
-        void init_list(const Pos<N> &pos, Value &value) { map[pos].list.emplace_back(value); }
-
-        void insert(const Pos<N> &pos, Ref<Value> value) {
-            map[pos].list.emplace_back(value);
-            balance(pos);
-        }
-
-        void balance_pos(const Pos<N> &pos) {
-            if (Entry *entry = get(pos)) {
-                if (entry->kind == Entry::kList) {
-                    if (tree->should_increase_depth(entry->list.size(), grid)) {
-                        const Box<N> child_box(pos, pos + grid);
-                        const U64 child_grid = grid / tree->options_.grid_base;
-                        entry->node = tree->next_node(Parent{.node = this, .box = child_box}, child_grid, entry->list);
-                        entry->kind = Entry::kNode;
-                        entry->list.clear();
-                    }
-                } else if (entry->kind == Entry::kNode) {
-                    entry->node->balance();
-                }
-            }
-        }
-
-        void balance() {
-            if (grid <= tree->grid_min_)
-                return; // Can't further balance
-
-            for (auto &[pos, _] : map.unordered()) {
-                balance_pos(pos);
-            }
-        }
-
-        void balance(const Pos<N> &pos) {
-            if (grid <= tree->grid_min_)
-                return; // Can't further balance
-            balance_pos(pos);
-        }
-
-        void remove(const Pos<N> &pos) {
-            if (Entry *entry = get(pos)) {
-                if (entry->kind == Entry::kNode) {
-                    Node *child = entry->node;
-                    tree->garbage_.push_back(child->id);
-                }
-                map.remove(pos);
-            }
-            if (map.is_empty() && parent.has_value()) {
-                parent->node->remove(parent->box.min);
-            }
-        }
-
-        void remove(const Pos<N> &pos, const Ref<Value> value) {
-            if (Entry *entry = get(pos)) {
-                ASSERT(entry->kind == Entry::kList, "Cannot remove from non-list entry");
-                entry->list.remove(value); // TODO: O(N) with number of values here
-                if (entry->list.is_empty()) {
-                    remove(pos);
-                }
-            }
-        }
-
-        pure typename Box<N>::pos_range pos_iter(const Box<N> &vol) const {
-            return vol.clamp(grid).pos_iter(Pos<N>::fill(grid));
-        }
-
-        U64 id = -1;
-        Maybe<Parent> parent;
-        U64 grid = -1;
-        Map<Pos<N>, Entry> map;
-        RTree *tree = nullptr;
-    };
-
-    struct Work {
-        explicit Work(Node *node, const Box<N> &volume) : node(node), vol(volume) {}
-
-        pure std::pair<Node *, Pos<N>> pair() const {
-            ASSERT(node != nullptr && pair_iter.has_value(), "Attempted to dereference an empty iterator.");
-            return {node, *pair_iter.value()};
-        }
-
-        pure Value &value() const {
-            ASSERT(node != nullptr && list_iter.has_value(), "Attempted to dereference an empty iterator.");
-            return list_iter.value()->raw();
-        }
-
-        bool operator==(const Work &rhs) const {
-            return node == rhs.node && vol == rhs.vol && list_iter == rhs.list_iter && pair_iter == rhs.pair_iter;
-        }
-        bool operator!=(const Work &rhs) const { return !(*this == rhs); }
-
-        Node *node;
-        Box<N> vol;
-
-        // 1) Iterating across values
-        Maybe<typename List<Ref<Value>>::iterator> list_iter = None;
-        Maybe<typename List<Ref<Value>>::iterator> list_end = None;
-
-        // 2) Iterating within a node - (node, pos) pairs
-        Maybe<typename Box<N>::pos_iterator> pair_iter = None;
-        Maybe<typename Box<N>::pos_iterator> pair_end = None;
-    };
+    using Work = detail::Work<N, Value>;
+    using Node = detail::Node<N, Value>;
 
     enum class Traversal {
         kPoints,  // All possible points in existing nodes
         kEntries, // All existing entries
         kValues   // All existing values
     };
-    template <Traversal mode, typename Concrete> class abstract_iterator {
+    template <Traversal mode, typename Concrete>
+    class abstract_iterator {
       public:
-        Concrete &operator++() {
-            advance();
-            return *static_cast<Concrete *>(this);
-        }
-
-        pure bool operator==(const abstract_iterator &rhs) const {
-            return &tree == &rhs.tree && worklist.get_back() == rhs.worklist.get_back();
-        }
-        pure bool operator!=(const abstract_iterator &rhs) const { return !(*this == rhs); }
-
-      protected:
-        friend class RTree;
-
         static Concrete begin(RTree &tree, const Box<N> &box) {
             Concrete iter(tree, box);
             if (tree.root_ != nullptr) {
@@ -213,6 +118,17 @@ class RTree {
 
         static Concrete end(RTree &tree, const Box<N> &box) { return Concrete(tree, box); }
 
+        Concrete &operator++() {
+            advance();
+            return *static_cast<Concrete *>(this);
+        }
+
+        pure bool operator==(const abstract_iterator &rhs) const {
+            return &tree == &rhs.tree && worklist.get_back() == rhs.worklist.get_back();
+        }
+        pure bool operator!=(const abstract_iterator &rhs) const { return !(*this == rhs); }
+
+      protected:
         explicit abstract_iterator(RTree &tree, const Box<N> &box) : tree(tree), box(box) {}
 
         bool visit_next_pair(Work &current) {
@@ -225,17 +141,17 @@ class RTree {
 
             const Pos<N> &pos = *current.pair_iter.value();
 
-            if (typename Node::Entry *entry = node->get(pos)) {
+            if (auto *entry = node->get(pos)) {
                 if (entry->kind == Node::Entry::kList) {
                     if constexpr (mode == Traversal::kValues) {
                         current.list_iter = entry->list.begin();
                         current.list_end = entry->list.end();
-                        while (current.list_iter != current.list_end && visited.count(current.value().id)) {
+                        while (current.list_iter != current.list_end && visited.count(get_id(current.value()))) {
                             current.list_iter->operator++();
                         }
                         if (current.list_iter != current.list_end) {
                             // Start visiting this list if there is at least one valid value
-                            visited.insert(current.value().id);
+                            visited.insert(get_id(current.value()));
                             return true;
                         }
                         // Skip this list entirely if it had no new unique values
@@ -262,10 +178,10 @@ class RTree {
         bool advance_list(Work &current) {
             do {
                 current.list_iter->operator++();
-            } while (current.list_iter != current.list_end && visited.contains(current.value().id));
+            } while (current.list_iter != current.list_end && visited.contains(get_id(current.value())));
 
             if (current.list_iter != current.list_end) {
-                visited.insert(current.value().id);
+                visited.insert(get_id(current.value()));
                 return true;
             }
             current.list_iter = current.list_end = None;
@@ -300,20 +216,8 @@ class RTree {
 
         // 3) Iterating across nodes
         List<Work> worklist = {};
-        Set<U64> visited = {};
+        Set<U64> visited;
 
-        RTree &tree;
-        Box<N> box;
-    };
-
-    template <typename Iterator> class abstract_range {
-      public:
-        pure Iterator begin() const { return Iterator::begin(tree, box); }
-        pure Iterator end() const { return Iterator::end(tree, box); }
-
-      private:
-        friend class RTree;
-        explicit abstract_range(RTree &tree, const Box<N> &box) : tree(tree), box(box) {}
         RTree &tree;
         Box<N> box;
     };
@@ -337,9 +241,6 @@ class RTree {
 
       private:
         friend class RTree;
-        friend class entry_iterable;
-        using Parent::begin;
-        using Parent::end;
         using Parent::Parent;
     };
 
@@ -362,14 +263,14 @@ class RTree {
 
       private:
         friend class RTree;
-        friend class entry_iterable;
-        using Parent::begin;
-        using Parent::end;
         using Parent::Parent;
     };
 
-    using entry_range = abstract_range<entry_iterator>;
-    using point_range = abstract_range<point_iterator>;
+    static constexpr I64 grid_min = 0x1 << grid_exp_min;
+    static constexpr I64 grid_max = 0x1 << grid_exp_max;
+
+    static constexpr GetBox get_box;
+    static constexpr GetID get_id;
 
   public:
     class value_iterator : public abstract_iterator<Traversal::kValues, value_iterator> {
@@ -394,24 +295,28 @@ class RTree {
 
       private:
         friend class RTree;
-        using Parent::begin;
-        using Parent::end;
         using Parent::Parent;
     };
 
-    using value_range = abstract_range<value_iterator>;
+    explicit RTree() : root_(next_node(None, grid_max, {})) {}
+
+    explicit RTree(const List<Value> &values) : RTree() {
+        for (const auto &value : values) {
+            insert(value);
+        }
+    }
 
     /// Inserts the value into the tree.
-    RTree &insert(const Value &value) { return insert_over(value, value.box, value.id, true); }
+    RTree &insert(const Value &value) { return insert_over(value, get_box(value), get_id(value), true); }
 
     /// Removes the value from the tree.
-    RTree &remove(const Value &value) { return remove_over(value.box, value.id, true); }
+    RTree &remove(const Value &value) { return remove_over(get_box(value), get_id(value), true); }
 
     /// Register a value as having moved from the previous volume `prev` to its current volume.
-    RTree &move(const Value &value, const Box<N> &prev) { return move(value.box, value.id, prev); }
+    RTree &move(const Value &value, const Box<N> &prev) { return move(get_box(value), get_id(value), prev); }
 
     /// Returns an iterator over all unique stored values in the given `volume`.
-    pure value_range operator[](const Box<N> &volume) { return value_range(*this, volume); }
+    pure Range<value_iterator> operator[](const Box<N> &volume) { return Range<value_iterator>(*this, volume); }
 
     /// Returns the current bounding box for this tree.
     pure const Box<N> &bounds() const {
@@ -426,9 +331,7 @@ class RTree {
     /// Returns the total number of distinct values stored in this tree.
     pure U64 size() const { return values_.size(); }
 
-    // TODO: Unsafe - nondeterministic order
-    pure typename Map<U64, Value>::const_iterator begin() const { return values_.begin(); }
-    pure typename Map<U64, Value>::const_iterator end() const { return values_.end(); }
+    pure typename Map<U64, Value>::const_unordered_range unordered() const { return values_.unordered(); }
 
     struct Testing {
         static std::ostream &indented(U64 n) {
@@ -487,14 +390,15 @@ class RTree {
     pure Testing testing() { return Testing(*this); }
 
   private:
-    Node *next_node(const Maybe<typename Node::Parent> parent, const U64 grid, const List<Ref<Value>> &values) {
+    static bool should_increase_depth(const U64 size, const U64 grid) { return size > max_entries && grid > grid_min; }
+
+    Node *next_node(const Maybe<typename Node::Parent> &parent, const I64 grid, const List<Ref<Value>> &values) {
         const Pos<N> grid_fill = Pos<N>::fill(grid);
         const U64 id = ++node_id_;
-        Node &node = nodes_[id];
-        node.parent = parent;
-        node.id = id;
-        node.grid = grid;
-        node.tree = this;
+        Node *node = &nodes_.emplace(std::piecewise_construct, std::forward_as_tuple(id), std::tuple{});
+        node->parent = parent;
+        node->id = id;
+        node->grid = grid;
         for (const Ref<Value> value : values) {
             const Box<N> &value_box = value->box;
             typename Box<N>::box_range points; // empty iterable to start with
@@ -507,22 +411,75 @@ class RTree {
             }
             for (const Box<N> &range : points) {
                 if (range.overlaps(value_box)) {
-                    typename Node::Entry &entry = node.map.get_or_add(range.min, {});
+                    typename Node::Entry &entry = node->map.get_or_add(range.min, {});
                     entry.list.push_back(value);
                 }
             }
         }
         // Re-balance the newly created node. This may create more nodes!
-        node.balance();
-        return &node;
+        balance(node);
+        return node;
     }
 
-    pure bool should_increase_depth(const U64 size, const U64 grid) const {
-        return size > options_.max_entries && grid > grid_min_;
+    void balance_pos(Node *node, const Pos<N> &pos) {
+        if (auto *entry = node->get(pos)) {
+            if (entry->kind == Node::Entry::kList) {
+                if (should_increase_depth(entry->list.size(), node->grid)) {
+                    const Box<N> child_box(pos, pos + node->grid);
+                    const I64 child_grid = node->grid / 2;
+                    const typename Node::Parent parent{.node = node, .box = child_box};
+                    entry->node = next_node(parent, child_grid, entry->list);
+                    entry->kind = Node::Entry::kNode;
+                    entry->list.clear();
+                }
+            } else if (entry->kind == Node::Entry::kNode) {
+                balance(entry->node);
+            }
+        }
     }
 
-    point_range points_in(const Box<N> &box) { return point_range(*this, box); }
-    entry_range entries_in(const Box<N> &box) { return entry_range(*this, box); }
+    void balance(Node *node) {
+        return_if(node->grid <= grid_min); // Can't further balance
+        for (auto &[pos, _] : node->map.unordered()) {
+            balance_pos(node, pos);
+        }
+    }
+
+    void balance(Node *node, const Pos<N> &pos) {
+        return_if(node->grid <= grid_min); // Can't further balance
+        balance_pos(node, pos);
+    }
+
+    void insert(Node *node, const Pos<N> &pos, Ref<Value> value) {
+        node->map[pos].list.emplace_back(value);
+        balance(node, pos);
+    }
+
+    void remove(Node *node, const Pos<N> &pos) {
+        if (auto *entry = node->get(pos)) {
+            if (entry->kind == Node::Entry::kNode) {
+                Node *child = entry->node;
+                garbage_.push_back(child->id);
+            }
+            node->map.remove(pos);
+        }
+        if (node->map.is_empty() && node->parent.has_value()) {
+            remove(node->parent->node, node->parent->box.min);
+        }
+    }
+
+    void remove(Node *node, const Pos<N> &pos, const Ref<Value> value) {
+        if (auto *entry = node->get(pos)) {
+            ASSERT(entry->kind == Node::Entry::kList, "Cannot remove from non-list entry");
+            entry->list.remove(value); // TODO: O(N) with number of values here
+            if (entry->list.is_empty()) {
+                remove(node, pos);
+            }
+        }
+    }
+
+    Range<point_iterator> points_in(const Box<N> &box) { return Range<point_iterator>(*this, box); }
+    Range<entry_iterator> entries_in(const Box<N> &box) { return Range<entry_iterator>(*this, box); }
 
     RTree &move(const Box<N> &new_box, const U64 id, const Box<N> &prev_box) {
         const Value &value = values_[id];
@@ -543,7 +500,7 @@ class RTree {
         }
         const Ref<Value> value_ref = value_entry;
         for (auto [node, pos] : points_in(box)) {
-            node->insert(pos, value_ref);
+            insert(node, pos, value_ref);
         }
         return *this;
     }
@@ -553,21 +510,19 @@ class RTree {
             // TODO: Update bounds?
             const Ref<Value> value_ref = *value;
             for (auto [node, pos] : entries_in(box)) {
-                node->remove(pos, value_ref);
+                remove(node, pos, value_ref);
             }
             if (remove_all) {
                 values_.remove(id);
             }
             for (const U64 removed_id : garbage_) {
-                nodes_.remove(removed_id);
+                nodes_.erase(removed_id);
             }
             garbage_.clear();
         }
         return *this;
     }
 
-    const Options options_;
-    const U64 grid_min_;
     Maybe<Box<N>> bounds_ = None;
 
     // Nodes keep references to the values stored in the above map to avoid storing two copies of each value.
@@ -579,7 +534,7 @@ class RTree {
     Node *root_;
     U64 node_id_ = 0;
 
-    // List of nodes to be removed when removal is complete
+    // List of nodes to be removed
     List<U64> garbage_;
 };
 
