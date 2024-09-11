@@ -1,6 +1,5 @@
 
 add_library(nox SHARED
-        nox/nox.cpp
         nox/data/SipHash.cpp
 )
 

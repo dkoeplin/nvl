@@ -2,6 +2,7 @@
 
 #include "nox/data/List.h"
 #include "nox/data/Map.h"
+#include "nox/data/Once.h"
 #include "nox/data/Range.h"
 #include "nox/data/Ref.h"
 #include "nox/data/Set.h"
@@ -41,7 +42,7 @@ struct Node {
 
     void init_list(const Pos<N> &pos, Value &value) { map[pos].list.emplace_back(value); }
 
-    pure typename Box<N>::pos_range pos_iter(const Box<N> &vol) const {
+    pure Range<typename Box<N>::pos_iterator> pos_iter(const Box<N> &vol) const {
         return vol.clamp(grid).pos_iter(Pos<N>::fill(grid));
     }
 
@@ -336,38 +337,61 @@ class RTree {
     struct Testing {
         static std::ostream &indented(U64 n) {
             for (U64 i = 0; i < n; i++) {
-                std::cout << "    ";
+                std::cout << "  ";
             }
             return std::cout;
         }
 
         explicit Testing(RTree &tree) : tree(tree) {}
 
+        struct PreorderWork {
+            PreorderWork(Node *node, const U64 depth) : node(node), depth(depth) {
+                ASSERT(node->parent.has_value(), "No parent defined for node #" << node->id);
+                const Box<N> &node_range = node->parent->box;
+                indented(depth - 1) << ">>[" << node->id << "] @ " << node->grid << std::endl;
+                pos_range = node_range.pos_iter(node->grid).once();
+            }
+            PreorderWork(Node *node, const Box<N> &bounds) : node(node), depth(0) {
+                indented(depth) << "[" << node->id << "] @ " << node->grid << std::endl;
+                pos_range = bounds.clamp(node->grid).pos_iter(node->grid).once();
+            }
+            Node *node;
+            U64 depth;
+            Once<typename Box<N>::pos_iterator> pos_range;
+        };
         void dump() const {
             const auto bounds = tree.bounds_.value_or(Box<N>::unit(Pos<N>::fill(1)));
             std::cout << "[[RTree with bounds " << bounds << "]]" << std::endl;
 
-            List<std::pair<Node *, U64>> worklist;
-            worklist.emplace_back(tree.root_, 0);
+            List<PreorderWork> worklist;
+            worklist.emplace_back(tree.root_, bounds);
+
             while (!worklist.is_empty()) {
-                auto [node, depth] = worklist.back();
-                worklist.pop_back();
-
-                const Box<N> node_range = node->parent.has_value() ? node->parent->box : bounds.clamp(node->grid);
-                indented(depth) << "[" << depth << "] " << node_range << ": " << node->grid << std::endl;
-
-                for (const Pos<N> &pos : node_range.pos_iter(node->grid)) {
+                PreorderWork &current = worklist.back();
+                Node *node = current.node;
+                const U64 depth = current.depth;
+                bool found_node = false;
+                while (!found_node && current.pos_range.has_next()) {
+                    const Pos<N> pos = *current.pos_range.begin();
+                    ++current.pos_range.begin();
                     if (auto *entry = node->get(pos)) {
-                        const Box<N> range{pos, pos + node->grid - 1};
-                        indented(depth) << "> " << range << ": " << std::endl;
+                        const Box<N> range(pos, pos + node->grid - 1);
+                        indented(depth) << "[" << node->id << "][" << range << "]:" << std::endl;
                         if (entry->kind == Node::Entry::kList) {
+                            if (entry->list.is_empty()) {
+                                indented(depth) << ">> EMPTY LIST" << std::endl;
+                            }
                             for (const Ref<Value> value : entry->list) {
                                 indented(depth) << ">> " << value << std::endl;
                             }
                         } else {
                             worklist.emplace_back(entry->node, depth + 1);
+                            found_node = true;
                         }
                     }
+                }
+                if (!worklist.back().pos_range.has_next()) {
+                    worklist.pop_back();
                 }
             }
         }
@@ -394,14 +418,14 @@ class RTree {
 
     Node *next_node(const Maybe<typename Node::Parent> &parent, const I64 grid, const List<Ref<Value>> &values) {
         const Pos<N> grid_fill = Pos<N>::fill(grid);
-        const U64 id = ++node_id_;
+        const U64 id = node_id_++;
         Node *node = &nodes_.emplace(std::piecewise_construct, std::forward_as_tuple(id), std::tuple{});
         node->parent = parent;
         node->id = id;
         node->grid = grid;
         for (const Ref<Value> value : values) {
             const Box<N> &value_box = value->box;
-            typename Box<N>::box_range points; // empty iterable to start with
+            Range<typename Box<N>::box_iterator> points; // empty iterable to start with
             if (parent.has_value()) {
                 if (const Maybe<Box<N>> intersection = value_box.intersect(parent->box)) {
                     points = intersection->clamp(grid_fill).box_iter(grid_fill);
@@ -425,7 +449,7 @@ class RTree {
         if (auto *entry = node->get(pos)) {
             if (entry->kind == Node::Entry::kList) {
                 if (should_increase_depth(entry->list.size(), node->grid)) {
-                    const Box<N> child_box(pos, pos + node->grid);
+                    const Box<N> child_box(pos, pos + node->grid - 1);
                     const I64 child_grid = node->grid / 2;
                     const typename Node::Parent parent{.node = node, .box = child_box};
                     entry->node = next_node(parent, child_grid, entry->list);
@@ -531,8 +555,8 @@ class RTree {
     Map<U64, Value> values_;
 
     Map<U64, Node> nodes_;
-    Node *root_;
     U64 node_id_ = 0;
+    Node *root_;
 
     // List of nodes to be removed
     List<U64> garbage_;

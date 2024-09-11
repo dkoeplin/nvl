@@ -12,12 +12,16 @@
 
 namespace nox {
 
-template <U64 N> class Pos {
+template <U64 N>
+class Pos {
   public:
     using value_type = I64;
 
     class iterator {
       public:
+        static iterator begin(Pos &parent) { return iterator(parent, 0); }
+        static iterator end(Pos &parent) { return iterator(parent, N); }
+
         pure bool operator==(const iterator &rhs) const { return parent_ == rhs.parent_ && index_ == rhs.index_; }
         pure bool operator!=(const iterator &rhs) const { return !(*this == rhs); }
 
@@ -29,15 +33,17 @@ template <U64 N> class Pos {
         }
 
       private:
-        friend class Pos;
-        static iterator begin(Pos &parent) { return iterator(parent, 0); }
-        static iterator end(Pos &parent) { return iterator(parent, N); }
-        explicit iterator(Pos &parent, U64 index) : parent_(parent), index_(index) {}
+        explicit iterator(Pos &parent, U64 index) : index_(index), parent_(parent) {}
         U64 index_ = 0;
         Pos &parent_;
     };
     class const_iterator {
       public:
+        static const_iterator begin(const Pos &parent) { return const_iterator(parent, 0); }
+        static const_iterator end(const Pos &parent) { return const_iterator(parent, N); }
+
+        const_iterator() : parent_(Pos::fill(0)) {}
+
         pure bool operator==(const const_iterator &rhs) const { return parent_ == rhs.parent_ && index_ == rhs.index_; }
         pure bool operator!=(const const_iterator &rhs) const { return !(*this == rhs); }
 
@@ -49,47 +55,50 @@ template <U64 N> class Pos {
         }
 
       private:
-        friend class Pos;
-        static const_iterator begin(const Pos &parent) { return const_iterator(parent, 0); }
-        static const_iterator end(const Pos &parent) { return const_iterator(parent, N); }
-        explicit const_iterator(const Pos &parent, U64 index) : parent_(parent), index_(index) {}
+        explicit const_iterator(const Pos &parent, U64 index) : index_(index), parent_(parent) {}
 
         U64 index_ = 0;
-        const Pos &parent_;
+        Pos parent_;
     };
 
     /// Returns a Pos of rank `N` where all elements are `value`.
-    static Pos fill(const I64 value) {
+    static constexpr Pos fill(const I64 value) {
         Pos result;
-        for (I64 &x : result) {
-            x = value;
+        for (U64 i = 0; i < N; ++i) {
+            result[i] = value;
         }
         return result;
     }
+
     /// Returns a Pos of rank `N` where all elements are zero except the one at `i`, which is 1.
-    static Pos unit(const I64 i) {
-        ASSERT(i >= 0 && i < N, "Index " << i << " is out of bounds [" << 0 << ", " << N << ")");
+    static Pos unit(const U64 i) {
+        ASSERT(i < N, "Index " << i << " is out of bounds [" << 0 << ", " << N << ")");
         Pos result = fill(0);
         result[i] = 1;
         return result;
     }
+
     /// Returns a Pos of rank `N` where all elements are zero.
     static Pos zero() { return fill(0); }
 
     /// Returns a Pos of rank `N` with uninitialized elements.
     explicit constexpr Pos() = default;
 
-    explicit constexpr Pos(I64 a) : indices_{a} {
-        static_assert(N == 1, "Cannot construct Pos of rank > 1 from integer.");
-    }
-    constexpr Pos(I64 a, I64 b) : indices_{a, b} { static_assert(N == 2, "Expected N != 2 elements"); }
-    constexpr Pos(I64 a, I64 b, I64 c) : indices_{a, b, c} { static_assert(N == 3, "Expected N != 3 elements"); }
-    constexpr Pos(I64 a, I64 b, I64 c, I64 d) : indices_{a, b, c, d} {
-        static_assert(N == 4, "Expected N != 4 elements");
-    }
-    constexpr Pos(I64 a, I64 b, I64 c, I64 d, I64 e) : indices_{a, b, c, d, e} {
-        static_assert(N == 5, "Expected N != 5 elements");
-    }
+    explicit constexpr Pos(I64 a)
+        requires(N == 1)
+        : indices_{a} {}
+    constexpr Pos(I64 a, I64 b)
+        requires(N == 2)
+        : indices_{a, b} {}
+    constexpr Pos(I64 a, I64 b, I64 c)
+        requires(N == 3)
+        : indices_{a, b, c} {}
+    constexpr Pos(I64 a, I64 b, I64 c, I64 d)
+        requires(N == 4)
+        : indices_{a, b, c, d} {}
+    constexpr Pos(I64 a, I64 b, I64 c, I64 d, I64 e)
+        requires(N == 5)
+        : indices_{a, b, c, d, e} {}
 
     /// Implicitly converts this Pos to an integer. Only valid for rank 1.
     explicit operator I64() const {
@@ -106,32 +115,25 @@ template <U64 N> class Pos {
     pure constexpr U64 rank() const { return N; }
 
     /// Returns the element at `i` or None if `i` is out of bounds.
-    pure Maybe<I64> get(const I64 i) const {
-        if (i >= 0 && i < rank())
-            return Some(indices_[i]);
-        return None;
-    }
+    pure Maybe<I64> get(const U64 i) const { return i < N ? Some(indices_[i]) : None; }
+
     /// Returns the element at `i` or `v` if `i` is out of bounds.
-    pure I64 get_or(const I64 i, const I64 v) const {
-        if (i > 0 && i < rank()) {
-            return indices_[i];
-        }
-        return v;
-    }
+    pure I64 get_or(const U64 i, const I64 v) const { return i < N ? indices_[i] : v; }
+
     /// Returns the element at `i`, asserting that `i` is within bounds.
-    pure I64 operator[](const I64 i) const {
-        ASSERT(i >= 0 && i < N, "Index " << i << " is out of bounds [" << 0 << ", " << N << ")");
+    pure constexpr I64 operator[](const U64 i) const {
+        ASSERT(i < N, "Index " << i << " is out of bounds [" << 0 << ", " << N << ")");
         return indices_[i];
     }
     /// Returns a reference to the element at `i`, asserting that `i` is within bounds.
-    I64 &operator[](const I64 i) {
-        ASSERT(i >= 0 && i < N, "Index " << i << " is out of bounds [" << 0 << ", " << N << ")");
+    pure constexpr I64 &operator[](const U64 i) {
+        ASSERT(i < N, "Index " << i << " is out of bounds [" << 0 << ", " << N << ")");
         return indices_[i];
     }
 
     /// Returns a copy of this Pos with the element at `i` changed to `v`.
-    pure Pos with(const I64 i, I64 v) const {
-        ASSERT(i >= 0 && i < N, "Index " << i << " is out of bounds [" << 0 << ", " << N << ")");
+    pure Pos with(const U64 i, I64 v) const {
+        ASSERT(i < N, "Index " << i << " is out of bounds [" << 0 << ", " << N << ")");
         Pos result = *this;
         result.indices_[i] = v;
         return result;
@@ -391,7 +393,8 @@ template <U64 N> class Pos {
     I64 indices_[N];
 };
 
-template <U64 N> Pos<N> min(const Pos<N> &a, const Pos<N> &b) {
+template <U64 N>
+Pos<N> min(const Pos<N> &a, const Pos<N> &b) {
     Pos<N> result;
     for (U64 i = 0; i < N; ++i) {
         result[i] = std::min(a[i], b[i]);
@@ -399,7 +402,8 @@ template <U64 N> Pos<N> min(const Pos<N> &a, const Pos<N> &b) {
     return result;
 }
 
-template <U64 N> Pos<N> max(const Pos<N> &a, const Pos<N> &b) {
+template <U64 N>
+Pos<N> max(const Pos<N> &a, const Pos<N> &b) {
     Pos<N> result;
     for (U64 i = 0; i < N; ++i) {
         result[i] = std::max(a[i], b[i]);
@@ -407,15 +411,31 @@ template <U64 N> Pos<N> max(const Pos<N> &a, const Pos<N> &b) {
     return result;
 }
 
-template <U64 N> Pos<N> operator*(I64 a, const Pos<N> &b) { return b * a; }
-template <U64 N> Pos<N> operator/(I64 a, const Pos<N> &b) { return Pos<N>::fill(a) / b; }
-template <U64 N> Pos<N> operator+(I64 a, const Pos<N> &b) { return b + a; }
-template <U64 N> Pos<N> operator-(I64 a, const Pos<N> &b) { return -b + a; }
+template <U64 N>
+Pos<N> operator*(I64 a, const Pos<N> &b) {
+    return b * a;
+}
+template <U64 N>
+Pos<N> operator/(I64 a, const Pos<N> &b) {
+    return Pos<N>::fill(a) / b;
+}
+template <U64 N>
+Pos<N> operator+(I64 a, const Pos<N> &b) {
+    return b + a;
+}
+template <U64 N>
+Pos<N> operator-(I64 a, const Pos<N> &b) {
+    return -b + a;
+}
 
-template <U64 N> std::ostream &operator<<(std::ostream &os, const Pos<N> &a) { return os << a.to_string(); }
+template <U64 N>
+std::ostream &operator<<(std::ostream &os, const Pos<N> &a) {
+    return os << a.to_string();
+}
 
 } // namespace nox
 
-template <U64 N> struct std::hash<nox::Pos<N>> {
+template <U64 N>
+struct std::hash<nox::Pos<N>> {
     pure U64 operator()(const nox::Pos<N> &a) const { return nox::sip_hash(a.indices_); }
 };

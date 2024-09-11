@@ -13,6 +13,7 @@ using testing::UnorderedElementsAre;
 using nox::Box;
 using nox::List;
 using nox::Map;
+using nox::Pos;
 using nox::RTree;
 using nox::Set;
 
@@ -21,6 +22,7 @@ struct LabeledBox {
     LabeledBox(U64 id, Box<2> box) : id(id), box(box) {}
     pure bool operator==(const LabeledBox &rhs) const { return id == rhs.id && box == rhs.box; }
     pure bool operator!=(const LabeledBox &rhs) const { return !(*this == rhs); }
+    LabeledBox operator+(const Pos<2> &offset) const { return {id, box + offset}; }
     U64 id;
     Box<2> box;
 };
@@ -49,7 +51,7 @@ TEST(TestRTree, divide) {
 }
 
 TEST(TestRTree, subdivide) {
-    RTree<2, LabeledBox, /*max_entries*/ 2> tree;
+    RTree<2, LabeledBox> tree;
     const LabeledBox b0{0, {{0, 5}, {10, 20}}};
     const LabeledBox b1{1, {{10, 100}, {20, 120}}};
     const LabeledBox b2{2, {{100, 200}, {200, 200}}};
@@ -98,6 +100,34 @@ TEST(TestRTree, bracket_operator) {
             EXPECT_TRUE(ids.contains(id));
         }
     }
+}
+
+TEST(TestRTree, keep_buckets_after_subdivide) {
+    Map<U64, Box<2>> box;
+    box[0] = Box<2>({512, 512}, {514, 514});
+    box[1] = Box<2>({0, 882}, {1512, 982}) + Pos<2>{0, 0};
+    box[2] = Box<2>({614, 762}, {762, 881}) + Pos<2>(0, 253);
+    box[3] = Box<2>({594, 701}, {715, 761}) + Pos<2>(0, 232);
+    box[4] = Box<2>({620, 641}, {684, 700}) + Pos<2>(0, 183);
+    box[5] = Box<2>({616, 592}, {686, 640}) + Pos<2>(0, 137);
+    box[6] = Box<2>({603, 536}, {680, 591}) + Pos<2>(0, 132);
+    box[7] = Box<2>({582, 474}, {662, 535}) + Pos<2>(0, 130);
+    box[8] = Box<2>({615, 416}, {672, 473}) + Pos<2>(0, 82);
+    box[9] = Box<2>({599, 375}, {647, 415}) + Pos<2>(0, 41);
+
+    RTree<2, LabeledBox, /*max_entries*/ 9> tree;
+    for (auto [id, x] : box.unordered()) {
+        std::cout << "#" << id << ": " << x << std::endl;
+        tree.insert({id, x});
+    }
+    tree.testing().dump();
+
+    const Map<Box<2>, Set<U64>> expected{{Box<2>({1024, 0}, {2047, 1023}), Set<U64>{1}},
+                                         {Box<2>({0, 1024}, {1023, 2047}), Set<U64>{2}},
+                                         {Box<2>({512, 512}, {1023, 1023}), Set<U64>{0, 1, 2, 3, 4, 5, 6, 7, 8}},
+                                         {Box<2>({0, 512}, {511, 1023}), Set<U64>{1}},
+                                         {Box<2>({512, 0}, {1023, 511}), Set<U64>{8, 9}}};
+    EXPECT_EQ(tree.testing().collect_ids(), expected);
 }
 
 } // namespace

@@ -63,4 +63,17 @@ class List : std::vector<Value> {
     using std::vector<Value>::insert;
 };
 
+template <typename Value>
+std::ostream &operator<<(std::ostream &os, const List<Value> &list) {
+    os << "{";
+    auto iter = list.begin();
+    if (iter != list.end()) {
+        os << *iter;
+    }
+    for (; iter != list.end(); ++iter) {
+        os << ", " << *iter;
+    }
+    return os << "}";
+}
+
 } // namespace nox

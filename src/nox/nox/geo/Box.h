@@ -14,16 +14,17 @@
 
 namespace nox {
 
-template <U64 N> class Box {
+template <U64 N>
+class Box {
   public:
-    static const Box kUnitBox;
-
-    static Box presorted(const Pos<N> &min, const Pos<N> &max) {
+    static constexpr Box presorted(const Pos<N> &min, const Pos<N> &max) {
         Box box;
         box.min = min;
         box.max = max;
         return box;
     }
+
+    static const Box kUnitBox;
 
     /// Returns a Box with `min` and `max` if min is strictly less than or equal to max.
     /// Returns None otherwise.
@@ -46,18 +47,10 @@ template <U64 N> class Box {
         using difference_type = std::ptrdiff_t;            // TODO: This likely isn't right
         using iterator_category = std::input_iterator_tag; // TODO: This may not be right
 
-        static pos_iterator empty() { return pos_iterator(kUnitBox, None, Pos<N>::fill(1)); }
+        static pos_iterator begin(const Box &box, const Pos<N> &step) { return pos_iterator(box, box.min, step); }
+        static pos_iterator end(const Box &box, const Pos<N> &step) { return pos_iterator(box, None, step); }
 
-        static pos_iterator begin(const Box &box, const Pos<N> &step = Pos<N>::fill(1)) {
-            for (U64 i = 0; i < N; i++) {
-                ASSERT(step[i] != 0, "Invalid iterator step size of 0");
-                ASSERT(step[i] > 0, "TODO: Support negative step");
-            }
-            return pos_iterator(box, box.min, step);
-        }
-        static pos_iterator end(const Box &box, const Pos<N> &step = Pos<N>::fill(1)) {
-            return pos_iterator(box, None, step);
-        }
+        pos_iterator() : pos_iterator(kUnitBox, None, Pos<N>::fill(1)) {}
 
         const Pos<N> &operator*() const { return pos_.value(); }
         const Pos<N> *operator->() const { return &pos_.value(); }
@@ -86,7 +79,12 @@ template <U64 N> class Box {
 
       private:
         explicit pos_iterator(const Box &box, const Maybe<Pos<N>> &pos, const Pos<N> &step)
-            : box_(box), pos_(pos), step_(step) {}
+            : box_(box), pos_(pos), step_(step) {
+            for (U64 i = 0; i < N; i++) {
+                ASSERT(step_[i] != 0, "Invalid iterator step size of 0");
+                ASSERT(step_[i] > 0, "TODO: Support negative step");
+            }
+        }
 
         Box box_;
         Maybe<Pos<N>> pos_;
@@ -101,19 +99,14 @@ template <U64 N> class Box {
         using difference_type = std::ptrdiff_t;
         using iterator_category = std::input_iterator_tag;
 
-        static box_iterator empty() { return box_iterator(kUnitBox, None, Pos<N>::fill(1)); }
-
         static box_iterator begin(const Box &box, const Pos<N> &shape = Pos<N>::fill(1)) {
-            for (U64 i = 0; i < N; i++) {
-                ASSERT(shape[i] != 0, "Invalid iterator shape size of 0");
-                ASSERT(shape[i] > 0, "TODO: Support negative step");
-            }
             return box_iterator(box, Box::presorted(box.min, box.min + shape - 1), shape);
         }
-
         static box_iterator end(const Box &box, const Pos<N> &shape = Pos<N>::fill(1)) {
             return box_iterator(box, None, shape);
         }
+
+        box_iterator() : box_iterator(kUnitBox, None, Pos<N>::fill(1)) {}
 
         const Box &operator*() const { return current_.value(); }
         const Box *operator->() { return &current_.value(); }
@@ -144,20 +137,22 @@ template <U64 N> class Box {
 
       private:
         explicit box_iterator(const Box &box, const Maybe<Box> &cur, const Pos<N> &shape)
-            : box_(box), current_(cur), shape_(shape) {}
+            : box_(box), current_(cur), shape_(shape) {
+            for (U64 i = 0; i < N; i++) {
+                ASSERT(shape_[i] != 0, "Invalid iterator shape size of 0");
+                ASSERT(shape_[i] > 0, "TODO: Support negative step");
+            }
+        }
         Box box_;
         Maybe<Box> current_;
         Pos<N> shape_;
     };
 
-    using pos_range = Range<pos_iterator>;
-    using box_range = Range<box_iterator>;
-
     explicit Box() = default;
 
     /// Returns a Box from points `a` to `b` (inclusive).
     /// Registers `min` and `max` fields to be the min and max in each dimension, respectively.
-    Box(const Pos<N> &a, const Pos<N> &b) {
+    constexpr Box(const Pos<N> &a, const Pos<N> &b) {
         for (U64 i = 0; i < N; i++) {
             min[i] = std::min(a[i], b[i]);
             max[i] = std::max(a[i], b[i]);
@@ -189,16 +184,18 @@ template <U64 N> class Box {
     pure Box clamp(const I64 grid) const { return Box::presorted(min.clamp_down(grid), max.clamp_up(grid)); }
 
     /// Returns an iterator over points in this box with the given `step` size in each dimension.
-    pure pos_range pos_iter(const I64 step = 1) const { return pos_range(*this, Pos<N>::fill(step)); }
+    pure Range<pos_iterator> pos_iter(const I64 step = 1) const {
+        return Range<pos_iterator>(*this, Pos<N>::fill(step));
+    }
 
     /// Returns an iterator over points in this box with the given multidimensional `step` size.
-    pure pos_range pos_iter(const Pos<N> &step) const { return pos_range(*this, step); }
+    pure Range<pos_iterator> pos_iter(const Pos<N> &step) const { return Range<pos_iterator>(*this, step); }
 
     /// Returns an iterator over sub-boxes with the given `step` size in each dimension.
-    pure box_range box_iter(const I64 step) const { return box_range(*this, Pos<N>::fill(step)); }
+    pure Range<box_iterator> box_iter(const I64 step) const { return Range<box_iterator>(*this, Pos<N>::fill(step)); }
 
     /// Returns an iterator over sub-boxes with the given multidimensional `step` size.
-    pure box_range box_iter(const Pos<N> &shape) const { return box_range(*this, shape); }
+    pure Range<box_iterator> box_iter(const Pos<N> &shape) const { return Range<box_iterator>(*this, shape); }
 
     /// Provides iteration over all points in this box.
     pure pos_iterator begin() const { return pos_iterator::begin(*this); }
@@ -255,9 +252,9 @@ template <U64 N> class Box {
         return result;
     }
 
-    pure List<Edge<N>> edges(I64 width = 1) const { return borders(-width, 0); }
+    pure List<Edge<N>> edges(const I64 width = 1) const { return borders(-width, 0); }
 
-    pure List<Edge<N>> borders(I64 width = 1, I64 dist = 1) const {
+    pure List<Edge<N>> borders(const I64 width = 1, const I64 dist = 1) const {
         List<Edge<N>> result;
         for (U64 i = 0; i < N; ++i) {
             for (const auto &dir : Dir::list) {
@@ -267,7 +264,7 @@ template <U64 N> class Box {
         return result;
     }
 
-    pure Edge<N> border(U64 dim, Dir dir, I64 width = 1, I64 dist = 1) const {
+    pure Edge<N> border(const U64 dim, const Dir dir, const I64 width = 1, const I64 dist = 1) const {
         auto unit = Pos<N>::unit(dim);
         auto inner = unit * dist;
         auto outer = unit * (width - 1);
@@ -278,7 +275,7 @@ template <U64 N> class Box {
 
     pure std::string to_string() const {
         std::stringstream ss;
-        ss << "(" << min.to_string() << " to " << max.to_string() << ")";
+        ss << min.to_string() << "::" << max.to_string();
         return ss.str();
     }
 
@@ -294,13 +291,13 @@ template <U64 N> class Box {
             const Box &both = *intersect;
             for (const auto &pos : kUnitBox) {
                 if (pos != Pos<N>::zero()) {
-                    Pos<N> min;
-                    Pos<N> max;
+                    Pos<N> result_min;
+                    Pos<N> result_max;
                     for (U64 d = 0; d < N; ++d) {
-                        min[d] = (pos[d] == -1) ? min[d] : (pos[d] == 0) ? both.min[d] : both.max[d] + 1;
-                        max[d] = (pos[d] == -1) ? both.min[d] - 1 : (pos[d] == 0) ? both.max[d] : max[d];
+                        result_min[d] = (pos[d] == -1) ? min[d] : (pos[d] == 0) ? both.min[d] : both.max[d] + 1;
+                        result_max[d] = (pos[d] == -1) ? both.min[d] - 1 : (pos[d] == 0) ? both.max[d] : max[d];
                     }
-                    if (const Maybe<Box> box = Box::get(min, max)) {
+                    if (const Maybe<Box> box = Box::get(result_min, result_max)) {
                         result.push_back(*box);
                     }
                 }
@@ -311,23 +308,38 @@ template <U64 N> class Box {
     }
 };
 
-template <U64 N> const Box<N> Box<N>::kUnitBox = Box(Pos<N>::fill(-1), Pos<N>::fill(1));
+template <U64 N>
+constexpr Box<N> Box<N>::kUnitBox = Box(Pos<N>::fill(-1), Pos<N>::fill(1));
 
-template <U64 N> Box<N> operator*(I64 a, const Box<N> &b) { return b * a; }
-template <U64 N> Box<N> operator+(I64 a, const Box<N> &b) { return b + a; }
-template <U64 N> Box<N> operator-(I64 a, const Box<N> &b) { return -b + a; }
+template <U64 N>
+Box<N> operator*(I64 a, const Box<N> &b) {
+    return b * a;
+}
+template <U64 N>
+Box<N> operator+(I64 a, const Box<N> &b) {
+    return b + a;
+}
+template <U64 N>
+Box<N> operator-(I64 a, const Box<N> &b) {
+    return -b + a;
+}
 
-template <U64 N> std::ostream &operator<<(std::ostream &os, const Box<N> &box) { return os << box.to_string(); }
+template <U64 N>
+std::ostream &operator<<(std::ostream &os, const Box<N> &box) {
+    return os << box.to_string();
+}
 
 /// Returns the minimal Box which includes all of both Box `a` and `b`.
 /// Note that the resulting area may be larger than the sum of the two areas.
-template <U64 N> pure Box<N> circumscribe(const Box<N> &a, const Box<N> &b) {
+template <U64 N>
+pure Box<N> circumscribe(const Box<N> &a, const Box<N> &b) {
     // presorted is sufficient here since already taking the min/max across both
     return Box<N>::presorted(min(a.min, b.min), max(a.max, b.max));
 }
 
 } // namespace nox
 
-template <U64 N> struct std::hash<nox::Box<N>> {
+template <U64 N>
+struct std::hash<nox::Box<N>> {
     pure U64 operator()(const nox::Box<N> &a) const { return nox::sip_hash(a); }
 };

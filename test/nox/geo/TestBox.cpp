@@ -45,7 +45,7 @@ TEST(TestBox, sub) {
 }
 
 TEST(TestBox, pos_iter) {
-    const Box<2> a({2, 4}, {4, 8});
+    constexpr auto a = Box<2>({2, 4}, {4, 8});
     const auto iter0 = a.pos_iter();
     const List<Pos<2>> list0(iter0.begin(), iter0.end());
     const List<Pos<2>> expected0{{2, 4}, {2, 5}, {2, 6}, {2, 7}, {2, 8}, {3, 4}, {3, 5}, {3, 6},
@@ -62,8 +62,8 @@ TEST(TestBox, pos_iter) {
     const List<Pos<2>> expected2{{2, 4}, {2, 6}, {2, 8}, {3, 4}, {3, 6}, {3, 8}, {4, 4}, {4, 6}, {4, 8}};
     EXPECT_EQ(list2, expected2);
 
-    EXPECT_DEATH({ auto iter3 = a.pos_iter({0, 2}); }, "Invalid iterator step size of 0");
-    EXPECT_DEATH({ auto iter4 = a.pos_iter({-1, 2}); }, "TODO: Support negative step");
+    EXPECT_DEATH({ std::cout << a.pos_iter({0, 2}); }, "Invalid iterator step size of 0");
+    EXPECT_DEATH({ std::cout << a.pos_iter({-1, 2}); }, "TODO: Support negative step");
 }
 
 TEST(TestBox, box_iter) {
@@ -96,8 +96,8 @@ TEST(TestBox, box_iter) {
         Box<2>({6, 5}, {6, 7}), // row 2, col 3:5
     };
 
-    EXPECT_DEATH({ auto iter2 = a.box_iter({0, 2}); }, "Invalid iterator shape size of 0");
-    EXPECT_DEATH({ auto iter3 = a.box_iter({-1, 2}); }, "TODO: Support negative step");
+    EXPECT_DEATH({ std::cout << a.box_iter({0, 2}); }, "Invalid iterator shape size of 0");
+    EXPECT_DEATH({ std::cout << a.box_iter({-1, 2}); }, "TODO: Support negative step");
 }
 
 TEST(TestBox, clamp) {

@@ -1,14 +1,15 @@
 #pragma once
 
-#include "nox/data/Once.h"
+#include <algorithm>
+
 #include "nox/macros/Pure.h"
 
 namespace nox {
 
 /**
- * @class Range
- * @brief A pair of iterators.
- * Iterating over a Range causes the `begin` iterator to be copied to allow repeated iteration.
+ * @class Once
+ * @brief A pair of iterators which can be iterated over exactly once.
+ * Iterating over a Once causes the `begin` iterator to be modified.
  *
  * Requires that the Iterator type has at least the following:
  * class Iterator {
@@ -19,23 +20,23 @@ namespace nox {
  * };
  */
 template <typename Iterator>
-class Range {
+class Once {
   public:
-    Range()
+    Once()
         requires std::is_default_constructible_v<Iterator>
         : begin_(), end_(), empty_(true) {}
 
     template <typename... Args>
-    explicit Range(Args &&...args)
+    explicit Once(Args &&...args)
         : begin_(Iterator::begin(std::forward<Args>(args)...)), end_(Iterator::end(std::forward<Args>(args)...)),
           empty_(false) {}
 
-    explicit Range(Iterator begin, Iterator end) : begin_(begin), end_(end), empty_(false) {}
+    Once(Iterator begin, Iterator end) : begin_(begin), end_(end), empty_(false) {}
 
-    pure Iterator begin() const { return empty_ ? end_ : begin_; }
-    pure Iterator end() const { return end_; }
+    pure bool has_next() const { return begin_ != end_; }
 
-    pure Once<Iterator> once() const { return Once<Iterator>(begin_, end_); }
+    pure Iterator &begin() { return empty_ ? end_ : begin_; }
+    pure Iterator &end() { return end_; }
 
     /// Returns true if all values in this range meet the given condition.
     template <typename Cond>
@@ -54,18 +55,5 @@ class Range {
     Iterator end_;
     bool empty_;
 };
-
-template <typename Iterator>
-std::ostream &operator<<(std::ostream &os, const Range<Iterator> &range) {
-    os << "{";
-    auto iter = range.begin();
-    if (iter != range.end()) {
-        os << *iter;
-    }
-    for (; iter != range.end(); ++iter) {
-        os << ", " << *iter;
-    }
-    return os << "}";
-}
 
 } // namespace nox
