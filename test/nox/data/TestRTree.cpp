@@ -19,7 +19,7 @@ using nox::Set;
 
 struct LabeledBox {
     LabeledBox() = default;
-    LabeledBox(U64 id, Box<2> box) : id(id), box(box) {}
+    LabeledBox(const U64 id, const Box<2> &box) : id(id), box(box) {}
     pure bool operator==(const LabeledBox &rhs) const { return id == rhs.id && box == rhs.box; }
     pure bool operator!=(const LabeledBox &rhs) const { return !(*this == rhs); }
     LabeledBox operator+(const Pos<2> &offset) const { return {id, box + offset}; }
@@ -32,7 +32,6 @@ std::ostream &operator<<(std::ostream &os, const LabeledBox &v) { return os << "
 TEST(TestRTree, create) {
     RTree<2, LabeledBox> tree;
     tree.insert({0, {{0, 5}, {5, 10}}});
-    tree.testing().dump();
     EXPECT_EQ(tree.size(), 1);
     EXPECT_EQ(tree.nodes(), 1);
 }
@@ -51,7 +50,7 @@ TEST(TestRTree, divide) {
 }
 
 TEST(TestRTree, subdivide) {
-    RTree<2, LabeledBox> tree;
+    RTree<2, LabeledBox, /*max_entries*/ 2> tree;
     const LabeledBox b0{0, {{0, 5}, {10, 20}}};
     const LabeledBox b1{1, {{10, 100}, {20, 120}}};
     const LabeledBox b2{2, {{100, 200}, {200, 200}}};
@@ -59,7 +58,6 @@ TEST(TestRTree, subdivide) {
     tree.insert(b1);
     tree.insert(b2);
 
-    tree.testing().dump();
     EXPECT_EQ(tree.size(), 3);  // Number of values
     EXPECT_EQ(tree.nodes(), 4); // Number of nodes
 
@@ -91,7 +89,7 @@ TEST(TestRTree, bracket_operator) {
     tree.insert({13, {{0, 45}, {1346, 539}}});
 
     Set<U64> ids;
-    const Box<2> range{{98, 526}, {99, 527}};
+    constexpr Box<2> range{{98, 526}, {99, 527}};
     for (const auto &box : tree[range]) {
         ids.insert(box.id);
     }
@@ -117,10 +115,8 @@ TEST(TestRTree, keep_buckets_after_subdivide) {
 
     RTree<2, LabeledBox, /*max_entries*/ 9> tree;
     for (auto [id, x] : box.unordered()) {
-        std::cout << "#" << id << ": " << x << std::endl;
         tree.insert({id, x});
     }
-    tree.testing().dump();
 
     const Map<Box<2>, Set<U64>> expected{{Box<2>({1024, 0}, {2047, 1023}), Set<U64>{1}},
                                          {Box<2>({0, 1024}, {1023, 2047}), Set<U64>{2}},
