@@ -15,17 +15,18 @@ namespace nox {
 template <U64 N>
 class Pos {
   public:
-    using value_type = I64;
-
     class iterator {
       public:
+        using value_type = I64;
+        using pointer = I64 *;
+        using reference = I64 &;
         static iterator begin(Pos &parent) { return iterator(parent, 0); }
         static iterator end(Pos &parent) { return iterator(parent, N); }
 
         pure bool operator==(const iterator &rhs) const { return parent_ == rhs.parent_ && index_ == rhs.index_; }
         pure bool operator!=(const iterator &rhs) const { return !(*this == rhs); }
 
-        I64 &operator->() const { return parent_.indices_[index_]; }
+        I64 *operator->() const { return &parent_.indices_[index_]; }
         I64 &operator*() const { return parent_.indices_[index_]; }
         iterator &operator++() {
             ++index_;
@@ -39,6 +40,9 @@ class Pos {
     };
     class const_iterator {
       public:
+        using value_type = I64;
+        using pointer = I64 *;
+        using reference = I64 &;
         static const_iterator begin(const Pos &parent) { return const_iterator(parent, 0); }
         static const_iterator end(const Pos &parent) { return const_iterator(parent, N); }
 
@@ -47,7 +51,7 @@ class Pos {
         pure bool operator==(const const_iterator &rhs) const { return parent_ == rhs.parent_ && index_ == rhs.index_; }
         pure bool operator!=(const const_iterator &rhs) const { return !(*this == rhs); }
 
-        pure const I64 &operator->() const { return parent_.indices_[index_]; }
+        pure const I64 *operator->() const { return &parent_.indices_[index_]; }
         pure const I64 &operator*() const { return parent_.indices_[index_]; }
         const_iterator &operator++() {
             ++index_;

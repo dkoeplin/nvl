@@ -6,6 +6,12 @@
 
 namespace nox {
 
+template <typename T>
+concept HasDereferenceOperator = requires(T a) { *a; };
+
+template <typename T>
+concept HasMemberAccessOperator = requires(T a) { a.operator->(); };
+
 /**
  * @class Once
  * @brief A pair of iterators which can be iterated over exactly once.
@@ -13,8 +19,9 @@ namespace nox {
  *
  * Requires that the Iterator type has at least the following:
  * class Iterator {
- *   using value_type = ...;
- *   Iterator(); // Default constructor
+ *   using reference = ...; // (Optional) Return type from dereference (*) operator.
+ *   using pointer = ...; // (Optional) Return type from the -> operator.
+ *   Iterator(); // (Optional) Default constructor
  *   static Iterator Iterator::begin(args...);
  *   static Iterator Iterator::end(args...);
  * };
@@ -34,9 +41,32 @@ class Once {
     Once(Iterator begin, Iterator end) : begin_(begin), end_(end), empty_(false) {}
 
     pure bool has_next() const { return begin_ != end_; }
+    pure bool has_value() const { return begin_ != end_; }
+
+    Once &operator++() {
+        ++begin_;
+        return *this;
+    }
+
+    pure typename Iterator::reference operator*() const
+        requires HasDereferenceOperator<Iterator>
+    {
+        return begin_->operator*();
+    }
+    pure typename Iterator::pointer operator->() const
+        requires HasMemberAccessOperator<Iterator>
+    {
+        return begin_.operator->();
+    }
 
     pure Iterator &begin() { return empty_ ? end_ : begin_; }
     pure Iterator &end() { return end_; }
+
+    pure const Iterator &begin() const { return empty_ ? end_ : begin_; }
+    pure const Iterator &end() const { return end_; }
+
+    pure bool operator==(const Once &rhs) const { return begin_ == rhs.begin_; }
+    pure bool operator!=(const Once &rhs) const { return begin_ != rhs.begin_; }
 
     /// Returns true if all values in this range meet the given condition.
     template <typename Cond>

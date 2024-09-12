@@ -58,31 +58,24 @@ struct Work {
 
     explicit Work(Node *node, const Box<N> &volume) : node(node), vol(volume) {}
 
-    pure std::pair<Node *, Pos<N>> pair() const {
-        ASSERT(node != nullptr && pair_iter.has_value(), "Attempted to dereference an empty iterator.");
-        return {node, *pair_iter.value()};
+    pure const Pos<N> &pos() const {
+        ASSERT(pair_range.has_value(), "Attempted to dereference an empty iterator.");
+        return *pair_range.begin();
     }
 
     pure Value &value() const {
-        ASSERT(node != nullptr && list_iter.has_value(), "Attempted to dereference an empty iterator.");
-        return list_iter.value()->raw();
+        ASSERT(node != nullptr && list_range.has_value(), "Attempted to dereference an empty iterator.");
+        return list_range->raw();
     }
-
-    bool operator==(const Work &rhs) const {
-        return node == rhs.node && vol == rhs.vol && list_iter == rhs.list_iter && pair_iter == rhs.pair_iter;
-    }
-    bool operator!=(const Work &rhs) const { return !(*this == rhs); }
 
     Node *node;
     Box<N> vol;
 
     // 1) Iterating across values
-    Maybe<typename List<Ref<Value>>::iterator> list_iter = None;
-    Maybe<typename List<Ref<Value>>::iterator> list_end = None;
+    Once<typename List<Ref<Value>>::iterator> list_range;
 
     // 2) Iterating within a node - (node, pos) pairs
-    Maybe<typename Box<N>::pos_iterator> pair_iter = None;
-    Maybe<typename Box<N>::pos_iterator> pair_end = None;
+    Once<typename Box<N>::pos_iterator> pair_range;
 };
 
 } // namespace detail
@@ -135,28 +128,26 @@ class RTree {
         bool visit_next_pair(Work &current) {
             Node *node = current.node;
 
-            if (current.pair_iter == current.pair_end) {
+            if (!current.pair_range.has_next()) {
                 worklist.pop_back();
                 return false;
             }
 
-            const Pos<N> &pos = *current.pair_iter.value();
+            const Pos<N> &pos = current.pos();
 
             if (auto *entry = node->get(pos)) {
                 if (entry->kind == Node::Entry::kList) {
                     if constexpr (mode == Traversal::kValues) {
-                        current.list_iter = entry->list.begin();
-                        current.list_end = entry->list.end();
-                        while (current.list_iter != current.list_end && visited.count(get_id(current.value()))) {
-                            current.list_iter->operator++();
+                        current.list_range = {entry->list.begin(), entry->list.end()};
+                        while (current.list_range.has_next() && visited.count(get_id(current.value()))) {
+                            ++current.list_range;
                         }
-                        if (current.list_iter != current.list_end) {
+                        if (current.list_range.has_next()) {
                             // Start visiting this list if there is at least one valid value
                             visited.insert(get_id(current.value()));
                             return true;
                         }
                         // Skip this list entirely if it had no new unique values
-                        current.list_iter = current.list_end = None;
                         return false;
                     }
                     // Visit this list or (node, pos)
@@ -178,36 +169,33 @@ class RTree {
 
         bool advance_list(Work &current) {
             do {
-                current.list_iter->operator++();
-            } while (current.list_iter != current.list_end && visited.contains(get_id(current.value())));
+                ++current.list_range;
+            } while (current.list_range.has_next() && visited.contains(get_id(current.value())));
 
-            if (current.list_iter != current.list_end) {
+            if (current.list_range.has_next()) {
                 visited.insert(get_id(current.value()));
                 return true;
             }
-            current.list_iter = current.list_end = None;
             return false;
         }
 
         /// Advances the current (node, pos) to either the next (node, pos), the next list, or the next child node.
         bool advance_pair(Work &current) {
-            current.pair_iter->operator++();
+            ++current.pair_range;
             return visit_next_pair(current);
         }
 
         bool advance_node(Work &current) {
-            auto pts = current.node->pos_iter(current.vol);
-            current.pair_iter = pts.begin();
-            current.pair_end = pts.end();
+            current.pair_range = current.node->pos_iter(current.vol).once();
             return visit_next_pair(current);
         }
 
         void advance() {
             while (!worklist.is_empty()) {
                 auto &current = worklist.back();
-                if (current.list_iter != None) {
+                if (current.list_range.has_next()) {
                     return_if(advance_list(current));
-                } else if (current.pair_iter != None) {
+                } else if (current.pair_range.has_next()) {
                     return_if(advance_pair(current));
                 } else {
                     return_if(advance_node(current));
@@ -227,17 +215,20 @@ class RTree {
       public:
         using Parent = abstract_iterator<Traversal::kEntries, entry_iterator>;
         using value_type = std::pair<Node *, Pos<N>>;
-        using difference_type = std::ptrdiff_t;
+        using pointer = value_type;
+        using reference = value_type;
 
         entry_iterator() = delete;
 
         value_type operator*() const {
             ASSERT(!this->worklist.is_empty(), "Attempted to dereference an empty iterator");
-            return this->worklist.back().pair();
+            auto &current = this->worklist.back();
+            return {current.node, current.pos()};
         }
         value_type operator->() const {
             ASSERT(!this->worklist.is_empty(), "Attempted to dereference an empty iterator");
-            return this->worklist.back().pair();
+            auto &current = this->worklist.back();
+            return {current.node, current.pos()};
         }
 
       private:
@@ -249,17 +240,20 @@ class RTree {
       public:
         using Parent = abstract_iterator<Traversal::kPoints, point_iterator>;
         using value_type = std::pair<Node *, Pos<N>>;
-        using difference_type = std::ptrdiff_t;
+        using pointer = value_type;
+        using reference = value_type;
 
         point_iterator() = delete;
 
         value_type operator*() const {
             ASSERT(!this->worklist.is_empty(), "Attempted to dereference an empty iterator");
-            return this->worklist.back().pair();
+            auto &current = this->worklist.back();
+            return {current.node, current.pos()};
         }
         value_type operator->() const {
             ASSERT(!this->worklist.is_empty(), "Attempted to dereference an empty iterator");
-            return this->worklist.back().pair();
+            auto &current = this->worklist.back();
+            return {current.node, current.pos()};
         }
 
       private:
@@ -277,9 +271,9 @@ class RTree {
     class value_iterator : public abstract_iterator<Traversal::kValues, value_iterator> {
       public:
         using Parent = abstract_iterator<Traversal::kValues, value_iterator>;
-        using pointer = Value &;
-        using reference = Value &;
         using value_type = Value;
+        using pointer = Value *;
+        using reference = Value &;
         using difference_type = std::ptrdiff_t;
         using iterator_category = std::input_iterator_tag;
 
@@ -289,9 +283,9 @@ class RTree {
             ASSERT(!this->worklist.is_empty(), "Attempted to dereference empty iterator");
             return this->worklist.back().value();
         }
-        Value &operator->() const {
+        Value *operator->() const {
             ASSERT(!this->worklist.is_empty(), "Attempted to dereference empty iterator");
-            return this->worklist.back().value();
+            return &this->worklist.back().value();
         }
 
       private:
