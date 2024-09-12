@@ -17,6 +17,7 @@ class Map : std::unordered_map<K, V, Hash, Equal, Allocator> {
 
     using parent::operator[];
     using parent::at;
+    using parent::empty;
     using parent::end;
     using parent::size;
 
@@ -76,8 +77,6 @@ class Map : std::unordered_map<K, V, Hash, Equal, Allocator> {
     pure bool operator==(const Map &other) const { return std::operator==(*this, other); }
     pure bool operator!=(const Map &other) const { return std::operator!=(*this, other); }
 
-    pure bool is_empty() const { return parent::empty(); }
-
     struct const_unordered_range {
         explicit const_unordered_range(const Map &map) : parent_(map) {}
         pure const_iterator begin() const { return parent_.begin(); }
@@ -91,7 +90,7 @@ class Map : std::unordered_map<K, V, Hash, Equal, Allocator> {
 template <typename K, typename V, typename Hash, typename Equal, typename Allocator>
 inline std::ostream &operator<<(std::ostream &os, const Map<K, V, Hash, Equal, Allocator> &map) {
     os << "{";
-    if (!map.is_empty()) {
+    if (!map.empty()) {
         auto unordered = map.unordered();
         auto iter = unordered.begin();
         os << "{" << iter->first << ", ";

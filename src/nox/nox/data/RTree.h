@@ -191,7 +191,7 @@ class RTree {
         }
 
         void advance() {
-            while (!worklist.is_empty()) {
+            while (!worklist.empty()) {
                 auto &current = worklist.back();
                 if (current.list_range.has_next()) {
                     return_if(advance_list(current));
@@ -221,12 +221,12 @@ class RTree {
         entry_iterator() = delete;
 
         value_type operator*() const {
-            ASSERT(!this->worklist.is_empty(), "Attempted to dereference an empty iterator");
+            ASSERT(!this->worklist.empty(), "Attempted to dereference an empty iterator");
             auto &current = this->worklist.back();
             return {current.node, current.pos()};
         }
         value_type operator->() const {
-            ASSERT(!this->worklist.is_empty(), "Attempted to dereference an empty iterator");
+            ASSERT(!this->worklist.empty(), "Attempted to dereference an empty iterator");
             auto &current = this->worklist.back();
             return {current.node, current.pos()};
         }
@@ -246,12 +246,12 @@ class RTree {
         point_iterator() = delete;
 
         value_type operator*() const {
-            ASSERT(!this->worklist.is_empty(), "Attempted to dereference an empty iterator");
+            ASSERT(!this->worklist.empty(), "Attempted to dereference an empty iterator");
             auto &current = this->worklist.back();
             return {current.node, current.pos()};
         }
         value_type operator->() const {
-            ASSERT(!this->worklist.is_empty(), "Attempted to dereference an empty iterator");
+            ASSERT(!this->worklist.empty(), "Attempted to dereference an empty iterator");
             auto &current = this->worklist.back();
             return {current.node, current.pos()};
         }
@@ -280,11 +280,11 @@ class RTree {
         value_iterator() = delete;
 
         Value &operator*() const {
-            ASSERT(!this->worklist.is_empty(), "Attempted to dereference empty iterator");
+            ASSERT(!this->worklist.empty(), "Attempted to dereference empty iterator");
             return this->worklist.back().value();
         }
         Value *operator->() const {
-            ASSERT(!this->worklist.is_empty(), "Attempted to dereference empty iterator");
+            ASSERT(!this->worklist.empty(), "Attempted to dereference empty iterator");
             return &this->worklist.back().value();
         }
 
@@ -360,7 +360,7 @@ class RTree {
             List<PreorderWork> worklist;
             worklist.emplace_back(tree.root_, bounds);
 
-            while (!worklist.is_empty()) {
+            while (!worklist.empty()) {
                 PreorderWork &current = worklist.back();
                 Node *node = current.node;
                 const U64 depth = current.depth;
@@ -372,7 +372,7 @@ class RTree {
                         const Box<N> range(pos, pos + node->grid - 1);
                         indented(depth) << "[" << node->id << "][" << range << "]:" << std::endl;
                         if (entry->kind == Node::Entry::kList) {
-                            if (entry->list.is_empty()) {
+                            if (entry->list.empty()) {
                                 indented(depth) << ">> EMPTY LIST" << std::endl;
                             }
                             for (const Ref<Value> value : entry->list) {
@@ -481,7 +481,7 @@ class RTree {
             }
             node->map.remove(pos);
         }
-        if (node->map.is_empty() && node->parent.has_value()) {
+        if (node->map.empty() && node->parent.has_value()) {
             remove(node->parent->node, node->parent->box.min);
         }
     }
@@ -490,7 +490,7 @@ class RTree {
         if (auto *entry = node->get(pos)) {
             ASSERT(entry->kind == Node::Entry::kList, "Cannot remove from non-list entry");
             entry->list.remove(value); // TODO: O(N) with number of values here
-            if (entry->list.is_empty()) {
+            if (entry->list.empty()) {
                 remove(node, pos);
             }
         }

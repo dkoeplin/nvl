@@ -37,14 +37,13 @@ class List : std::vector<Value> {
     using std::vector<Value>::at;
     using std::vector<Value>::back;
     using std::vector<Value>::emplace_back;
+    using std::vector<Value>::empty;
     using std::vector<Value>::front;
     using std::vector<Value>::push_back;
     using std::vector<Value>::pop_back;
     using std::vector<Value>::size;
 
-    pure const Value *get_back() const { return is_empty() ? nullptr : &back(); }
-
-    pure bool is_empty() const { return parent::empty(); }
+    pure const Value *get_back() const { return empty() ? nullptr : &back(); }
 
     List<Value> &append(const List<Value> &rhs) {
         insert(end(), rhs.begin(), rhs.end());

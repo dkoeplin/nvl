@@ -38,7 +38,7 @@ class SetVector {
     pure const_iterator end() const { return vec_.end(); }
 
     pure U64 size() const { return vec_.size(); }
-    pure bool is_empty() const { return vec_.empty(); }
+    pure bool empty() const { return vec_.empty(); }
 
     Value &operator[](U64 i) { return vec_[i]; }
     pure const Value &operator[](U64 i) const { return vec_[i]; }

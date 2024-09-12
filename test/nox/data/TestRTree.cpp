@@ -126,4 +126,31 @@ TEST(TestRTree, keep_buckets_after_subdivide) {
     EXPECT_EQ(tree.testing().collect_ids(), expected);
 }
 
+TEST(TestRTree, negative_buckets) {
+    RTree<2, LabeledBox> tree;
+    tree.insert({0, Box<2>({0, 882}, {1512, 982})});
+    tree.insert({1, Box<2>({346, -398}, {666, -202})});
+
+    const Map<Box<2>, Set<U64>> expected{{Box<2>({0, -1024}, {1023, -1}), Set<U64>{1}},
+                                         {Box<2>({0, 0}, {1023, 1023}), Set<U64>{0}},
+                                         {Box<2>({1024, 0}, {2047, 1023}), Set<U64>{0}}};
+    EXPECT_EQ(tree.testing().collect_ids(), expected);
+}
+
+TEST(TestRTree, fetch) {
+    RTree<2, LabeledBox> tree;
+    const LabeledBox a{1, {{0, 882}, {1512, 982}}};
+    const LabeledBox b{2, {{346, -398}, {666, -202}}};
+    tree.insert(a);
+    tree.insert(b);
+
+    const auto range0 = tree[{{0, -300}, {1024, 1000}}];
+    const auto range1 = tree[{{0, 0}, {100, 100}}];
+    const auto range2 = tree[{{0, 885}, {100, 886}}];
+
+    EXPECT_THAT(range0.list(), UnorderedElementsAre(a, b));
+    EXPECT_THAT(range1.list(), testing::IsEmpty());
+    EXPECT_THAT(range2.list(), UnorderedElementsAre(a));
+}
+
 } // namespace

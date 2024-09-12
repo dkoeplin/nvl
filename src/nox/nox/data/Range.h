@@ -1,5 +1,6 @@
 #pragma once
 
+#include "nox/data/List.h"
 #include "nox/data/Once.h"
 #include "nox/macros/Pure.h"
 
@@ -21,6 +22,8 @@ namespace nox {
 template <typename Iterator>
 class Range {
   public:
+    using value_type = typename Iterator::value_type;
+
     Range()
         requires std::is_default_constructible_v<Iterator>
         : begin_(), end_(), empty_(true) {}
@@ -48,6 +51,8 @@ class Range {
     pure bool exists(const Cond &cond) const {
         return std::any_of(begin(), end(), cond);
     }
+
+    List<value_type> list() const { return List<value_type>(begin(), end()); }
 
   private:
     Iterator begin_;

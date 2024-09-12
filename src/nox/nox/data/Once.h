@@ -29,6 +29,8 @@ concept HasMemberAccessOperator = requires(T a) { a.operator->(); };
 template <typename Iterator>
 class Once {
   public:
+    using value_type = typename Iterator::value_type;
+
     Once()
         requires std::is_default_constructible_v<Iterator>
         : begin_(), end_(), empty_(true) {}
