@@ -15,6 +15,8 @@ namespace nox {
 template <U64 N>
 class Pos {
   public:
+    using value_type = I64;
+
     class iterator {
       public:
         using value_type = I64;

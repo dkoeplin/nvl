@@ -111,7 +111,7 @@ TEST(TestBox, clamp) {
 
 TEST(TestBox, to_string) {
     const Box<2> a({2, 3}, {7, 8});
-    EXPECT_EQ(a.to_string(), "({2, 3} to {7, 8})");
+    EXPECT_EQ(a.to_string(), "{2, 3}::{7, 8}");
 }
 
 } // namespace

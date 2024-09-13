@@ -125,6 +125,11 @@ class RTree {
       protected:
         explicit abstract_iterator(RTree &tree, const Box<N> &box) : tree(tree), box(box) {}
 
+        bool skip_value(Work &current) {
+            auto &value = current.value();
+            return visited.count(get_id(value)) || !get_box(value).overlaps(box);
+        }
+
         bool visit_next_pair(Work &current) {
             Node *node = current.node;
 
@@ -139,7 +144,7 @@ class RTree {
                 if (entry->kind == Node::Entry::kList) {
                     if constexpr (mode == Traversal::kValues) {
                         current.list_range = {entry->list.begin(), entry->list.end()};
-                        while (current.list_range.has_next() && visited.count(get_id(current.value()))) {
+                        while (current.list_range.has_next() && skip_value(current)) {
                             ++current.list_range;
                         }
                         if (current.list_range.has_next()) {
@@ -170,7 +175,7 @@ class RTree {
         bool advance_list(Work &current) {
             do {
                 ++current.list_range;
-            } while (current.list_range.has_next() && visited.contains(get_id(current.value())));
+            } while (current.list_range.has_next() && skip_value(current));
 
             if (current.list_range.has_next()) {
                 visited.insert(get_id(current.value()));

@@ -8,6 +8,7 @@
 namespace {
 
 using testing::ElementsAre;
+using testing::IsEmpty;
 using testing::UnorderedElementsAre;
 
 using nox::Box;
@@ -149,7 +150,7 @@ TEST(TestRTree, fetch) {
     const auto range2 = tree[{{0, 885}, {100, 886}}];
 
     EXPECT_THAT(range0.list(), UnorderedElementsAre(a, b));
-    EXPECT_THAT(range1.list(), testing::IsEmpty());
+    EXPECT_THAT(range1.list(), IsEmpty());
     EXPECT_THAT(range2.list(), UnorderedElementsAre(a));
 }
 

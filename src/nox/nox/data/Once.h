@@ -15,7 +15,8 @@ concept HasMemberAccessOperator = requires(T a) { a.operator->(); };
 /**
  * @class Once
  * @brief A pair of iterators which can be iterated over exactly once.
- * Iterating over a Once causes the `begin` iterator to be modified.
+ *
+ * Most uses of Once are destructive, as they cause the `begin` iterator to be modified.
  *
  * Requires that the Iterator type has at least the following:
  * class Iterator {
@@ -33,14 +34,13 @@ class Once {
 
     Once()
         requires std::is_default_constructible_v<Iterator>
-        : begin_(), end_(), empty_(true) {}
+        : begin_(), end_() {}
 
     template <typename... Args>
     explicit Once(Args &&...args)
-        : begin_(Iterator::begin(std::forward<Args>(args)...)), end_(Iterator::end(std::forward<Args>(args)...)),
-          empty_(false) {}
+        : begin_(Iterator::begin(std::forward<Args>(args)...)), end_(Iterator::end(std::forward<Args>(args)...)) {}
 
-    Once(Iterator begin, Iterator end) : begin_(begin), end_(end), empty_(false) {}
+    Once(Iterator begin, Iterator end) : begin_(begin), end_(end) {}
 
     pure bool has_next() const { return begin_ != end_; }
     pure bool has_value() const { return begin_ != end_; }
@@ -61,10 +61,10 @@ class Once {
         return begin_.operator->();
     }
 
-    pure Iterator &begin() { return empty_ ? end_ : begin_; }
+    pure Iterator &begin() { return begin_; }
     pure Iterator &end() { return end_; }
 
-    pure const Iterator &begin() const { return empty_ ? end_ : begin_; }
+    pure const Iterator &begin() const { return begin_; }
     pure const Iterator &end() const { return end_; }
 
     pure bool operator==(const Once &rhs) const { return begin_ == rhs.begin_; }
@@ -85,7 +85,6 @@ class Once {
   private:
     Iterator begin_;
     Iterator end_;
-    bool empty_;
 };
 
 } // namespace nox

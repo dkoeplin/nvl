@@ -24,21 +24,23 @@ class Range {
   public:
     using value_type = typename Iterator::value_type;
 
+    /// Creates an empty Range.
+    /// Only available if the underlying Iterator type is also default constructible.
     Range()
         requires std::is_default_constructible_v<Iterator>
-        : begin_(), end_(), empty_(true) {}
+        : begin_(), end_() {}
 
     template <typename... Args>
     explicit Range(Args &&...args)
-        : begin_(Iterator::begin(std::forward<Args>(args)...)), end_(Iterator::end(std::forward<Args>(args)...)),
-          empty_(false) {}
+        : begin_(Iterator::begin(std::forward<Args>(args)...)), end_(Iterator::end(std::forward<Args>(args)...)) {}
 
-    explicit Range(Iterator begin, Iterator end) : begin_(begin), end_(end), empty_(false) {}
+    Range(Iterator begin, Iterator end) : begin_(begin), end_(end) {}
 
-    pure Iterator begin() const { return empty_ ? end_ : begin_; }
+    /// Returns a _copy_ of the `begin` Iterator.
+    pure Iterator begin() const { return begin_; }
+
+    /// Returns a _copy_ of the `end` Iterator.
     pure Iterator end() const { return end_; }
-
-    pure Once<Iterator> once() const { return Once<Iterator>(begin_, end_); }
 
     /// Returns true if all values in this range meet the given condition.
     template <typename Cond>
@@ -52,12 +54,15 @@ class Range {
         return std::any_of(begin(), end(), cond);
     }
 
-    List<value_type> list() const { return List<value_type>(begin(), end()); }
+    /// Returns a copy of this Range as a single iteration Once range.
+    pure Once<Iterator> once() const { return Once<Iterator>(begin_, end_); }
+
+    /// Returns a copy of the elements in this Range in a List.
+    pure List<value_type> list() const { return List<value_type>(begin(), end()); }
 
   private:
     Iterator begin_;
     Iterator end_;
-    bool empty_;
 };
 
 template <typename Iterator>
