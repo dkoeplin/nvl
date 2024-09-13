@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.29)
-project(nox)
+project(nvl)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -22,5 +22,5 @@ set(gtest_force_shared_crt ON CACHE BOOL " " FORCE)
 FetchContent_MakeAvailable(googletest)
 include(GoogleTest)
 
-add_subdirectory(src/nox)
+add_subdirectory(src/nvl)
 add_subdirectory(test)

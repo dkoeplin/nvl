@@ -1,9 +1,9 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "nox/data/RTree.h"
-#include "nox/geo/Box.h"
-#include "nox/geo/Pos.h"
+#include "nvl/data/RTree.h"
+#include "nvl/geo/Box.h"
+#include "nvl/geo/Pos.h"
 
 namespace {
 
@@ -11,12 +11,12 @@ using testing::ElementsAre;
 using testing::IsEmpty;
 using testing::UnorderedElementsAre;
 
-using nox::Box;
-using nox::List;
-using nox::Map;
-using nox::Pos;
-using nox::RTree;
-using nox::Set;
+using nvl::Box;
+using nvl::List;
+using nvl::Map;
+using nvl::Pos;
+using nvl::RTree;
+using nvl::Set;
 
 struct LabeledBox {
     LabeledBox() = default;

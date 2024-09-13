@@ -1,14 +1,14 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "nox/data/Map.h"
-#include "nox/geo/Pos.h"
+#include "nvl/data/Map.h"
+#include "nvl/geo/Pos.h"
 
 namespace {
 
-using nox::Map;
-using nox::None;
-using nox::Pos;
+using nvl::Map;
+using nvl::None;
+using nvl::Pos;
 
 using testing::ElementsAre;
 

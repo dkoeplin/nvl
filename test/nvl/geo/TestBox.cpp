@@ -1,16 +1,16 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "nox/geo/Box.h"
-#include "nox/geo/Pos.h"
+#include "nvl/geo/Box.h"
+#include "nvl/geo/Pos.h"
 
 namespace {
 
 using testing::ElementsAre;
 
-using nox::Box;
-using nox::List;
-using nox::Pos;
+using nvl::Box;
+using nvl::List;
+using nvl::Pos;
 
 TEST(TestBox, shape) {
     const Box<2> a({4, 5}, {32, 45});

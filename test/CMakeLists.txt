@@ -1,2 +1,2 @@
 enable_testing()
-add_subdirectory(nox)
+add_subdirectory(nvl)
