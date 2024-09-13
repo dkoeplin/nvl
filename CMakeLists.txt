@@ -22,5 +22,10 @@ set(gtest_force_shared_crt ON CACHE BOOL " " FORCE)
 FetchContent_MakeAvailable(googletest)
 include(GoogleTest)
 
-add_subdirectory(src/nvl)
+add_library(nvl SHARED
+        nvl/data/SipHash.cpp
+)
+
+target_include_directories(nvl PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+
 add_subdirectory(test)
