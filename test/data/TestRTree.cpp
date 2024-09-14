@@ -4,6 +4,7 @@
 #include "nvl/data/RTree.h"
 #include "nvl/geo/Box.h"
 #include "nvl/geo/Pos.h"
+#include "util/LabeledBox.h"
 
 namespace {
 
@@ -17,24 +18,13 @@ using nvl::Map;
 using nvl::Pos;
 using nvl::RTree;
 using nvl::Set;
-
-struct LabeledBox {
-    LabeledBox() = default;
-    LabeledBox(const U64 id, const Box<2> &box) : id(id), box(box) {}
-    pure bool operator==(const LabeledBox &rhs) const { return id == rhs.id && box == rhs.box; }
-    pure bool operator!=(const LabeledBox &rhs) const { return !(*this == rhs); }
-    LabeledBox operator+(const Pos<2> &offset) const { return {id, box + offset}; }
-    U64 id;
-    Box<2> box;
-};
-
-std::ostream &operator<<(std::ostream &os, const LabeledBox &v) { return os << "BOX(" << v.id << ": " << v.box << ")"; }
+using nvl::testing::LabeledBox;
 
 TEST(TestRTree, create) {
     RTree<2, LabeledBox> tree;
     tree.insert({0, {{0, 5}, {5, 10}}});
     EXPECT_EQ(tree.size(), 1);
-    EXPECT_EQ(tree.nodes(), 1);
+    EXPECT_EQ(tree.testing().nodes(), 1);
 }
 
 TEST(TestRTree, divide) {
@@ -44,7 +34,7 @@ TEST(TestRTree, divide) {
     tree.insert(b0);
     tree.insert(b1);
     EXPECT_EQ(tree.size(), 2);
-    EXPECT_EQ(tree.nodes(), 1);
+    EXPECT_EQ(tree.testing().nodes(), 1);
     const Map<Box<2>, Set<U64>> expected{{Box<2>({0, 0}, {1023, 1023}), Set<U64>{0}},
                                          {Box<2>({2048, 1024}, {3071, 2047}), Set<U64>{1}}};
     EXPECT_EQ(tree.testing().collect_ids(), expected);
@@ -59,8 +49,8 @@ TEST(TestRTree, subdivide) {
     tree.insert(b1);
     tree.insert(b2);
 
-    EXPECT_EQ(tree.size(), 3);  // Number of values
-    EXPECT_EQ(tree.nodes(), 4); // Number of nodes
+    EXPECT_EQ(tree.size(), 3);            // Number of values
+    EXPECT_EQ(tree.testing().nodes(), 4); // Number of nodes
 
     const Map<Box<2>, Set<U64>> expected{{Box<2>({0, 0}, {127, 127}), Set<U64>{0, 1}},
                                          {Box<2>({0, 128}, {127, 255}), Set<U64>{2}},
@@ -68,8 +58,7 @@ TEST(TestRTree, subdivide) {
     EXPECT_EQ(tree.testing().collect_ids(), expected);
 
     // Check that we find all values when iterating over the bounding box, but each value is returned exactly once.
-    const auto range = tree[tree.bounds()];
-    const List<LabeledBox> elements(range.begin(), range.end());
+    const auto elements = tree[tree.bbox()].list();
     EXPECT_THAT(elements, UnorderedElementsAre(b0, b1, b2));
 }
 
