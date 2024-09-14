@@ -10,8 +10,9 @@
 #include "nvl/geo/Pos.h"
 #include "nvl/macros/Aliases.h"
 #include "nvl/macros/ReturnIf.h"
-#include "nvl/traits/GetBox.h"
-#include "nvl/traits/GetID.h"
+#include "nvl/math/Bitwise.h"
+#include "nvl/traits/HasBox.h"
+#include "nvl/traits/HasID.h"
 
 namespace nvl {
 
@@ -93,13 +94,11 @@ struct Work {
  * @tparam kMaxEntries Maximum number of entries per node. Defaults to 10.
  * @tparam kGridExpMin Minimum node grid size (2 ^ min_grid_exp). Defaults to 2.
  * @tparam kGridExpMax Initial grid size of the root. (2 ^ root_grid_exp). Defaults to 10.
- * @tparam GetBox Defines how to fetch the associated volume for a value.
- * @tparam GetID Defines how to fetch the associated ID for a value
  */
-template <U64 N, typename Value, U64 kMaxEntries = 10, U64 kGridExpMin = 2, U64 kGridExpMax = 10,
-          typename GetBox = traits::GetBox<N, Value>, typename GetID = traits::GetID<Value>>
+template <U64 N, typename Value, U64 kMaxEntries = 10, U64 kGridExpMin = 2, U64 kGridExpMax = 10>
+    requires traits::HasBox<Value> && traits::HasID<Value>
 class RTree {
-    friend struct Testing;
+    friend struct Debug;
     using Work = rtree_detail::Work<N, Value>;
     using Node = rtree_detail::Node<N, Value>;
 
@@ -115,13 +114,13 @@ public:
     }
 
     /// Inserts the value into the tree.
-    RTree &insert(const Value &value) { return insert_over(value, get_box(value), get_id(value), true); }
+    RTree &insert(const Value &value) { return insert_over(value, value.box(), value.id(), true); }
 
     /// Removes the value from the tree.
-    RTree &remove(const Value &value) { return remove_over(get_box(value), get_id(value), true); }
+    RTree &remove(const Value &value) { return remove_over(value.box(), value.id(), true); }
 
     /// Registers a value as having moved from the previous volume `prev` to its current volume.
-    RTree &move(const Value &value, const Box<N> &prev) { return move(get_box(value), get_id(value), prev); }
+    RTree &move(const Value &value, const Box<N> &prev) { return move(value.box(), value.id(), prev); }
 
     /// Returns an iterator over all unique stored values in the given volume.
     pure Range<value_iterator> operator[](const Pos<N> &pos) { return Range<value_iterator>(*this, Box<N>::unit(pos)); }
@@ -146,15 +145,15 @@ public:
     /// Returns a Range for unordered iteration over all values in this tree.
     pure typename Map<U64, Value>::const_unordered_range unordered() const { return values_.unordered(); }
 
-    struct Testing {
-        static std::ostream &indented(U64 n) {
+    struct Debug {
+        static std::ostream &indented(const U64 n) {
             for (U64 i = 0; i < n; i++) {
                 std::cout << "  ";
             }
             return std::cout;
         }
 
-        explicit Testing(RTree &tree) : tree(tree) {}
+        explicit Debug(RTree &tree) : tree(tree) {}
 
         struct PreorderWork {
             PreorderWork(Node *node, const U64 depth) : node(node), depth(depth) {
@@ -217,7 +216,7 @@ public:
                 if (auto *entry = node->get(pos); entry && entry->kind == Node::Entry::kList) {
                     const Box<N> box(pos, pos + node->grid - 1);
                     for (const auto &value : entry->list) {
-                        ids[box].insert(value->id);
+                        ids[box].insert(value->id());
                     }
                 }
             }
@@ -227,9 +226,18 @@ public:
         /// Returns the total number of nodes in this tree.
         pure U64 nodes() const { return tree.nodes_.size(); }
 
+        /// Returns the maximum depth, in nodes, of this tree.
+        pure U64 depth() const {
+            const U64 root_grid = tree.root_->grid;
+            U64 min_grid = root_grid;
+            for (auto &[_, node] : tree.nodes_) {
+                min_grid = (node.grid < min_grid) ? node.grid : min_grid;
+            }
+            return ceil_log2(root_grid) - ceil_log2(min_grid) + 1;
+        }
+
         RTree &tree;
-    };
-    pure Testing testing() { return Testing(*this); }
+    } debug = Debug(*this);
 
 private:
     enum class Traversal {
@@ -266,7 +274,7 @@ private:
 
         bool skip_value(Work &current) {
             auto &value = current.value();
-            return visited.count(get_id(value)) || !get_box(value).overlaps(box);
+            return visited.count(value.id()) || !value.box().overlaps(box);
         }
 
         bool visit_next_pair(Work &current) {
@@ -288,7 +296,7 @@ private:
                         }
                         if (current.list_range.has_next()) {
                             // Start visiting this list if there is at least one valid value
-                            visited.insert(get_id(current.value()));
+                            visited.insert(current.value().id());
                             return true;
                         }
                         // Skip this list entirely if it had no new unique values
@@ -317,7 +325,7 @@ private:
             } while (current.list_range.has_next() && skip_value(current));
 
             if (current.list_range.has_next()) {
-                visited.insert(get_id(current.value()));
+                visited.insert(current.value().id());
                 return true;
             }
             return false;
@@ -408,9 +416,6 @@ private:
     static constexpr I64 grid_min = 0x1 << kGridExpMin;
     static constexpr I64 grid_max = 0x1 << kGridExpMax;
 
-    static constexpr GetBox get_box;
-    static constexpr GetID get_id;
-
 public:
     class value_iterator : public abstract_iterator<Traversal::kValues, value_iterator> {
     public:
@@ -423,12 +428,14 @@ public:
 
         value_iterator() = delete;
 
+        pure INLINE bool has_value() const { return !this->worklist.empty(); }
+
         Value &operator*() const {
-            ASSERT(!this->worklist.empty(), "Attempted to dereference empty iterator");
+            ASSERT(has_value(), "Attempted to dereference empty iterator");
             return this->worklist.back().value();
         }
         Value *operator->() const {
-            ASSERT(!this->worklist.empty(), "Attempted to dereference empty iterator");
+            ASSERT(has_value(), "Attempted to dereference empty iterator");
             return &this->worklist.back().value();
         }
 
@@ -448,7 +455,7 @@ private:
         node->id = id;
         node->grid = grid;
         for (const Ref<Value> value : values) {
-            const Box<N> &value_box = value->box;
+            const Box<N> &value_box = value->box();
             Range<typename Box<N>::box_iterator> points; // empty iterable to start with
             if (parent.has_value()) {
                 if (const Maybe<Box<N>> intersection = value_box.intersect(parent->box)) {

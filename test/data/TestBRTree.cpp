@@ -16,10 +16,37 @@ using nvl::Box;
 using nvl::BRTree;
 using nvl::List;
 using nvl::Pos;
+using nvl::View;
 using nvl::testing::LabeledBox;
 
 TEST(TestBRTree, create) {
+    BRTree<2, LabeledBox> tree;
+    tree.insert({1, {{0, 0}, {32, 32}}});
 
+    EXPECT_EQ(tree.size(), 1);
+    EXPECT_EQ(tree.debug.nodes(), 1);
+}
+
+TEST(TestBRTree, fetch) {
+    BRTree<2, LabeledBox> tree;
+    LabeledBox box{1, {{0, 0}, {32, 32}}};
+    tree.insert(box);
+
+    const auto list = tree[{0, 0}].list();
+    EXPECT_THAT(list, UnorderedElementsAre(View<2, LabeledBox>(box, {0, 0})));
+}
+
+TEST(TestBRTree, move) {
+    BRTree<2, LabeledBox> tree;
+    LabeledBox box{1, {{0, 0}, {32, 32}}};
+    tree.insert(box);
+    tree.loc = {500, 500};
+
+    const auto list0 = tree[{0, 0}].list();
+    EXPECT_THAT(list0, IsEmpty());
+
+    const auto list1 = tree[{500, 500}].list();
+    EXPECT_THAT(list1, UnorderedElementsAre(View<2, LabeledBox>(box, {500, 500})));
 }
 
 } // namespace

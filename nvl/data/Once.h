@@ -2,14 +2,9 @@
 
 #include "nvl/data/IteratorPair.h"
 #include "nvl/macros/Pure.h"
+#include "nvl/traits/HasDereference.h"
 
 namespace nvl {
-
-template <typename T>
-concept HasDereferenceOperator = requires(T a) { *a; };
-
-template <typename T>
-concept HasMemberAccessOperator = requires(T a) { a.operator->(); };
 
 /**
  * @class Once
@@ -47,12 +42,12 @@ public:
     }
 
     pure typename Iterator::reference operator*() const
-        requires HasDereferenceOperator<Iterator>
+        requires traits::HasDereferenceOperator<Iterator>
     {
         return this->begin_->operator*();
     }
     pure typename Iterator::pointer operator->() const
-        requires HasMemberAccessOperator<Iterator>
+        requires traits::HasMemberAccessOperator<Iterator>
     {
         return this->begin_.operator->();
     }
