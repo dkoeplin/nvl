@@ -1,11 +1,10 @@
 #pragma once
 
-#include <nvl/data/Range.h>
-
 #include <functional>
 
 #include "nvl/data/List.h"
 #include "nvl/data/Maybe.h"
+#include "nvl/data/Range.h"
 #include "nvl/enum/Dir.h"
 #include "nvl/geo/Pos.h"
 #include "nvl/macros/Aliases.h"
@@ -183,8 +182,8 @@ public:
     pure Box operator-(const I64 rhs) const { return Box::presorted(min - rhs, max - rhs); }
 
     /// Returns a new Box which is clamped to the given grid size.
-    pure Box clamp(const Pos<N> &grid) const { return Box::presorted(min.clamp_down(grid), max.clamp_up(grid)); }
-    pure Box clamp(const I64 grid) const { return Box::presorted(min.clamp_down(grid), max.clamp_up(grid)); }
+    pure Box clamp(const Pos<N> &grid) const { return Box::presorted(min.grid_min(grid), max.grid_max(grid)); }
+    pure Box clamp(const I64 grid) const { return Box::presorted(min.grid_min(grid), max.grid_max(grid)); }
 
     /// Returns an iterator over points in this box with the given `step` size in each dimension.
     pure Range<pos_iterator> pos_iter(const I64 step = 1) const {

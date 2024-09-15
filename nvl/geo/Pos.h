@@ -8,17 +8,17 @@
 #include "nvl/macros/Aliases.h"
 #include "nvl/macros/Assert.h"
 #include "nvl/macros/Pure.h"
-#include "nvl/math/Clamping.h"
+#include "nvl/math/Grid.h"
 
 namespace nvl {
 
 template <U64 N>
 class Pos {
-  public:
+public:
     using value_type = I64;
 
     class iterator {
-      public:
+    public:
         using value_type = I64;
         using pointer = I64 *;
         using reference = I64 &;
@@ -35,13 +35,13 @@ class Pos {
             return *this;
         }
 
-      private:
+    private:
         explicit iterator(Pos &parent, U64 index) : index_(index), parent_(parent) {}
         U64 index_ = 0;
         Pos &parent_;
     };
     class const_iterator {
-      public:
+    public:
         using value_type = I64;
         using pointer = I64 *;
         using reference = I64 &;
@@ -60,7 +60,7 @@ class Pos {
             return *this;
         }
 
-      private:
+    private:
         explicit const_iterator(const Pos &parent, U64 index) : index_(index), parent_(parent) {}
 
         U64 index_ = 0;
@@ -228,36 +228,36 @@ class Pos {
 
     /// Returns a new Pos with the result of element-wise clamping to the given grid.
     /// Elements are rounded up to the grid in each dimension.
-    pure Pos clamp_up(const Pos &grid) const {
+    pure Pos grid_max(const Pos &grid) const {
         Pos result;
         for (U64 i = 0; i < N; i++) {
-            result[i] = nvl::clamp_up(indices_[i], grid[i]);
+            result[i] = nvl::grid_max(indices_[i], grid[i]);
         }
         return result;
     }
 
-    pure Pos clamp_up(const I64 grid) const {
+    pure Pos grid_max(const I64 grid) const {
         Pos result;
         for (U64 i = 0; i < N; i++) {
-            result[i] = nvl::clamp_up(indices_[i], grid);
+            result[i] = nvl::grid_max(indices_[i], grid);
         }
         return result;
     }
 
     /// Returns a new Pos with the result of element-wise clamping to the given grid.
     /// Elements are rounded down to the grid in each dimension.
-    pure Pos clamp_down(const Pos &grid) const {
+    pure Pos grid_min(const Pos &grid) const {
         Pos result;
         for (U64 i = 0; i < N; i++) {
-            result[i] = nvl::clamp_down(indices_[i], grid[i]);
+            result[i] = nvl::grid_min(indices_[i], grid[i]);
         }
         return result;
     }
 
-    pure Pos clamp_down(const I64 grid) const {
+    pure Pos grid_min(const I64 grid) const {
         Pos result;
         for (U64 i = 0; i < N; i++) {
-            result[i] = nvl::clamp_down(indices_[i], grid);
+            result[i] = nvl::grid_min(indices_[i], grid);
         }
         return result;
     }
@@ -394,7 +394,7 @@ class Pos {
         return ss.str();
     }
 
-  private:
+private:
     friend struct std::hash<Pos>;
     I64 indices_[N];
 };

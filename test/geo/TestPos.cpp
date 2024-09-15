@@ -149,13 +149,14 @@ TEST(TestPos, sub) {
     EXPECT_THAT(a, ElementsAre(-6, -3, -2, -4, -1));
 }
 
-TEST(TestPos, clamp_down) {
-    EXPECT_EQ(Pos<2>(0, 1024).clamp_down({1024, 1024}), Pos<2>(0, 1024));
-    EXPECT_EQ(Pos<2>(0, -1024).clamp_down({1024, 1024}), Pos<2>(0, -1024));
+TEST(TestPos, grid_min) {
+    EXPECT_EQ(Pos<2>(0, 1024).grid_min({1024, 1024}), Pos<2>(0, 1024));
+    EXPECT_EQ(Pos<2>(0, -1024).grid_min({1024, 1024}), Pos<2>(0, -1024));
 }
 
-TEST(TestPos, clamp_up) {
-    // TODO
+TEST(TestPos, grid_max) {
+    EXPECT_EQ(Pos<2>(0, 1024).grid_max({1024, 1024}), Pos<2>(0, 2047));
+    EXPECT_EQ(Pos<2>(0, -1024).grid_max({1024, 1024}), Pos<2>(0, -1024));
 }
 
 TEST(TestPos, comparisons) {

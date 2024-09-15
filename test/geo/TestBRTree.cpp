@@ -1,8 +1,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "nvl/data/BRTree.h"
 #include "nvl/geo/Box.h"
+#include "nvl/geo/BRTree.h"
 #include "nvl/geo/Pos.h"
 #include "util/LabeledBox.h"
 
@@ -52,7 +52,7 @@ TEST(TestBRTree, move) {
 
 Set<View<2, Edge<2>>> view(List<Edge<2>> &list, const Pos<2> &offset) {
     Set<View<2, Edge<2>>> set;
-    for (auto &item : list) {
+    for (Edge<2> &item : list) {
         set.emplace(item, offset);
     }
     return set;

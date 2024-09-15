@@ -43,7 +43,7 @@ struct Node {
     pure bool operator==(const Node &rhs) const { return id == rhs.id; }
     pure bool operator!=(const Node &rhs) const { return !(*this == rhs); }
 
-    pure Entry *get(const Pos<N> &pos) const { return map.get(pos.clamp_down(grid)); }
+    pure Entry *get(const Pos<N> &pos) const { return map.get(pos.grid_min(grid)); }
 
     void init_list(const Pos<N> &pos, Value &value) { map[pos].list.emplace_back(value); }
 

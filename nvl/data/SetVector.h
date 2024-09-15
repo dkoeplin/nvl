@@ -1,17 +1,16 @@
 #pragma once
 
-#include <list>
-#include <unordered_map>
-
+#include "nvl/data/List.h"
+#include "nvl/data/Map.h"
 #include "nvl/data/Maybe.h"
 #include "nvl/macros/Aliases.h"
 #include "nvl/macros/Pure.h"
 
 namespace nvl {
 
-template <typename Value, typename Hash = std::hash<Value>> // Value / Hash
+template <typename Value, typename Hash = std::hash<Value>>
 class SetVector {
-  public:
+public:
     using Vec = std::vector<Value>;
 
     using value_type = typename Vec::value_type;
@@ -73,9 +72,9 @@ class SetVector {
         return *this;
     }
 
-  private:
-    std::unordered_map<Value, U64, Hash> map_;
-    std::vector<Value> vec_;
+private:
+    Map<Value, U64, Hash> map_;
+    List<Value> vec_;
     Hash hash_;
 };
 

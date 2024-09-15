@@ -108,17 +108,7 @@ public:
 
 template <typename K, typename V, typename Hash, typename Equal, typename Allocator>
 std::ostream &operator<<(std::ostream &os, const Map<K, V, Hash, Equal, Allocator> &map) {
-    os << "{";
-    if (!map.empty()) {
-        auto unordered = map.unordered_entries();
-        auto iter = unordered.begin();
-        os << "{" << iter->first << ", ";
-        os << iter->second << "}";
-        for (++iter; iter != unordered.end(); ++iter) {
-            os << ", {" << iter->first << ", " << iter->second << "}";
-        }
-    }
-    return os << "}";
+    return os << map.unordered_entries();
 }
 
 } // namespace nvl

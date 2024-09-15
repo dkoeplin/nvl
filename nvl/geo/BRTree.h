@@ -1,6 +1,6 @@
 #pragma once
 
-#include "nvl/data/RTree.h"
+#include "nvl/geo/RTree.h"
 #include "nvl/geo/Box.h"
 #include "nvl/geo/View.h"
 #include "nvl/macros/Aliases.h"

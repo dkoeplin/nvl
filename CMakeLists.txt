@@ -23,7 +23,34 @@ FetchContent_MakeAvailable(googletest)
 include(GoogleTest)
 
 add_library(nvl SHARED
+        nvl/data/IteratorPair.h
+        nvl/data/List.h
+        nvl/data/Map.h
+        nvl/data/Maybe.h
+        nvl/data/Once.h
+        nvl/data/Range.h
+        nvl/data/Ref.h
+        nvl/data/Set.h
+        nvl/data/SetVector.h
+        nvl/data/SipHash.h
         nvl/data/SipHash.cpp
+        nvl/enum/Dir.h
+        nvl/geo/Box.h
+        nvl/geo/BRTree.h
+        nvl/geo/Pos.h
+        nvl/geo/RTree.h
+        nvl/geo/View.h
+        nvl/macros/Aliases.h
+        nvl/macros/Assert.h
+        nvl/macros/Implicit.h
+        nvl/macros/Inline.h
+        nvl/macros/Pure.h
+        nvl/macros/ReturnIf.h
+        nvl/math/Bitwise.h
+        nvl/math/Grid.h
+        nvl/traits/HasBox.h
+        nvl/traits/HasDereference.h
+        nvl/traits/HasID.h
 )
 
 target_include_directories(nvl PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

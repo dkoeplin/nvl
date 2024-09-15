@@ -1,9 +1,9 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "nvl/data/RTree.h"
 #include "nvl/geo/Box.h"
 #include "nvl/geo/Pos.h"
+#include "nvl/geo/RTree.h"
 #include "util/LabeledBox.h"
 
 namespace {

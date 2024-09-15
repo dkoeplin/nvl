@@ -8,7 +8,8 @@ namespace nvl {
 
 /**
  * @class Range
- * @brief A pair of iterators.
+ * @brief A pair of iterators which can be iterated over any number of times.
+ *
  * Iterating over a Range causes the `begin` iterator to be copied to allow repeated iteration.
  *
  * Requires that the Iterator type has at least the following:
