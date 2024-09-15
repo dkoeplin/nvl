@@ -328,9 +328,14 @@ public:
         return result;
     }
 
+    pure bool operator==(const Edge &rhs) const { return dim_ == rhs.dim_ && dir_ == rhs.dir_ && box_ == rhs.box_; }
+    pure bool operator!=(const Edge &rhs) const { return !(*this == rhs); }
+
     pure U64 thickness() const { return box_.shape(dim_); }
 
     pure U64 id() const { return (U64)(this); }
+    pure U64 dim() const { return dim_; }
+    pure Dir dir() const { return dir_; }
     pure const Box<N> &box() const { return box_; }
 
 private:
@@ -383,7 +388,12 @@ Box<N> operator-(I64 a, const Box<N> &b) {
 
 template <U64 N>
 std::ostream &operator<<(std::ostream &os, const Box<N> &box) {
-    return os << box.to_string();
+    return os << box.min << "::" << box.max;
+}
+
+template <U64 N>
+std::ostream &operator<<(std::ostream &os, const Edge<N> &edge) {
+    return os << "Edge(" << edge.dim() << ", " << edge.dir() << ", " << edge.box() << ")";
 }
 
 /// Returns the minimal Box which includes all of both Box `a` and `b`.

@@ -26,4 +26,6 @@ constexpr Dir Dir::Pos = Dir(1);
 constexpr Dir Dir::Neg = Dir(-1);
 constexpr Dir Dir::list[2] = {Pos, Neg};
 
+inline std::ostream &operator<<(std::ostream &os, const Dir &dir) { return os << (dir == Dir::Neg ? "Neg" : "Pos"); }
+
 } // namespace nvl

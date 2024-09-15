@@ -18,15 +18,27 @@ public:
     pure bool operator==(const View &rhs) const { return value_ == rhs.value_ && offset_ == rhs.offset_; }
     pure bool operator!=(const View &rhs) const { return !(*this == rhs); }
 
-    const Value *operator->() const { return &value_; }
-    const Value &operator*() const { return value_; }
+    const Value *operator->() const { return &value_.raw(); }
+    const Value &operator*() const { return value_.raw(); }
 
     pure Box<N> box() const { return value_.box() + offset_; }
     pure U64 id() const { return value_.id(); }
+
+    pure const Pos<N> &offset() const { return offset_; }
 
 private:
     Ref<Value> value_;
     Pos<N> offset_;
 };
 
+template <U64 N, typename Value>
+std::ostream &operator<<(std::ostream &os, const View<N, Value> &view) {
+    return os << *view << " @ " << view.offset();
+}
+
 } // namespace nvl
+
+template <U64 N, typename Value>
+struct std::hash<nvl::View<N, Value>> {
+    pure U64 operator()(const nvl::View<N, Value> &a) const { return nvl::sip_hash(a); }
+};

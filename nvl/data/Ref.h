@@ -5,8 +5,9 @@
 
 namespace nvl {
 
-template <typename Value> class Ref {
-  public:
+template <typename Value>
+class Ref {
+public:
     Ref() = default;
     implicit Ref(Value &value) : ptr(&value) {}
 
@@ -24,10 +25,13 @@ template <typename Value> class Ref {
     pure bool operator==(const Ref &rhs) const { return *ptr == *rhs.ptr; }
     pure bool operator!=(const Ref &rhs) const { return *ptr != *rhs.ptr; }
 
-  private:
+private:
     Value *ptr = nullptr;
 };
 
-template <typename Value> std::ostream &operator<<(std::ostream &os, Ref<Value> ref) { return os << ref.raw(); }
+template <typename Value>
+std::ostream &operator<<(std::ostream &os, const Ref<Value> &ref) {
+    return os << ref.raw();
+}
 
 } // namespace nvl
