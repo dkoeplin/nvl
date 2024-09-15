@@ -3,7 +3,6 @@
 #include <vector>
 
 #include "nvl/data/Range.h"
-#include "nvl/data/Ref.h"
 #include "nvl/macros/Pure.h"
 
 namespace nvl {
@@ -69,15 +68,7 @@ private:
 
 template <typename Value>
 std::ostream &operator<<(std::ostream &os, const List<Value> &list) {
-    os << "{";
-    auto iter = list.begin();
-    if (iter != list.end()) {
-        os << *iter;
-    }
-    for (; iter != list.end(); ++iter) {
-        os << ", " << *iter;
-    }
-    return os << "}";
+    return os << Range(list.begin(), list.end());
 }
 
 } // namespace nvl
