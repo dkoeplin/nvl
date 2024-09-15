@@ -440,7 +440,7 @@ public:
 
         window_iterator() = delete;
 
-        pure INLINE bool has_value() const { return !this->worklist.empty(); }
+        pure expand bool has_value() const { return !this->worklist.empty(); }
 
         Value &operator*() const {
             ASSERT(has_value(), "Attempted to dereference empty iterator");

@@ -5,6 +5,10 @@
 
 namespace nvl {
 
+/**
+ * @class Dir
+ * @brief Denotes positive or negative direction in an associated dimension.
+ */
 class Dir {
 public:
     static const Dir Pos;

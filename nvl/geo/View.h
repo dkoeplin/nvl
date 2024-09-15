@@ -9,6 +9,15 @@
 
 namespace nvl {
 
+/**
+ * @class View
+ * @brief Views a Value at an offset within an N-dimension space.
+ *
+ * Holds a reference to the value, and allows inspecting the bounding box of the value at the offset with .box().
+ *
+ * @tparam N Number of dimensions in the N-dimensional space
+ * @tparam Value Value type being stored.
+ */
 template <U64 N, typename Value>
     requires traits::HasBox<Value> && traits::HasID<Value>
 class View {

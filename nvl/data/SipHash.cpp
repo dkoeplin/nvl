@@ -3,23 +3,22 @@
 #include <cstring> // std::memcpy
 
 #include "nvl/macros/Aliases.h"
-#include "nvl/macros/Inline.h"
+#include "nvl/macros/Expand.h"
 #include "nvl/math/Bitwise.h"
 
 namespace nvl {
 
 namespace {
 
-// SipHash Paper: https://www.131002.net/siphash/siphash.pdf
+constexpr size_t kPacketSize = sizeof(U64);
+static_assert((kPacketSize & (kPacketSize - 1)) == 0, "Size must be 2^i.");
+
 // Implementation adapted from:
 // https://github.com/google/highwayhash/blob/master/highwayhash/sip_hash.h
 // https://github.com/google/highwayhash/blob/master/highwayhash/state_helpers.h
-
 template <int kUpdateIters, int kFinalizeIters>
 class SipHash {
-  public:
-    static constexpr size_t kPacketSize = sizeof(U64);
-
+public:
     explicit SipHash(const U64 key[2]) {
         v0 = 0x736f6d6570736575ull ^ key[0];
         v1 = 0x646f72616e646f6dull ^ key[1];
@@ -27,7 +26,7 @@ class SipHash {
         v3 = 0x7465646279746573ull ^ key[1];
     }
 
-    INLINE void update(const char *bytes) {
+    expand void update(const char *bytes) {
         U64 packet;
         std::memcpy(&packet, bytes, sizeof(packet));
 
@@ -38,7 +37,7 @@ class SipHash {
         v0 ^= packet;
     }
 
-    INLINE U64 finalize() {
+    expand U64 finalize() {
         // Mix in bits to avoid leaking the key if all packets were zero.
         v2 ^= 0xFF;
 
@@ -47,9 +46,9 @@ class SipHash {
         return (v0 ^ v1) ^ (v2 ^ v3);
     }
 
-  private:
+private:
     template <size_t rounds>
-    INLINE void compress() {
+    expand void compress() {
         for (size_t i = 0; i < rounds; ++i) {
             // ARX network: add, rotate, exclusive-or.
             v0 += v1;
@@ -98,7 +97,7 @@ constexpr U64 kDefaultKey[2] = {0xDEADBEEF, 0xF00DF17E};
 // implementation detail, do not call directly.
 template <class State>
 void padded_update(const U64 size, const char *remaining_bytes, const U64 remaining_size, State *state) {
-    char final_packet[State::kPacketSize] = {0};
+    char final_packet[kPacketSize] = {0};
 
     // This layout matches the AVX-2 specialization in highway_tree_hash.h.
     uint32_t packet4 = static_cast<uint32_t>(size) << 24;
@@ -114,7 +113,7 @@ void padded_update(const U64 size, const char *remaining_bytes, const U64 remain
     }
 
     std::memcpy(final_packet, remaining_bytes, remaining_size - remainder_mod4);
-    std::memcpy(final_packet + State::kPacketSize - 4, &packet4, sizeof(packet4));
+    std::memcpy(final_packet + kPacketSize - 4, &packet4, sizeof(packet4));
 
     state->update(final_packet);
 }
@@ -123,8 +122,6 @@ void padded_update(const U64 size, const char *remaining_bytes, const U64 remain
 template <class State>
 void update_state(const char *bytes, const U64 size, State *state) {
     // Feed entire packets.
-    constexpr U64 kPacketSize = State::kPacketSize;
-    static_assert((kPacketSize & (kPacketSize - 1)) == 0, "Size must be 2^i.");
     const U64 remainder = size & (kPacketSize - 1);
     const U64 truncated_size = size - remainder;
     for (U64 i = 0; i < truncated_size; i += kPacketSize) {
@@ -143,7 +140,7 @@ void update_state(const char *bytes, const U64 size, State *state) {
 // Callers wanting to combine multiple hashes should repeatedly update_state()
 // and only call State::Finalize once.
 template <class State>
-U64 INLINE compute_hash(const U64 key[2], const char *bytes, const U64 size) {
+pure expand U64 compute_hash(const U64 key[2], const char *bytes, const U64 size) {
     State state(key);
     update_state(bytes, size, &state);
     return state.finalize();
@@ -155,12 +152,12 @@ U64 INLINE compute_hash(const U64 key[2], const char *bytes, const U64 size) {
 // "bytes" is the data to hash; ceil(size / 8) * 8 bytes are read.
 // Returns a 64-bit hash of the given data bytes, which are swapped on
 // big-endian CPUs so the return value is the same as on little-endian CPUs.
-INLINE U64 sip_hash24(const U64 key[2], const char *bytes, const U64 size) {
+pure expand U64 sip_hash24(const U64 key[2], const char *bytes, const U64 size) {
     return compute_hash<SipHash24>(key, bytes, size);
 }
 
 // Round-reduced SipHash version (1 update and 3 finalization rounds).
-INLINE U64 sip_hash13(const U64 key[2], const char *bytes, const U64 size) {
+pure expand U64 sip_hash13(const U64 key[2], const char *bytes, const U64 size) {
     return compute_hash<SipHash13>(key, bytes, size);
 }
 

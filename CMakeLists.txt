@@ -43,7 +43,7 @@ add_library(nvl SHARED
         nvl/macros/Aliases.h
         nvl/macros/Assert.h
         nvl/macros/Implicit.h
-        nvl/macros/Inline.h
+        nvl/macros/Expand.h
         nvl/macros/Pure.h
         nvl/macros/ReturnIf.h
         nvl/math/Bitwise.h
