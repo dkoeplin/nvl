@@ -2,7 +2,7 @@
 
 #include <unordered_map>
 
-#include "nvl/data/Maybe.h"
+#include "nvl/data/Range.h"
 #include "nvl/macros/Pure.h"
 
 namespace nvl {
@@ -10,16 +10,39 @@ namespace nvl {
 template <typename K, typename V, typename Hash = std::hash<K>, typename Equal = std::equal_to<K>,
           typename Allocator = std::allocator<std::pair<const K, V>>>
 class Map : std::unordered_map<K, V, Hash, Equal, Allocator> {
-  public:
+public:
     using parent = std::unordered_map<K, V, Hash, Equal, Allocator>;
     using iterator = typename parent::iterator;
     using const_iterator = typename parent::const_iterator;
 
     using parent::operator[];
     using parent::at;
+    using parent::clear;
     using parent::empty;
     using parent::end;
     using parent::size;
+
+    class value_iterator {
+    public:
+        using value_type = V;
+        using pointer = V *;
+        using reference = V &;
+
+        explicit value_iterator(typename Map<K, V>::iterator iter) : iter_(iter) {}
+
+        value_iterator &operator++() {
+            ++iter_;
+            return *this;
+        }
+        V &operator*() { return iter_->second; }
+        V *operator->() { return &iter_->second; }
+
+        pure bool operator==(const value_iterator &rhs) const { return iter_ == rhs.iter_; }
+        pure bool operator!=(const value_iterator &rhs) const { return iter_ != rhs.iter_; }
+
+    private:
+        typename Map<K, V>::iterator iter_;
+    };
 
     Map() : parent() {}
     Map(std::initializer_list<std::pair<const K, V>> init) : parent(init) {}
@@ -77,21 +100,17 @@ class Map : std::unordered_map<K, V, Hash, Equal, Allocator> {
     pure bool operator==(const Map &other) const { return std::operator==(*this, other); }
     pure bool operator!=(const Map &other) const { return std::operator!=(*this, other); }
 
-    struct const_unordered_range {
-        explicit const_unordered_range(const Map &map) : parent_(map) {}
-        pure const_iterator begin() const { return parent_.begin(); }
-        pure const_iterator end() const { return parent_.end(); }
-        const Map &parent_;
-    };
-
-    pure const_unordered_range unordered() const { return const_unordered_range(*this); }
+    pure Range<const_iterator> unordered_entries() const { return {parent::begin(), parent::end()}; }
+    pure Range<value_iterator> unordered_values() {
+        return {value_iterator(parent::begin()), value_iterator(parent::end())};
+    }
 };
 
 template <typename K, typename V, typename Hash, typename Equal, typename Allocator>
-inline std::ostream &operator<<(std::ostream &os, const Map<K, V, Hash, Equal, Allocator> &map) {
+std::ostream &operator<<(std::ostream &os, const Map<K, V, Hash, Equal, Allocator> &map) {
     os << "{";
     if (!map.empty()) {
-        auto unordered = map.unordered();
+        auto unordered = map.unordered_entries();
         auto iter = unordered.begin();
         os << "{" << iter->first << ", ";
         os << iter->second << "}";

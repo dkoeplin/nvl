@@ -103,7 +103,8 @@ class RTree {
     using Node = rtree_detail::Node<N, Value>;
 
 public:
-    class value_iterator;
+    class window_iterator;
+    using value_iterator = typename Map<U64, Value>::value_iterator;
 
     explicit RTree() : root_(next_node(None, grid_max, {})) {}
 
@@ -123,8 +124,13 @@ public:
     RTree &move(const Value &value, const Box<N> &prev) { return move(value.box(), value.id(), prev); }
 
     /// Returns an iterator over all unique stored values in the given volume.
-    pure Range<value_iterator> operator[](const Pos<N> &pos) { return Range<value_iterator>(*this, Box<N>::unit(pos)); }
-    pure Range<value_iterator> operator[](const Box<N> &box) { return Range<value_iterator>(*this, box); }
+    pure Range<window_iterator> operator[](const Pos<N> &pos) {
+        return Range<window_iterator>(*this, Box<N>::unit(pos));
+    }
+    pure Range<window_iterator> operator[](const Box<N> &box) { return Range<window_iterator>(*this, box); }
+
+    /// Returns a Range for unordered iteration over all values in this tree.
+    pure Range<value_iterator> unordered() { return values_.unordered_values(); }
 
     /// Returns the current bounding box for this tree.
     pure const Box<N> &bbox() const {
@@ -142,8 +148,14 @@ public:
     /// Returns true if this tree is empty.
     pure bool empty() const { return values_.empty(); }
 
-    /// Returns a Range for unordered iteration over all values in this tree.
-    pure typename Map<U64, Value>::const_unordered_range unordered() const { return values_.unordered(); }
+    void clear() {
+        bbox_ = None;
+        node_id_ = 0;
+        values_.clear();
+        nodes_.clear();
+        garbage_.clear();
+        root_ = next_node(None, grid_max, {});
+    }
 
     struct Debug {
         static std::ostream &indented(const U64 n) {
@@ -274,7 +286,7 @@ private:
 
         bool skip_value(Work &current) {
             auto &value = current.value();
-            return visited.count(value.id()) || !value.box().overlaps(box);
+            return visited.contains(value.id()) || !value.box().overlaps(box);
         }
 
         bool visit_next_pair(Work &current) {
@@ -417,16 +429,16 @@ private:
     static constexpr I64 grid_max = 0x1 << kGridExpMax;
 
 public:
-    class value_iterator : public abstract_iterator<Traversal::kValues, value_iterator> {
+    class window_iterator : public abstract_iterator<Traversal::kValues, window_iterator> {
     public:
-        using Parent = abstract_iterator<Traversal::kValues, value_iterator>;
+        using Parent = abstract_iterator<Traversal::kValues, window_iterator>;
         using value_type = Value;
         using pointer = Value *;
         using reference = Value &;
         using difference_type = std::ptrdiff_t;
         using iterator_category = std::input_iterator_tag;
 
-        value_iterator() = delete;
+        window_iterator() = delete;
 
         pure INLINE bool has_value() const { return !this->worklist.empty(); }
 
@@ -495,7 +507,7 @@ private:
 
     void balance(Node *node) {
         return_if(node->grid <= grid_min); // Can't further balance
-        for (auto &[pos, _] : node->map.unordered()) {
+        for (auto &[pos, _] : node->map.unordered_entries()) {
             balance_pos(node, pos);
         }
     }
@@ -548,7 +560,7 @@ private:
     }
 
     RTree &insert_over(const Value &value, const Box<N> &box, const U64 id, const bool is_new) {
-        bbox_ = bbox_ ? circumscribe(*bbox_, box) : box;
+        bbox_ = bbox_ ? bounding_box(*bbox_, box) : box;
         Value &value_entry = values_[id];
         if (is_new) {
             value_entry = value;
@@ -579,6 +591,7 @@ private:
     }
 
     Maybe<Box<N>> bbox_ = None;
+    U64 node_id_ = 0;
 
     // Nodes keep references to the values stored in the above map to avoid storing two copies of each value.
     // These references are guaranteed stable as long as the value itself is not removed from the map.
@@ -586,7 +599,6 @@ private:
     Map<U64, Value> values_;
 
     Map<U64, Node> nodes_;
-    U64 node_id_ = 0;
     Node *root_;
 
     // List of nodes to be removed

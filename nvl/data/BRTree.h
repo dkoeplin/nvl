@@ -1,13 +1,50 @@
 #pragma once
 
 #include "nvl/data/RTree.h"
-#include "nvl/geo/Edge.h"
+#include "nvl/geo/Box.h"
 #include "nvl/geo/View.h"
 #include "nvl/macros/Aliases.h"
 #include "nvl/traits/HasBox.h"
 #include "nvl/traits/HasID.h"
 
 namespace nvl {
+
+namespace brtree_detail {
+
+template <U64 N, typename Value, U64 kMaxEntries = 10, U64 kGridExpMin = 2, U64 kGridExpMax = 10>
+class BRTreeBorders {
+protected:
+    template <typename Entry>
+    using Tree = RTree<N, Entry, kMaxEntries, kGridExpMin, kGridExpMax>;
+
+    void mark_changed() { changed_ = true; }
+
+    Tree<Edge<N>> &get_borders() {
+        if (changed_) {
+            // Clear the borders
+            changed_ = false;
+            borders_.clear();
+
+            // Recompute borders across all values
+            for (const Value &value : values_.unordered()) {
+                for (const Edge<N> &border : value.box().borders()) {
+                    for (const Edge<N> &remain : border.diff(values_[border.box()])) {
+                        borders_.insert(remain);
+                    }
+                }
+            }
+        }
+        return borders_;
+    }
+
+    Tree<Value> values_;
+
+private:
+    bool changed_ = false;
+    Tree<Edge<N>> borders_;
+};
+
+} // namespace brtree_detail
 
 /**
  * @class BRTree
@@ -21,78 +58,100 @@ namespace nvl {
  */
 template <U64 N, typename Value, U64 kMaxEntries = 10, U64 kGridExpMin = 2, U64 kGridExpMax = 10>
     requires traits::HasBox<Value> && traits::HasID<Value>
-class BRTree {
+class BRTree : brtree_detail::BRTreeBorders<N, Value, kMaxEntries, kGridExpMin, kGridExpMax> {
 public:
     template <typename Entry>
-        requires traits::HasBox<Entry> && traits::HasID<Entry>
     using Tree = RTree<N, Entry, kMaxEntries, kGridExpMin, kGridExpMax>;
 
-    using value_iterator = typename Tree<Value>::value_iterator;
-
+    /// Provides an iterator which returns a View of each Value when dereferenced.
+    template <typename iterator, typename Entry>
     class view_iterator {
     public:
-        using value_type = View<N, Value>;
-        using pointer = View<N, Value> *;
-        using reference = View<N, Value> &;
+        using value_type = View<N, Entry>;
+        using pointer = View<N, Entry> *;
+        using reference = View<N, Entry> &;
         using difference_type = std::ptrdiff_t;
         using iterator_category = std::input_iterator_tag;
 
-        static view_iterator begin(const Range<value_iterator> &range, const Pos<N> &offset) {
+        static view_iterator begin(const Range<iterator> &range, const Pos<N> &offset) {
             return view_iterator(range.begin(), offset);
         }
-        static view_iterator end(const Range<value_iterator> &range, const Pos<N> &offset) {
+        static view_iterator end(const Range<iterator> &range, const Pos<N> &offset) {
             return view_iterator(range.end(), offset);
         }
 
-        pointer operator->() { return &value_.value(); }
-        reference operator*() { return value_.value(); }
+        pointer operator->() { return &value(); }
+        reference operator*() { return value(); }
 
         view_iterator &operator++() {
             ++iter_;
-            value_ = iter_.has_value() ? Some(View<N, Value>(*iter_, offset_)) : None;
+            value_ = None;
             return *this;
         }
 
-        pure bool operator==(const view_iterator &rhs) { return iter_ == rhs.iter_; }
-        pure bool operator!=(const view_iterator &rhs) { return iter_ != rhs.iter_; }
+        pure bool operator==(const view_iterator &rhs) const { return iter_ == rhs.iter_; }
+        pure bool operator!=(const view_iterator &rhs) const { return iter_ != rhs.iter_; }
 
     private:
-        explicit view_iterator(value_iterator iter, const Pos<N> &offset) : iter_(iter), offset_(offset) {
-            value_ = iter_.has_value() ? Some(View<N, Value>(*iter_, offset_)) : None;
+        explicit view_iterator(iterator iter, const Pos<N> &offset) : iter_(iter), offset_(offset) {}
+
+        View<N, Entry> &value() {
+            // Views are lazily created to avoid dereferencing an end/empty iterator.
+            if (!value_.has_value()) {
+                value_ = Some(View<N, Entry>(*iter_, offset_));
+            }
+            return value_.value();
         }
-        value_iterator iter_;
-        Maybe<View<N, Value>> value_ = None;
+
+        iterator iter_;
+        Maybe<View<N, Entry>> value_ = None;
         Pos<N> offset_;
     };
 
+    using window_iterator = view_iterator<typename Tree<Value>::window_iterator, Value>;
+    using value_iterator = view_iterator<typename Tree<Value>::value_iterator, Value>;
+    using border_iterator = view_iterator<typename Tree<Edge<N>>::value_iterator, Edge<N>>;
+
     BRTree() = default;
 
-    pure Range<view_iterator> operator[](const Pos<N> &pos) { return Range<view_iterator>(values_[pos - loc], loc); }
-    pure Range<view_iterator> operator[](const Box<N> &box) { return Range<view_iterator>(values_[box - loc], loc); }
+    pure Range<window_iterator> operator[](const Pos<N> &pos) {
+        return Range<window_iterator>(this->values_[pos - loc], loc);
+    }
+    pure Range<window_iterator> operator[](const Box<N> &box) {
+        return Range<window_iterator>(this->values_[box - loc], loc);
+    }
+
+    /// Returns an unordered Range for iteration over all values in this tree.
+    /// Values are returned as View<N, Value>, where the view is with respect to this tree's global offset.
+    pure Range<value_iterator> unordered() const { return Range<value_iterator>(this->values_.unordered(), loc); }
+
+    /// Returns an unordered Range for iteration over all borders in this tree.
+    /// Borders are returned as View<N, Edge<N>>, where the view is with respect to this tree's global offset.
+    pure Range<border_iterator> borders() { return Range<border_iterator>(this->get_borders().unordered(), loc); }
 
     BRTree &insert(const Value &value) {
-        values_.insert(value);
-        changed_ = true;
+        this->values_.insert(value);
+        this->mark_changed();
         return *this;
     }
 
     BRTree &remove(const Value &value) {
-        values_.remove(value);
-        changed_ = true;
+        this->values_.remove(value);
+        this->mark_changed();
         return *this;
     }
 
     /// Returns the bounding box over all values in this tree.
-    pure Box<N> bbox() const { return values_.bbox() + loc; }
+    pure Box<N> bbox() const { return this->values_.bbox() + loc; }
 
     /// Returns the shape of the bounding box over all values in this tree.
-    pure Pos<N> shape() const { return values_.shape(); }
+    pure Pos<N> shape() const { return this->values_.shape(); }
 
     /// Returns the current number of values in this tree.
-    pure U64 size() const { return values_.size(); }
+    pure U64 size() const { return this->values_.size(); }
 
     /// Returns true if this tree is empty.
-    pure bool empty() const { return values_.empty(); }
+    pure bool empty() const { return this->values_.empty(); }
 
     struct Debug {
         explicit Debug(BRTree &tree) : tree(tree) {}
@@ -108,16 +167,28 @@ public:
         BRTree &tree;
     } debug = Debug(*this);
 
+    struct Viewed {
+        using window_iterator = typename Tree<Value>::window_iterator;
+        using value_iterator = typename Tree<Value>::value_iterator;
+        using border_iterator = typename Tree<Edge<N>>::value_iterator;
+
+        explicit Viewed(BRTree &tree) : tree(tree) {}
+
+        pure Range<window_iterator> operator[](const Pos<N> &pos) { return tree.values_[pos]; }
+        pure Range<window_iterator> operator[](const Box<N> &box) { return tree.values_[box]; }
+
+        pure Range<value_iterator> unordered() const { return tree.values_.unordered(); }
+
+        pure Range<border_iterator> borders() const { return tree.get_borders().unordered(); }
+
+        BRTree &tree;
+    } view = Viewed(*this);
+
     Pos<N> loc = Pos<N>::fill(0);
 
 private:
     friend struct Debug;
-
-    void update() {}
-
-    bool changed_ = false;
-    Tree<Value> values_;
-    Tree<Edge<N>> borders_;
+    friend struct Viewed;
 };
 
 } // namespace nvl

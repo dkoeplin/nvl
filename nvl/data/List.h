@@ -2,7 +2,7 @@
 
 #include <vector>
 
-#include "nvl/data/Maybe.h"
+#include "nvl/data/Range.h"
 #include "nvl/data/Ref.h"
 #include "nvl/macros/Pure.h"
 
@@ -10,38 +10,43 @@ namespace nvl {
 
 template <typename Value>
 class List : std::vector<Value> {
-  public:
+public:
     using parent = std::vector<Value>;
-    using value_type = typename std::vector<Value>::value_type;
-    using iterator = typename std::vector<Value>::iterator;
-    using const_iterator = typename std::vector<Value>::const_iterator;
-    using reverse_iterator = typename std::vector<Value>::reverse_iterator;
-    using const_reverse_iterator = typename std::vector<Value>::const_reverse_iterator;
+    using value_type = typename parent::value_type;
+    using iterator = typename parent::iterator;
+    using const_iterator = typename parent::const_iterator;
+    using reverse_iterator = typename parent::reverse_iterator;
+    using const_reverse_iterator = typename parent::const_reverse_iterator;
 
     using parent::parent;
     List() = default;
 
-    pure bool operator==(const List &other) const {
-        return size() == other.size() && std::equal(begin(), end(), other.begin());
+    template <typename Iterator>
+        requires std::same_as<typename Iterator::value_type, Value>
+    explicit List(const Range<Iterator> &range)
+        : List<typename Range<Iterator>::value_type>(range.begin(), range.end()) {}
+
+    pure bool operator==(const List &rhs) const {
+        return size() == rhs.size() && std::equal(begin(), end(), rhs.begin());
     }
     pure bool operator!=(const List &other) const { return !(*this == other); }
 
-    using std::vector<Value>::begin;
-    using std::vector<Value>::end;
-    using std::vector<Value>::rbegin;
-    using std::vector<Value>::rend;
-    using std::vector<Value>::cbegin;
-    using std::vector<Value>::cend;
+    using parent::begin;
+    using parent::cbegin;
+    using parent::cend;
+    using parent::end;
+    using parent::rbegin;
+    using parent::rend;
 
-    using std::vector<Value>::operator[];
-    using std::vector<Value>::at;
-    using std::vector<Value>::back;
-    using std::vector<Value>::emplace_back;
-    using std::vector<Value>::empty;
-    using std::vector<Value>::front;
-    using std::vector<Value>::push_back;
-    using std::vector<Value>::pop_back;
-    using std::vector<Value>::size;
+    using parent::operator[];
+    using parent::at;
+    using parent::back;
+    using parent::emplace_back;
+    using parent::empty;
+    using parent::front;
+    using parent::pop_back;
+    using parent::push_back;
+    using parent::size;
 
     pure const Value *get_back() const { return empty() ? nullptr : &back(); }
 
@@ -58,7 +63,7 @@ class List : std::vector<Value> {
 
     void clear() { parent::clear(); }
 
-  private:
+private:
     using std::vector<Value>::insert;
 };
 

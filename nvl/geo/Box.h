@@ -7,16 +7,19 @@
 #include "nvl/data/List.h"
 #include "nvl/data/Maybe.h"
 #include "nvl/enum/Dir.h"
-#include "nvl/geo/Edge.h"
 #include "nvl/geo/Pos.h"
 #include "nvl/macros/Aliases.h"
 #include "nvl/macros/Pure.h"
+#include "nvl/traits/HasBox.h"
 
 namespace nvl {
 
 template <U64 N>
+class Edge;
+
+template <U64 N>
 class Box {
-  public:
+public:
     static constexpr Box presorted(const Pos<N> &min, const Pos<N> &max) {
         Box box;
         box.min = min;
@@ -40,7 +43,7 @@ class Box {
     static Box unit(const Pos<N> &pt) { return Box::presorted(pt, pt); }
 
     class pos_iterator {
-      public:
+    public:
         using value_type = Pos<N>;
         using pointer = Pos<N> *;
         using reference = Pos<N> &;
@@ -77,7 +80,7 @@ class Box {
         }
         pure bool operator!=(const pos_iterator &rhs) const { return !(*this == rhs); }
 
-      private:
+    private:
         explicit pos_iterator(const Box &box, const Maybe<Pos<N>> &pos, const Pos<N> &step)
             : box_(box), pos_(pos), step_(step) {
             for (U64 i = 0; i < N; i++) {
@@ -92,7 +95,7 @@ class Box {
     };
 
     class box_iterator {
-      public:
+    public:
         using value_type = Box;
         using pointer = Box *;
         using reference = Box &;
@@ -135,7 +138,7 @@ class Box {
         }
         pure bool operator!=(const box_iterator &rhs) const { return !(*this == rhs); }
 
-      private:
+    private:
         explicit box_iterator(const Box &box, const Maybe<Box> &cur, const Pos<N> &shape)
             : box_(box), current_(cur), shape_(shape) {
             for (U64 i = 0; i < N; i++) {
@@ -198,8 +201,8 @@ class Box {
     pure Range<box_iterator> box_iter(const Pos<N> &shape) const { return Range<box_iterator>(*this, shape); }
 
     /// Provides iteration over all points in this box.
-    pure pos_iterator begin() const { return pos_iterator::begin(*this); }
-    pure pos_iterator end() const { return pos_iterator::end(*this); }
+    pure pos_iterator begin() const { return pos_iterator::begin(*this, Pos<N>::fill(1)); }
+    pure pos_iterator end() const { return pos_iterator::end(*this, Pos<N>::fill(1)); }
 
     pure bool operator==(const Box &rhs) const { return min == rhs.min && max == rhs.max; }
     pure bool operator!=(const Box &rhs) const { return !(*this == rhs); }
@@ -240,38 +243,29 @@ class Box {
         return result;
     }
 
-    pure List<Box> diff(const List<Box> &boxes) const {
+    template <typename Iterator>
+        requires traits::HasBox<typename Iterator::value_type>
+    pure List<Box> diff(const Range<Iterator> &range) const {
         List<Box> result{*this};
-        for (const Box &rhs : boxes) {
+        for (const auto &value : range) {
             List<Box> next;
             for (const Box &lhs : result) {
-                lhs.push_diff(next, rhs);
+                lhs.push_diff(next, value.box());
             }
             result = next;
         }
         return result;
     }
 
-    pure List<Edge<N>> edges(const I64 width = 1) const { return borders(-width, 0); }
-
-    pure List<Edge<N>> borders(const I64 width = 1, const I64 dist = 1) const {
-        List<Edge<N>> result;
-        for (U64 i = 0; i < N; ++i) {
-            for (const auto &dir : Dir::list) {
-                result.push_back(border(i, dir, width, dist));
-            }
-        }
-        return result;
+    pure List<Box> diff(const List<Box> &boxes) const {
+        return diff(Range<typename List<Box>::const_iterator>(boxes.begin(), boxes.end()));
     }
 
-    pure Edge<N> border(const U64 dim, const Dir dir, const I64 width = 1, const I64 dist = 1) const {
-        auto unit = Pos<N>::unit(dim);
-        auto inner = unit * dist;
-        auto outer = unit * (width - 1);
-        auto border_min = (dir == Dir::Neg) ? min - outer : min.with(dim, max[dim]);
-        auto border_max = (dir == Dir::Neg) ? max.with(dim, min[dim]) : max + outer;
-        return Edge<N>(dim, dir, Box::presorted(border_min, border_max));
-    }
+    pure List<Edge<N>> edges(I64 width = 1) const;
+
+    pure List<Edge<N>> borders(I64 width = 1, I64 dist = 1) const;
+
+    pure Edge<N> border(U64 dim, Dir dir, I64 width = 1, I64 dist = 1) const;
 
     pure std::string to_string() const {
         std::stringstream ss;
@@ -279,10 +273,12 @@ class Box {
         return ss.str();
     }
 
+    const Box &box() const { return *this; }
+
     Pos<N> min;
     Pos<N> max;
 
-  private:
+private:
     friend class pos_iterator;
 
     // TODO: This is currently O(N^2), could be 2*N?
@@ -309,7 +305,68 @@ class Box {
 };
 
 template <U64 N>
+class Edge {
+public:
+    Edge() = default;
+    explicit Edge(const U64 dim, const Dir dir, const Box<N> &box) : dim_(dim), dir_(dir), box_(box) {}
+
+    pure List<Edge> diff(const Box<N> &rhs) const {
+        List<Edge> result;
+        for (const auto &b : box_.diff(rhs)) {
+            result.emplace_back(dim_, dir_, b);
+        }
+        return result;
+    }
+
+    template <typename Iterator>
+        requires traits::HasBox<typename Iterator::value_type>
+    pure List<Edge> diff(const Range<Iterator> &range) const {
+        List<Edge> result;
+        for (const auto &b : box_.diff(range)) {
+            result.emplace_back(dim_, dir_, b);
+        }
+        return result;
+    }
+
+    pure U64 thickness() const { return box_.shape(dim_); }
+
+    pure U64 id() const { return (U64)(this); }
+    pure const Box<N> &box() const { return box_; }
+
+private:
+    U64 dim_ = 0;
+    Dir dir_;
+    Box<N> box_;
+};
+
+template <U64 N>
 constexpr Box<N> Box<N>::kUnitBox = Box(Pos<N>::fill(-1), Pos<N>::fill(1));
+
+template <U64 N>
+List<Edge<N>> Box<N>::edges(const I64 width) const {
+    return borders(-width, 0);
+}
+
+template <U64 N>
+List<Edge<N>> Box<N>::borders(const I64 width, const I64 dist) const {
+    List<Edge<N>> result;
+    for (U64 i = 0; i < N; ++i) {
+        for (const auto &dir : Dir::list) {
+            result.push_back(border(i, dir, width, dist));
+        }
+    }
+    return result;
+}
+
+template <U64 N>
+Edge<N> Box<N>::border(const U64 dim, const Dir dir, const I64 width, const I64 dist) const {
+    auto unit = Pos<N>::unit(dim);
+    auto inner = unit * dist;
+    auto outer = unit * (width - 1);
+    auto border_min = (dir == Dir::Neg) ? min - outer - inner : min.with(dim, max[dim]) + inner;
+    auto border_max = (dir == Dir::Neg) ? max.with(dim, min[dim]) - inner : max + outer + inner;
+    return Edge<N>(dim, dir, Box::presorted(border_min, border_max));
+}
 
 template <U64 N>
 Box<N> operator*(I64 a, const Box<N> &b) {
@@ -332,7 +389,7 @@ std::ostream &operator<<(std::ostream &os, const Box<N> &box) {
 /// Returns the minimal Box which includes all of both Box `a` and `b`.
 /// Note that the resulting area may be larger than the sum of the two areas.
 template <U64 N>
-pure Box<N> circumscribe(const Box<N> &a, const Box<N> &b) {
+pure Box<N> bounding_box(const Box<N> &a, const Box<N> &b) {
     // presorted is sufficient here since already taking the min/max across both
     return Box<N>::presorted(min(a.min, b.min), max(a.max, b.max));
 }
@@ -342,4 +399,9 @@ pure Box<N> circumscribe(const Box<N> &a, const Box<N> &b) {
 template <U64 N>
 struct std::hash<nvl::Box<N>> {
     pure U64 operator()(const nvl::Box<N> &a) const { return nvl::sip_hash(a); }
+};
+
+template <U64 N>
+struct std::hash<nvl::Edge<N>> {
+    pure U64 operator()(const nvl::Edge<N> &a) const { return nvl::sip_hash(a); }
 };

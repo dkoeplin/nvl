@@ -8,7 +8,6 @@
 
 namespace {
 
-using testing::ElementsAre;
 using testing::IsEmpty;
 using testing::UnorderedElementsAre;
 
@@ -58,7 +57,7 @@ TEST(TestRTree, subdivide) {
     EXPECT_EQ(tree.debug.collect_ids(), expected);
 
     // Check that we find all values when iterating over the bounding box, but each value is returned exactly once.
-    const auto elements = tree[tree.bbox()].list();
+    const List<LabeledBox> elements(tree[tree.bbox()]);
     EXPECT_THAT(elements, UnorderedElementsAre(b0, b1, b2));
 }
 
@@ -83,9 +82,9 @@ TEST(TestRTree, bracket_operator) {
     for (const auto &box : tree[range]) {
         ids.insert(box.id());
     }
-    for (const auto &[id, box] : tree.unordered()) {
+    for (const auto &box : tree.unordered()) {
         if (box.box().overlaps(range)) {
-            EXPECT_TRUE(ids.contains(id));
+            EXPECT_TRUE(ids.contains(box.id()));
         }
     }
 }
@@ -104,7 +103,7 @@ TEST(TestRTree, keep_buckets_after_subdivide) {
     box[9] = Box<2>({599, 375}, {647, 415}) + Pos<2>(0, 41);
 
     RTree<2, LabeledBox, /*max_entries*/ 9> tree;
-    for (auto [id, x] : box.unordered()) {
+    for (auto &[id, x] : box.unordered_entries()) {
         tree.insert({id, x});
     }
 
@@ -134,13 +133,13 @@ TEST(TestRTree, fetch) {
     tree.insert(a);
     tree.insert(b);
 
-    const auto range0 = tree[{{0, -300}, {1024, 1000}}];
-    const auto range1 = tree[{{0, 0}, {100, 100}}];
-    const auto range2 = tree[{{0, 885}, {100, 886}}];
+    const List<LabeledBox> range0(tree[{{0, -300}, {1024, 1000}}]);
+    const List<LabeledBox> range1(tree[{{0, 0}, {100, 100}}]);
+    const List<LabeledBox> range2(tree[{{0, 885}, {100, 886}}]);
 
-    EXPECT_THAT(range0.list(), UnorderedElementsAre(a, b));
-    EXPECT_THAT(range1.list(), IsEmpty());
-    EXPECT_THAT(range2.list(), UnorderedElementsAre(a));
+    EXPECT_THAT(range0, UnorderedElementsAre(a, b));
+    EXPECT_THAT(range1, IsEmpty());
+    EXPECT_THAT(range2, UnorderedElementsAre(a));
 }
 
 } // namespace

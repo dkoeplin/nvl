@@ -1,7 +1,6 @@
 #pragma once
 
 #include "nvl/data/IteratorPair.h"
-#include "nvl/data/List.h"
 #include "nvl/data/Once.h"
 #include "nvl/macros/Pure.h"
 
@@ -34,9 +33,6 @@ public:
 
     /// Returns a copy of this Range as a single iteration Once range.
     pure Once<Iterator> once() const { return Once<Iterator>(this->begin(), this->end()); }
-
-    /// Returns a copy of the elements in this Range in a List.
-    pure List<value_type> list() const { return List<value_type>(this->begin(), this->end()); }
 };
 
 template <typename Iterator>
