@@ -2,10 +2,10 @@
 
 #include <functional>
 
+#include "Dir.h"
 #include "nvl/data/List.h"
 #include "nvl/data/Maybe.h"
 #include "nvl/data/Range.h"
-#include "nvl/enum/Dir.h"
 #include "nvl/geo/Pos.h"
 #include "nvl/macros/Aliases.h"
 #include "nvl/macros/Pure.h"

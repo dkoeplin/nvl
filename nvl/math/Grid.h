@@ -10,7 +10,7 @@ namespace nvl {
 /// For example, with a grid size of 10, the grids are [-20, -11], [-10, -1], [0, 9], [10, 19], [20, 29], and so on.
 
 /// Returns the closest integer grid maximum to `a` for a grid with size of `g`.
-pure expand I64 grid_max(const I64 a, const I64 g) { return ((a < 0 ? a : (a + g)) / g) * g - 1; }
+pure expand I64 grid_max(const I64 a, const I64 g) { return ((a < 0 ? (a + 1) : (a + g)) / g) * g - 1; }
 
 /// Returns the closest integer grid minimum to `a` for a grid with size of `b`.
 pure expand I64 grid_min(const I64 a, const I64 g) { return ((a < 0 ? (a - g + 1) : a) / g) * g; }

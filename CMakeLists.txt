@@ -34,7 +34,7 @@ add_library(nvl SHARED
         nvl/data/SetVector.h
         nvl/data/SipHash.h
         nvl/data/SipHash.cpp
-        nvl/enum/Dir.h
+        nvl/geo/Dir.h
         nvl/geo/Box.h
         nvl/geo/BRTree.h
         nvl/geo/Pos.h
@@ -46,8 +46,13 @@ add_library(nvl SHARED
         nvl/macros/Expand.h
         nvl/macros/Pure.h
         nvl/macros/ReturnIf.h
+        nvl/macros/Unreachable.h
         nvl/math/Bitwise.h
+        nvl/math/Distribution.h
         nvl/math/Grid.h
+        nvl/math/Random.h
+        nvl/time/Duration.h
+        nvl/time/TimeScale.h
         nvl/traits/HasBox.h
         nvl/traits/HasDereference.h
         nvl/traits/HasID.h

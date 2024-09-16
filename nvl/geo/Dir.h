@@ -1,7 +1,7 @@
 #pragma once
 
-#include "nvl/macros/Aliases.h"
-#include "nvl/macros/Pure.h"
+#include "../macros/Aliases.h"
+#include "../macros/Pure.h"
 
 namespace nvl {
 
