@@ -3,6 +3,6 @@
 namespace nvl::traits {
 
 template <typename T>
-concept HasBox = requires(T a) { a.box(); };
+concept HasBBox = requires(T a) { a.bbox(); };
 
 } // namespace nvl::traits

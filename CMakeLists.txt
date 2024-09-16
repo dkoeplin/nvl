@@ -53,7 +53,7 @@ add_library(nvl SHARED
         nvl/math/Random.h
         nvl/time/Duration.h
         nvl/time/TimeScale.h
-        nvl/traits/HasBox.h
+        nvl/traits/HasBBox.h
         nvl/traits/HasDereference.h
         nvl/traits/HasID.h
 )

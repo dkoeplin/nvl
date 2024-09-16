@@ -155,7 +155,7 @@ TEST(TestPos, grid_max) {
 }
 
 TEST(TestPos, grid_min) {
-    EXPECT_EQ(Pos<2>(0, 9).grid_min({10, 10}), Pos<2>(0, 10));
+    EXPECT_EQ(Pos<2>(0, 9).grid_min({10, 10}), Pos<2>(0, 0));
     EXPECT_EQ(Pos<2>(0, -9).grid_min({10, 10}), Pos<2>(0, -10));
 }
 

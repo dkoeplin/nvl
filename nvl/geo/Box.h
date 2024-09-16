@@ -9,7 +9,7 @@
 #include "nvl/geo/Pos.h"
 #include "nvl/macros/Aliases.h"
 #include "nvl/macros/Pure.h"
-#include "nvl/traits/HasBox.h"
+#include "nvl/traits/HasBBox.h"
 
 namespace nvl {
 
@@ -243,13 +243,13 @@ public:
     }
 
     template <typename Iterator>
-        requires traits::HasBox<typename Iterator::value_type>
+        requires traits::HasBBox<typename Iterator::value_type>
     pure List<Box> diff(const Range<Iterator> &range) const {
         List<Box> result{*this};
         for (const auto &value : range) {
             List<Box> next;
             for (const Box &lhs : result) {
-                lhs.push_diff(next, value.box());
+                lhs.push_diff(next, value.bbox());
             }
             result = next;
         }
@@ -272,7 +272,7 @@ public:
         return ss.str();
     }
 
-    const Box &box() const { return *this; }
+    const Box &bbox() const { return *this; }
 
     Pos<N> min;
     Pos<N> max;
@@ -318,7 +318,7 @@ public:
     }
 
     template <typename Iterator>
-        requires traits::HasBox<typename Iterator::value_type>
+        requires traits::HasBBox<typename Iterator::value_type>
     pure List<Edge> diff(const Range<Iterator> &range) const {
         List<Edge> result;
         for (const auto &b : box_.diff(range)) {
@@ -335,7 +335,7 @@ public:
     pure U64 id() const { return (U64)(this); }
     pure U64 dim() const { return dim_; }
     pure Dir dir() const { return dir_; }
-    pure const Box<N> &box() const { return box_; }
+    pure const Box<N> &bbox() const { return box_; }
 
 private:
     U64 dim_ = 0;
@@ -392,7 +392,7 @@ std::ostream &operator<<(std::ostream &os, const Box<N> &box) {
 
 template <U64 N>
 std::ostream &operator<<(std::ostream &os, const Edge<N> &edge) {
-    return os << "Edge(" << edge.dim() << ", " << edge.dir() << ", " << edge.box() << ")";
+    return os << "Edge(" << edge.dim() << ", " << edge.dir() << ", " << edge.bbox() << ")";
 }
 
 /// Returns the minimal Box which includes all of both Box `a` and `b`.

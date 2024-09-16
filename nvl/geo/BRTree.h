@@ -1,10 +1,10 @@
 #pragma once
 
-#include "nvl/geo/RTree.h"
 #include "nvl/geo/Box.h"
+#include "nvl/geo/RTree.h"
 #include "nvl/geo/View.h"
 #include "nvl/macros/Aliases.h"
-#include "nvl/traits/HasBox.h"
+#include "nvl/traits/HasBBox.h"
 #include "nvl/traits/HasID.h"
 
 namespace nvl {
@@ -27,8 +27,8 @@ protected:
 
             // Recompute borders across all values
             for (const Value &value : values_.unordered()) {
-                for (const Edge<N> &border : value.box().borders()) {
-                    for (const Edge<N> &remain : border.diff(values_[border.box()])) {
+                for (const Edge<N> &border : value.bbox().borders()) {
+                    for (const Edge<N> &remain : border.diff(values_[border.bbox()])) {
                         borders_.insert(remain);
                     }
                 }
@@ -57,7 +57,7 @@ private:
  * @tparam kGridExpMax Initial grid size of the root. (2 ^ root_grid_exp). Defaults to 10.
  */
 template <U64 N, typename Value, U64 kMaxEntries = 10, U64 kGridExpMin = 2, U64 kGridExpMax = 10>
-    requires traits::HasBox<Value> && traits::HasID<Value>
+    requires traits::HasBBox<Value> && traits::HasID<Value>
 class BRTree : brtree_detail::BRTreeBorders<N, Value, kMaxEntries, kGridExpMin, kGridExpMax> {
 public:
     template <typename Entry>

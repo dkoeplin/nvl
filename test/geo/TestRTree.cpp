@@ -83,7 +83,7 @@ TEST(TestRTree, bracket_operator) {
         ids.insert(box.id());
     }
     for (const auto &box : tree.unordered()) {
-        if (box.box().overlaps(range)) {
+        if (box.bbox().overlaps(range)) {
             EXPECT_TRUE(ids.contains(box.id()));
         }
     }

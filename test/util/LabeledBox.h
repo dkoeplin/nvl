@@ -16,7 +16,7 @@ public:
     LabeledBox operator+(const Pos<2> &offset) const { return {id_, box_ + offset}; }
 
     pure U64 id() const { return id_; }
-    pure const Box<2> &box() const { return box_; }
+    pure const Box<2> &bbox() const { return box_; }
 
 private:
     U64 id_;
@@ -24,7 +24,7 @@ private:
 };
 
 inline std::ostream &operator<<(std::ostream &os, const LabeledBox &v) {
-    return os << "BOX(" << v.id() << ": " << v.box() << ")";
+    return os << "BOX(" << v.id() << ": " << v.bbox() << ")";
 }
 
 } // namespace nvl::testing

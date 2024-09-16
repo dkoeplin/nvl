@@ -61,7 +61,7 @@ Set<View<2, Edge<2>>> view(List<Edge<2>> &list, const Pos<2> &offset) {
 TEST(TestBRTree, borders) {
     BRTree<2, LabeledBox> tree;
     LabeledBox box{1, {{0, 0}, {32, 32}}};
-    List<Edge<2>> borders = box.box().borders();
+    List<Edge<2>> borders = box.bbox().borders();
 
     tree.insert(box);
     const Set<View<2, Edge<2>>> borders0(tree.borders());

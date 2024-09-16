@@ -11,7 +11,7 @@
 #include "nvl/macros/Aliases.h"
 #include "nvl/macros/ReturnIf.h"
 #include "nvl/math/Bitwise.h"
-#include "nvl/traits/HasBox.h"
+#include "nvl/traits/HasBBox.h"
 #include "nvl/traits/HasID.h"
 
 namespace nvl {
@@ -96,7 +96,7 @@ struct Work {
  * @tparam kGridExpMax Initial grid size of the root. (2 ^ root_grid_exp). Defaults to 10.
  */
 template <U64 N, typename Value, U64 kMaxEntries = 10, U64 kGridExpMin = 2, U64 kGridExpMax = 10>
-    requires traits::HasBox<Value> && traits::HasID<Value>
+    requires traits::HasBBox<Value> && traits::HasID<Value>
 class RTree {
     friend struct Debug;
     using Work = rtree_detail::Work<N, Value>;
@@ -115,13 +115,13 @@ public:
     }
 
     /// Inserts the value into the tree.
-    RTree &insert(const Value &value) { return insert_over(value, value.box(), value.id(), true); }
+    RTree &insert(const Value &value) { return insert_over(value, value.bbox(), value.id(), true); }
 
     /// Removes the value from the tree.
-    RTree &remove(const Value &value) { return remove_over(value.box(), value.id(), true); }
+    RTree &remove(const Value &value) { return remove_over(value.bbox(), value.id(), true); }
 
     /// Registers a value as having moved from the previous volume `prev` to its current volume.
-    RTree &move(const Value &value, const Box<N> &prev) { return move(value.box(), value.id(), prev); }
+    RTree &move(const Value &value, const Box<N> &prev) { return move(value.bbox(), value.id(), prev); }
 
     /// Returns an iterator over all unique stored values in the given volume.
     pure Range<window_iterator> operator[](const Pos<N> &pos) {
@@ -286,7 +286,7 @@ private:
 
         bool skip_value(Work &current) {
             auto &value = current.value();
-            return visited.contains(value.id()) || !value.box().overlaps(box);
+            return visited.contains(value.id()) || !value.bbox().overlaps(box);
         }
 
         bool visit_next_pair(Work &current) {
@@ -467,7 +467,7 @@ private:
         node->id = id;
         node->grid = grid;
         for (const Ref<Value> value : values) {
-            const Box<N> &value_box = value->box();
+            const Box<N> &value_box = value->bbox();
             Range<typename Box<N>::box_iterator> points; // empty iterable to start with
             if (parent.has_value()) {
                 if (const Maybe<Box<N>> intersection = value_box.intersect(parent->box)) {

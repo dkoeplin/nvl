@@ -4,7 +4,7 @@
 #include "nvl/geo/Box.h"
 #include "nvl/macros/Aliases.h"
 #include "nvl/macros/Pure.h"
-#include "nvl/traits/HasBox.h"
+#include "nvl/traits/HasBBox.h"
 #include "nvl/traits/HasID.h"
 
 namespace nvl {
@@ -19,7 +19,7 @@ namespace nvl {
  * @tparam Value Value type being stored.
  */
 template <U64 N, typename Value>
-    requires traits::HasBox<Value> && traits::HasID<Value>
+    requires traits::HasBBox<Value> && traits::HasID<Value>
 class View {
 public:
     explicit View(Value &value, const Pos<N> &offset) : value_(value), offset_(offset) {}
@@ -30,7 +30,7 @@ public:
     const Value *operator->() const { return &value_.raw(); }
     const Value &operator*() const { return value_.raw(); }
 
-    pure Box<N> box() const { return value_.box() + offset_; }
+    pure Box<N> bbox() const { return value_.bbox() + offset_; }
     pure U64 id() const { return value_.id(); }
 
     pure const Pos<N> &offset() const { return offset_; }
