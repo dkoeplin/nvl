@@ -1,12 +1,16 @@
 #pragma once
 
-#include <string>
+#include <string_view>
 
 #include "nvl/macros/Implicit.h"
 #include "nvl/macros/Pure.h"
 
 namespace nvl {
 
+/**
+ * @struct TimeScale
+ * @brief An enum representing various time scales (nanoseconds to days).
+ */
 struct TimeScale {
     enum Value { kNanoseconds, kMicroseconds, kMilliseconds, kSeconds, kMinutes, kHours, kDays, kNScales };
 

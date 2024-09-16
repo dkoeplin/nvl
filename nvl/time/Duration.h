@@ -5,6 +5,10 @@
 
 namespace nvl {
 
+/**
+ * @class Duration
+ * @brief Represents a duration of time in nanoseconds.
+ */
 class Duration {
 public:
     template <typename Duration>
