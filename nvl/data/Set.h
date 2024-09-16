@@ -46,7 +46,7 @@ public:
 
 template <typename Value, typename Hash>
 std::ostream &operator<<(std::ostream &os, const Set<Value, Hash> &set) {
-    return os << Range(set.begin(), set.end());
+    return os << Range<typename Set<Value, Hash>::const_iterator>(set.begin(), set.end());
 }
 
 } // namespace nvl
