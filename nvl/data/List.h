@@ -68,7 +68,7 @@ private:
 
 template <typename Value>
 std::ostream &operator<<(std::ostream &os, const List<Value> &list) {
-    return os << Range(list.begin(), list.end());
+    return os << Range<typename List<Value>::const_iterator>(list.begin(), list.end());
 }
 
 } // namespace nvl

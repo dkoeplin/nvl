@@ -280,11 +280,36 @@ public:
 private:
     friend class pos_iterator;
 
-    // TODO: This is currently O(N^2), could be 2*N?
     void push_diff(List<Box> &result, const Box &rhs) const {
-        if (const Maybe<Box> intersect = this->intersect(rhs)) {
+        const Maybe<Box> intersect = this->intersect(rhs);
+        if (intersect.has_value()) {
             const Box &both = *intersect;
-            for (const auto &pos : kUnitBox) {
+            for (U64 i = 0; i < N; ++i) {
+                for (const Dir dir : Dir::list) {
+                    Pos<N> rmin;
+                    Pos<N> rmax;
+                    for (U64 d = 0; d < N; ++d) {
+                        if (i == d) {
+                            rmin[d] = (dir == Dir::Neg) ? min[d] : both.max[d] + 1;
+                            rmax[d] = (dir == Dir::Neg) ? both.min[d] - 1 : max[d];
+                        } else if (d > i) {
+                            rmin[d] = min[d];
+                            rmax[d] = max[d];
+                        } else {
+                            rmin[d] = both.min[d];
+                            rmax[d] = both.max[d];
+                        }
+                        //  rmin[d] = (i != d || dir == Dir::Neg) ? (d > i ? min[d] : both.min[d] - 1) : both.max[d] +
+                        //  1; rmax[d] = (i != d || dir == Dir::Pos) ? (d > i ? max[d] : both.max[d] + 1) : both.min[d]
+                        //  - 1;
+                    }
+                    const Maybe<Box> box = Box::get(rmin, rmax);
+                    if (box.has_value()) {
+                        result.push_back(*box);
+                    }
+                }
+            }
+            /*for (const auto &pos : kUnitBox) {
                 if (pos != Pos<N>::zero()) {
                     Pos<N> result_min;
                     Pos<N> result_max;
@@ -296,7 +321,7 @@ private:
                         result.push_back(*box);
                     }
                 }
-            }
+            }*/
         } else {
             result.push_back(*this);
         }

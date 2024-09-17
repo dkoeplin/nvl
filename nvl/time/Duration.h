@@ -25,14 +25,15 @@ public:
     pure std::string to_string() const {
         TimeScale scale = TimeScale::kNanoseconds;
         U64 time = nanos_;
-        double divisor = 1;
+        U64 divisor = 1;
         while (scale < TimeScale::kNScales - 1 && time > TimeScale::divisors[scale]) {
+            const U64 factor = TimeScale::divisors[scale];
             scale = TimeScale(static_cast<TimeScale::Value>(scale.value + 1));
-            divisor *= static_cast<double>(TimeScale::divisors[scale]);
-            time /= TimeScale::divisors[scale];
+            divisor *= factor;
+            time /= factor;
         }
         std::stringstream ss;
-        ss << (nanos_ / divisor) << " " << scale;
+        ss << (static_cast<double>(nanos_) / static_cast<double>(divisor)) << " " << scale;
         return ss.str();
     }
 

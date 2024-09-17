@@ -20,7 +20,9 @@ struct TimeScale {
 
     /// All units for time scales.
     static constexpr std::string_view unit[kNScales]{"ns", "us", "ms", "sec", "min", "hr", "days"};
-    static constexpr U64 divisors[kNScales]{1, 1000, 1000, 1000, 60, 60, 24};
+
+    /// Defines the conversion factor from the current time scale to the next.
+    static constexpr U64 divisors[kNScales]{1000, 1000, 1000, 60, 60, 24, 1};
 
     constexpr TimeScale() = default;
     implicit constexpr TimeScale(const Value value) : value(value) {}

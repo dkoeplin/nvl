@@ -34,32 +34,37 @@ public:
 
     template <typename Func>
     void fuzz(Func func) {
-        for (U64 i = 0; i < N; ++i) {
+        for (U64 i = 0; i < num_tests; ++i) {
             Tuple tuple;
             generate<1, Tuple, Args...>(tuple, random_, in);
             io.push_back(std::move(tuple));
         }
 
         const auto start = Clock::now();
-        for (U64 i = 0; i < N; ++i) {
+        for (U64 i = 0; i < num_tests; ++i) {
             std::apply(func, io[i]);
         }
         const auto end = Clock::now();
 
         const Duration time(end - start);
-        std::cout << "Over " << N << " calls:" << std::endl;
-        std::cout << "  Total Time:      " << time << std::endl;
-        std::cout << "  Avg. Call Time:  " << (time / N) << std::endl;
+        std::cout << "Over " << num_tests << " calls:" << std::endl;
+        std::cout << "  Total call time:  " << time << std::endl;
+        std::cout << "  Avg. time / call: " << (time / num_tests) << std::endl;
     }
 
     template <typename Func>
     void verify(Func func) {
-        for (U64 i = 0; i < N; ++i) {
+        const auto start = Clock::now();
+        for (U64 i = 0; i < num_tests; ++i) {
             std::apply(func, io[i]);
         }
+        const auto end = Clock::now();
+        const Duration time(end - start);
+        std::cout << "Verify time: " << time << std::endl;
+        std::cout << "Verify time / Call: " << (time / num_tests) << std::endl;
     }
 
-    U64 N = 1E6;
+    U64 num_tests = 1E6;
     Map<U64, Distribution> in;
 
 private:

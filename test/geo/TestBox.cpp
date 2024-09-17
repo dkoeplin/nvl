@@ -3,12 +3,16 @@
 
 #include "nvl/geo/Box.h"
 #include "nvl/geo/Pos.h"
+#include "nvl/math/Distribution.h"
+#include "util/Fuzzing.h"
 
 namespace {
-
 using testing::ElementsAre;
+using testing::UnorderedElementsAre;
 
 using nvl::Box;
+using nvl::Dir;
+using nvl::Edge;
 using nvl::List;
 using nvl::Pos;
 
@@ -109,9 +113,129 @@ TEST(TestBox, clamp) {
     EXPECT_EQ(Box<2>({-100, 100}, {100, 300}).clamp({1024, 1024}), Box<2>({-1024, 0}, {1023, 1023}));
 }
 
+/*
+ 0 1 2 3 4 5 6
+1
+2      E E E
+3    E X # # E
+4    E # # # E
+5    E # # Y E
+6      E E E
+*/
+TEST(TestBox, borders) {
+    constexpr Box<2> box({3, 3}, {5, 5});
+    EXPECT_THAT(box.borders(), UnorderedElementsAre(Edge<2>(0, Dir::Neg, Box<2>({2, 3}, {2, 5})),
+                                                    Edge<2>(0, Dir::Pos, Box<2>({6, 3}, {6, 5})),
+                                                    Edge<2>(1, Dir::Neg, Box<2>({3, 2}, {5, 2})),
+                                                    Edge<2>(1, Dir::Pos, Box<2>({3, 6}, {5, 6}))));
+}
+
+TEST(TestBox, overlaps) {
+    const Box<2> a({16, 5}, {16, 17});
+    const Box<2> b({8, 11}, {14, 16});
+    EXPECT_FALSE(a.overlaps(b));
+}
+
+TEST(TestBox, intersect) {
+    const Box<2> a({16, 5}, {16, 17});
+    const Box<2> b({8, 11}, {14, 16});
+    EXPECT_FALSE(a.intersect(b).has_value());
+}
+
+/*   0 1 2 3 4 << dim 0
+   0
+   1   X A B    ==> [X A B], [C], [D], [E F Y]
+   2   C - D
+   3   E F Y
+   4
+ */
+TEST(TestBox, diff) {
+    constexpr Box<2> box_a({1, 1}, {3, 3});
+    constexpr Box<2> box_b({2, 2}, {2, 2});
+    EXPECT_THAT(box_a.diff(box_b), UnorderedElementsAre(Box<2>({1, 1}, {1, 3}), // dim 0, neg
+                                                        Box<2>({3, 1}, {3, 3}), // dim 0, pos
+                                                        Box<2>({2, 1}, {2, 1}), // dim 1, neg
+                                                        Box<2>({2, 3}, {2, 3})) // dim 1, pos
+    );
+}
+
 TEST(TestBox, to_string) {
     const Box<2> a({2, 3}, {7, 8});
     EXPECT_EQ(a.to_string(), "{2, 3}::{7, 8}");
 }
+
+/// Generic fuzz testing across N dimensional diffing
+template <U64 N>
+struct FuzzBoxDiff : nvl::testing::FuzzingTestFixture<List<Box<N>>, Box<N>, Box<N>> {
+    FuzzBoxDiff() {
+        using nvl::Distribution;
+        using nvl::Random;
+
+        // this->num_tests = 1E3;
+
+        this->in[0] = Distribution::Custom<Box<N>>([](Random &random) {
+            const auto a = random.uniform<Pos<N>, I64>(1, 15);
+            const auto b = random.uniform<Pos<N>, I64>(1, 15);
+            return Box(a, b);
+        });
+        this->in[1] = Distribution::Custom<Box<N>>([](Random &random) {
+            const auto a = random.uniform<Pos<N>, I64>(1, 15);
+            const auto b = random.uniform<Pos<N>, I64>(1, 15);
+            return Box(a, b);
+        });
+
+        this->fuzz([](List<Box<N>> &diff, const Box<N> &a, const Box<N> &b) { diff = a.diff(b); });
+
+        this->verify([&](const List<Box<N>> &diff, const Box<N> &a, const Box<N> &b) {
+            // Confirm that we get no more than 2*N boxes
+            ASSERT(diff.size() <= 2 * N, "[DIFF] a: " << a << " b: " << b << "\n"
+                                                      << "  Remainders: " << diff << "\n"
+                                                      << "  Resulted in more remainders than expected.");
+
+            // Confirm that all points in a are in the remainder boxes unless they are also in b
+            const auto remainders = nvl::Range<typename List<Box<N>>::const_iterator>(diff.begin(), diff.end());
+            for (const Pos<N> &pt : a) {
+                if (b.contains(pt)) {
+                    for (const auto &d : diff) {
+                        ASSERT(!d.contains(pt), "[DIFF] a: " << a << " b: " << b << "\n"
+                                                             << "  Remainders: " << diff << "\n"
+                                                             << "  Remainder " << b << " contains " << pt
+                                                             << " also in b");
+                    }
+
+                } else {
+                    ASSERT(remainders.exists([&](const Box<N> &rem) { return rem.contains(pt); }),
+                           "[DIFF] a: " << a << " b: " << b << "\n"
+                                        << "  Remainders: " << diff << "\n"
+                                        << "  No remainder contained point " << pt << " in a but not in b")
+                }
+            }
+
+            // Confirm that there's no overlap between resulting diff boxes
+            for (U64 i = 0; i < diff.size(); ++i) {
+                const Box<N> &first = diff[i];
+                for (U64 j = i + 1; j < diff.size(); ++j) {
+                    const Box<N> &second = diff[j];
+                    for (const Pos<N> &pt : first) {
+                        ASSERT(!second.contains(pt), "[DIFF] a: " << a << " b: " << b << "\n"
+                                                                  << "  Remainders: " << diff << "\n"
+                                                                  << "  Remainders " << first << " and " << second
+                                                                  << " had overlapping point " << pt);
+                    }
+                }
+            }
+        });
+    }
+};
+
+using FuzzBoxDiff2 = FuzzBoxDiff<2>;
+TEST_F(FuzzBoxDiff2, diff2) {}
+
+using FuzzBoxDiff3 = FuzzBoxDiff<3>;
+TEST_F(FuzzBoxDiff3, diff3) {}
+
+// The verification for this is slow lol
+// using FuzzBoxDiff4 = FuzzBoxDiff<4>;
+// TEST_F(FuzzBoxDiff4, DISABLED_diff4) {}
 
 } // namespace
