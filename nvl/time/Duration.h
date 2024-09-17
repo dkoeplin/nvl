@@ -33,7 +33,7 @@ public:
             time /= factor;
         }
         std::stringstream ss;
-        ss << (static_cast<double>(nanos_) / static_cast<double>(divisor)) << " " << scale;
+        ss << (static_cast<F64>(nanos_) / static_cast<F64>(divisor)) << " " << scale;
         return ss.str();
     }
 

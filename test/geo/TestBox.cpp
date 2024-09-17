@@ -172,17 +172,8 @@ struct FuzzBoxDiff : nvl::testing::FuzzingTestFixture<List<Box<N>>, Box<N>, Box<
         using nvl::Random;
 
         // this->num_tests = 1E3;
-
-        this->in[0] = Distribution::Custom<Box<N>>([](Random &random) {
-            const auto a = random.uniform<Pos<N>, I64>(1, 15);
-            const auto b = random.uniform<Pos<N>, I64>(1, 15);
-            return Box(a, b);
-        });
-        this->in[1] = Distribution::Custom<Box<N>>([](Random &random) {
-            const auto a = random.uniform<Pos<N>, I64>(1, 15);
-            const auto b = random.uniform<Pos<N>, I64>(1, 15);
-            return Box(a, b);
-        });
+        this->in[0] = Distribution::Uniform<I64>(1, 15);
+        this->in[1] = Distribution::Uniform<I64>(1, 15);
 
         this->fuzz([](List<Box<N>> &diff, const Box<N> &a, const Box<N> &b) { diff = a.diff(b); });
 

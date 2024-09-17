@@ -309,19 +309,19 @@ public:
         return result;
     }
 
-    pure double dist(const Pos &rhs) const {
-        double result = 0;
+    pure F64 dist(const Pos &rhs) const {
+        F64 result = 0;
         for (U64 i = 0; i < N; ++i) {
-            const double diff = indices_[i] - rhs.indices_[i];
+            const F64 diff = indices_[i] - rhs.indices_[i];
             result += diff * diff;
         }
         return std::sqrt(result);
     }
 
-    pure double magnitude() const {
-        double result = 0;
+    pure F64 magnitude() const {
+        F64 result = 0;
         for (U64 i = 0; i < N; ++i) {
-            result += static_cast<double>(indices_[i]) * indices_[i];
+            result += static_cast<F64>(indices_[i]) * indices_[i];
         }
         return std::sqrt(result);
     }

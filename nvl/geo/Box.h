@@ -9,6 +9,7 @@
 #include "nvl/geo/Pos.h"
 #include "nvl/macros/Aliases.h"
 #include "nvl/macros/Pure.h"
+#include "nvl/math/Random.h"
 #include "nvl/traits/HasBBox.h"
 
 namespace nvl {
@@ -427,6 +428,22 @@ pure Box<N> bounding_box(const Box<N> &a, const Box<N> &b) {
     // presorted is sufficient here since already taking the min/max across both
     return Box<N>::presorted(min(a.min, b.min), max(a.max, b.max));
 }
+
+template <U64 N>
+struct RandomGen<Box<N>> {
+    template <typename I>
+    pure Box<N> uniform(Random &random, const I min, const I max) const {
+        const auto a = random.uniform<Pos<N>, I>(min, max);
+        const auto b = random.uniform<Pos<N>, I>(min, max);
+        return Box(a, b);
+    }
+    template <typename I>
+    pure Box<N> normal(Random &random, const I mean, const I stddev) const {
+        const auto a = random.normal<Pos<N>, I>(mean, stddev);
+        const auto b = random.normal<Pos<N>, I>(mean, stddev);
+        return Box(a, b);
+    }
+};
 
 } // namespace nvl
 
