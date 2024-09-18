@@ -35,6 +35,8 @@ add_library(nvl SHARED
         nvl/data/SetVector.h
         nvl/data/SipHash.h
         nvl/data/SipHash.cpp
+        nvl/draw/Color.h
+        nvl/draw/Draw.h
         nvl/geo/Dir.h
         nvl/geo/Box.h
         nvl/geo/BRTree.h
@@ -48,6 +50,8 @@ add_library(nvl SHARED
         nvl/macros/Pure.h
         nvl/macros/ReturnIf.h
         nvl/macros/Unreachable.h
+        nvl/material/Material.cpp
+        nvl/material/Material.h
         nvl/math/Bitwise.h
         nvl/math/Distribution.h
         nvl/math/Grid.h
