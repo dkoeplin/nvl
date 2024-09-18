@@ -10,7 +10,7 @@ namespace nvl {
 
 /**
  * @class View
- * @brief Views a Value at an offset within an N-dimension space.
+ * @brief Views a Value at an offset within an N-dimensional space.
  *
  * Holds a reference to the value, and allows inspecting the bounding box of the value at the offset with .box().
  *

@@ -17,6 +17,7 @@ function(add_gtest test_file)
     add_dependencies(all-gtests ${test_name})
 endfunction()
 
+add_subdirectory(actor)
 add_subdirectory(data)
 add_subdirectory(geo)
 add_subdirectory(math)

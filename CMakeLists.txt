@@ -23,6 +23,7 @@ FetchContent_MakeAvailable(googletest)
 include(GoogleTest)
 
 add_library(nvl SHARED
+        nvl/actor/Actor.h
         nvl/data/IteratorPair.h
         nvl/data/List.h
         nvl/data/Map.h
