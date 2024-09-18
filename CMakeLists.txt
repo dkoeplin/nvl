@@ -55,7 +55,6 @@ add_library(nvl SHARED
         nvl/time/TimeScale.h
         nvl/traits/HasBBox.h
         nvl/traits/HasDereference.h
-        nvl/traits/HasID.h
 )
 
 target_include_directories(nvl PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

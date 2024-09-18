@@ -28,3 +28,8 @@ inline std::ostream &operator<<(std::ostream &os, const LabeledBox &v) {
 }
 
 } // namespace nvl::testing
+
+template <>
+struct std::hash<nvl::testing::LabeledBox> {
+    pure U64 operator()(const nvl::testing::LabeledBox &a) const noexcept { return nvl::sip_hash(a); }
+};

@@ -17,32 +17,32 @@ using nvl::List;
 using nvl::Pos;
 
 TEST(TestBox, shape) {
-    const Box<2> a({4, 5}, {32, 45});
+    constexpr Box<2> a({4, 5}, {32, 45});
     EXPECT_THAT(a.shape(), ElementsAre(29, 41));
 
-    const Box<2> b({2, 4}, {6, 10});
+    constexpr Box<2> b({2, 4}, {6, 10});
     EXPECT_THAT(b.shape(), ElementsAre(5, 7));
 
-    const Box<3> c({5, 8, 3}, {10, 13, 9});
+    constexpr Box<3> c({5, 8, 3}, {10, 13, 9});
     EXPECT_THAT(c.shape(), ElementsAre(6, 6, 7));
 }
 
 TEST(TestBox, mul) {
-    const Box<2> a{{2, 3}, {5, 6}};
+    constexpr Box<2> a{{2, 3}, {5, 6}};
     constexpr Pos<2> b{5, -1};
     EXPECT_EQ(a * b, Box<2>({10, -6}, {25, -3}));
     EXPECT_EQ(a * 2, Box<2>({4, 6}, {10, 12}));
 }
 
 TEST(TestBox, add) {
-    const Box<2> a({2, 3}, {7, 8});
+    constexpr Box<2> a({2, 3}, {7, 8});
     constexpr Pos<2> b{4, 2};
     EXPECT_EQ(a + b, Box<2>({6, 5}, {11, 10}));
     EXPECT_EQ(a + 5, Box<2>({7, 8}, {12, 13}));
 }
 
 TEST(TestBox, sub) {
-    const Box<2> a({2, 3}, {7, 8});
+    constexpr Box<2> a({2, 3}, {7, 8});
     constexpr Pos<2> b{4, 2};
     EXPECT_EQ(a - b, Box<2>({-2, 1}, {3, 6}));
     EXPECT_EQ(a - 4, Box<2>({-2, -1}, {3, 4}));
@@ -71,7 +71,7 @@ TEST(TestBox, pos_iter) {
 }
 
 TEST(TestBox, box_iter) {
-    const Box<2> a({2, 2}, {6, 8}); // shape is 5x7
+    constexpr Box<2> a({2, 2}, {6, 8}); // shape is 5x7
 
     const auto iter0 = a.box_iter({2, 2});
     const List<Box<2>> list0(iter0.begin(), iter0.end());
@@ -122,23 +122,23 @@ TEST(TestBox, clamp) {
 5    E # # Y E
 6      E E E
 */
-TEST(TestBox, borders) {
+TEST(TestBox, edges) {
     constexpr Box<2> box({3, 3}, {5, 5});
-    EXPECT_THAT(box.borders(), UnorderedElementsAre(Edge<2>(0, Dir::Neg, Box<2>({2, 3}, {2, 5})),
-                                                    Edge<2>(0, Dir::Pos, Box<2>({6, 3}, {6, 5})),
-                                                    Edge<2>(1, Dir::Neg, Box<2>({3, 2}, {5, 2})),
-                                                    Edge<2>(1, Dir::Pos, Box<2>({3, 6}, {5, 6}))));
+    EXPECT_THAT(box.edges(), UnorderedElementsAre(Edge<2>(0, Dir::Neg, Box<2>({2, 3}, {2, 5})),
+                                                  Edge<2>(0, Dir::Pos, Box<2>({6, 3}, {6, 5})),
+                                                  Edge<2>(1, Dir::Neg, Box<2>({3, 2}, {5, 2})),
+                                                  Edge<2>(1, Dir::Pos, Box<2>({3, 6}, {5, 6}))));
 }
 
 TEST(TestBox, overlaps) {
-    const Box<2> a({16, 5}, {16, 17});
-    const Box<2> b({8, 11}, {14, 16});
+    constexpr Box<2> a({16, 5}, {16, 17});
+    constexpr Box<2> b({8, 11}, {14, 16});
     EXPECT_FALSE(a.overlaps(b));
 }
 
 TEST(TestBox, intersect) {
-    const Box<2> a({16, 5}, {16, 17});
-    const Box<2> b({8, 11}, {14, 16});
+    constexpr Box<2> a({16, 5}, {16, 17});
+    constexpr Box<2> b({8, 11}, {14, 16});
     EXPECT_FALSE(a.intersect(b).has_value());
 }
 
@@ -160,7 +160,7 @@ TEST(TestBox, diff) {
 }
 
 TEST(TestBox, to_string) {
-    const Box<2> a({2, 3}, {7, 8});
+    constexpr Box<2> a({2, 3}, {7, 8});
     EXPECT_EQ(a.to_string(), "{2, 3}::{7, 8}");
 }
 
@@ -183,7 +183,7 @@ struct FuzzBoxDiff : nvl::testing::FuzzingTestFixture<List<Box<N>>, Box<N>, Box<
                                                       << "  Remainders: " << diff << "\n"
                                                       << "  Resulted in more remainders than expected.");
 
-            // Confirm that all points in a are in the remainder boxes unless they are also in b
+            // Confirm that all points in `a` are in the remainder boxes unless they are also in b
             const auto remainders = nvl::Range<typename List<Box<N>>::const_iterator>(diff.begin(), diff.end());
             for (const Pos<N> &pt : a) {
                 if (b.contains(pt)) {

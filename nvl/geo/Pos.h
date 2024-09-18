@@ -443,5 +443,5 @@ std::ostream &operator<<(std::ostream &os, const Pos<N> &a) {
 
 template <U64 N>
 struct std::hash<nvl::Pos<N>> {
-    pure U64 operator()(const nvl::Pos<N> &a) const { return nvl::sip_hash(a.indices_); }
+    pure U64 operator()(const nvl::Pos<N> &a) const noexcept { return nvl::sip_hash(a.indices_); }
 };

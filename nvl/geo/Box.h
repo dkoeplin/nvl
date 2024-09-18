@@ -261,11 +261,12 @@ public:
         return diff(Range<typename List<Box>::const_iterator>(boxes.begin(), boxes.end()));
     }
 
-    pure List<Edge<N>> edges(I64 width = 1) const;
+    /// Returns the side with given `width`. Distinct from edges in that sides overlap with the box.
+    pure List<Edge<N>> sides(I64 width = 1) const;
 
-    pure List<Edge<N>> borders(I64 width = 1, I64 dist = 1) const;
+    pure List<Edge<N>> edges(I64 width = 1, I64 dist = 1) const;
 
-    pure Edge<N> border(U64 dim, Dir dir, I64 width = 1, I64 dist = 1) const;
+    pure Edge<N> edge(U64 dim, Dir dir, I64 width = 1, I64 dist = 1) const;
 
     pure std::string to_string() const {
         std::stringstream ss;
@@ -287,42 +288,26 @@ private:
             const Box &both = *intersect;
             for (U64 i = 0; i < N; ++i) {
                 for (const Dir dir : Dir::list) {
-                    Pos<N> rmin;
-                    Pos<N> rmax;
+                    Pos<N> result_min;
+                    Pos<N> result_max;
                     for (U64 d = 0; d < N; ++d) {
                         if (i == d) {
-                            rmin[d] = (dir == Dir::Neg) ? min[d] : both.max[d] + 1;
-                            rmax[d] = (dir == Dir::Neg) ? both.min[d] - 1 : max[d];
+                            result_min[d] = (dir == Dir::Neg) ? min[d] : both.max[d] + 1;
+                            result_max[d] = (dir == Dir::Neg) ? both.min[d] - 1 : max[d];
                         } else if (d > i) {
-                            rmin[d] = min[d];
-                            rmax[d] = max[d];
+                            result_min[d] = min[d];
+                            result_max[d] = max[d];
                         } else {
-                            rmin[d] = both.min[d];
-                            rmax[d] = both.max[d];
+                            result_min[d] = both.min[d];
+                            result_max[d] = both.max[d];
                         }
-                        //  rmin[d] = (i != d || dir == Dir::Neg) ? (d > i ? min[d] : both.min[d] - 1) : both.max[d] +
-                        //  1; rmax[d] = (i != d || dir == Dir::Pos) ? (d > i ? max[d] : both.max[d] + 1) : both.min[d]
-                        //  - 1;
                     }
-                    const Maybe<Box> box = Box::get(rmin, rmax);
+                    const Maybe<Box> box = Box::get(result_min, result_max);
                     if (box.has_value()) {
                         result.push_back(*box);
                     }
                 }
             }
-            /*for (const auto &pos : kUnitBox) {
-                if (pos != Pos<N>::zero()) {
-                    Pos<N> result_min;
-                    Pos<N> result_max;
-                    for (U64 d = 0; d < N; ++d) {
-                        result_min[d] = (pos[d] == -1) ? min[d] : (pos[d] == 0) ? both.min[d] : both.max[d] + 1;
-                        result_max[d] = (pos[d] == -1) ? both.min[d] - 1 : (pos[d] == 0) ? both.max[d] : max[d];
-                    }
-                    if (const Maybe<Box> box = Box::get(result_min, result_max)) {
-                        result.push_back(*box);
-                    }
-                }
-            }*/
         } else {
             result.push_back(*this);
         }
@@ -358,7 +343,6 @@ public:
 
     pure U64 thickness() const { return box_.shape(dim_); }
 
-    pure U64 id() const { return (U64)(this); }
     pure U64 dim() const { return dim_; }
     pure Dir dir() const { return dir_; }
     pure const Box<N> &bbox() const { return box_; }
@@ -373,29 +357,29 @@ template <U64 N>
 constexpr Box<N> Box<N>::kUnitBox = Box(Pos<N>::fill(-1), Pos<N>::fill(1));
 
 template <U64 N>
-List<Edge<N>> Box<N>::edges(const I64 width) const {
-    return borders(-width, 0);
+List<Edge<N>> Box<N>::sides(const I64 width) const {
+    return edges(-width, 0);
 }
 
 template <U64 N>
-List<Edge<N>> Box<N>::borders(const I64 width, const I64 dist) const {
+List<Edge<N>> Box<N>::edges(const I64 width, const I64 dist) const {
     List<Edge<N>> result;
     for (U64 i = 0; i < N; ++i) {
         for (const auto &dir : Dir::list) {
-            result.push_back(border(i, dir, width, dist));
+            result.push_back(edge(i, dir, width, dist));
         }
     }
     return result;
 }
 
 template <U64 N>
-Edge<N> Box<N>::border(const U64 dim, const Dir dir, const I64 width, const I64 dist) const {
+Edge<N> Box<N>::edge(const U64 dim, const Dir dir, const I64 width, const I64 dist) const {
     auto unit = Pos<N>::unit(dim);
     auto inner = unit * dist;
     auto outer = unit * (width - 1);
-    auto border_min = (dir == Dir::Neg) ? min - outer - inner : min.with(dim, max[dim]) + inner;
-    auto border_max = (dir == Dir::Neg) ? max.with(dim, min[dim]) - inner : max + outer + inner;
-    return Edge<N>(dim, dir, Box::presorted(border_min, border_max));
+    auto edge_min = (dir == Dir::Neg) ? min - outer - inner : min.with(dim, max[dim]) + inner;
+    auto edge_max = (dir == Dir::Neg) ? max.with(dim, min[dim]) - inner : max + outer + inner;
+    return Edge<N>(dim, dir, Box::presorted(edge_min, edge_max));
 }
 
 template <U64 N>
@@ -449,10 +433,10 @@ struct RandomGen<Box<N>> {
 
 template <U64 N>
 struct std::hash<nvl::Box<N>> {
-    pure U64 operator()(const nvl::Box<N> &a) const { return nvl::sip_hash(a); }
+    pure U64 operator()(const nvl::Box<N> &a) const noexcept { return nvl::sip_hash(a); }
 };
 
 template <U64 N>
 struct std::hash<nvl::Edge<N>> {
-    pure U64 operator()(const nvl::Edge<N> &a) const { return nvl::sip_hash(a); }
+    pure U64 operator()(const nvl::Edge<N> &a) const noexcept { return nvl::sip_hash(a); }
 };

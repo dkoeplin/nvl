@@ -58,20 +58,22 @@ Set<View<2, Edge<2>>> view(List<Edge<2>> &list, const Pos<2> &offset) {
     return set;
 }
 
-TEST(TestBRTree, borders) {
+TEST(TestBRTree, edges) {
     BRTree<2, LabeledBox> tree;
     LabeledBox box{1, {{0, 0}, {32, 32}}};
-    List<Edge<2>> borders = box.bbox().borders();
+    List<Edge<2>> edges = box.bbox().edges();
 
     tree.insert(box);
-    const Set<View<2, Edge<2>>> borders0(tree.borders());
-    const Set<View<2, Edge<2>>> expected0 = view(borders, tree.loc);
-    EXPECT_EQ(borders0, expected0);
+    EXPECT_EQ(tree.debug.edge_rtree().size(), 4);
+
+    const Set<View<2, Edge<2>>> edges0(tree.unordered_edges());
+    const Set<View<2, Edge<2>>> expected0 = view(edges, tree.loc);
+    EXPECT_EQ(edges0, expected0);
 
     tree.loc = {500, 500};
-    const Set<View<2, Edge<2>>> borders1(tree.borders());
-    const Set<View<2, Edge<2>>> expected1 = view(borders, tree.loc);
-    EXPECT_EQ(borders1, expected1);
+    const Set<View<2, Edge<2>>> edges1(tree.unordered_edges());
+    const Set<View<2, Edge<2>>> expected1 = view(edges, tree.loc);
+    EXPECT_EQ(edges1, expected1);
 }
 
 } // namespace

@@ -5,7 +5,6 @@
 #include "nvl/macros/Aliases.h"
 #include "nvl/macros/Pure.h"
 #include "nvl/traits/HasBBox.h"
-#include "nvl/traits/HasID.h"
 
 namespace nvl {
 
@@ -19,7 +18,7 @@ namespace nvl {
  * @tparam Value Value type being stored.
  */
 template <U64 N, typename Value>
-    requires traits::HasBBox<Value> && traits::HasID<Value>
+    requires traits::HasBBox<Value>
 class View {
 public:
     explicit View(Value &value, const Pos<N> &offset) : value_(value), offset_(offset) {}
@@ -31,7 +30,6 @@ public:
     const Value &operator*() const { return value_.raw(); }
 
     pure Box<N> bbox() const { return value_.bbox() + offset_; }
-    pure U64 id() const { return value_.id(); }
 
     pure const Pos<N> &offset() const { return offset_; }
 
@@ -49,5 +47,5 @@ std::ostream &operator<<(std::ostream &os, const View<N, Value> &view) {
 
 template <U64 N, typename Value>
 struct std::hash<nvl::View<N, Value>> {
-    pure U64 operator()(const nvl::View<N, Value> &a) const { return nvl::sip_hash(a); }
+    pure U64 operator()(const nvl::View<N, Value> &a) const { return std::hash<Value>()(*a); }
 };

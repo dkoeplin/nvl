@@ -20,6 +20,7 @@ public:
     using parent::clear;
     using parent::empty;
     using parent::end;
+    using parent::find;
     using parent::size;
 
     class value_iterator {
