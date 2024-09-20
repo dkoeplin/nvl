@@ -8,12 +8,12 @@
 namespace {
 
 struct A {
-    dyn_tag(A);
+    class_tag(A);
     virtual ~A() = default;
 };
 
 struct B : A {
-    dyn_tag(B, A);
+    class_tag(B, A);
     explicit B(std::string name) : name(std::move(name)) {}
     pure std::string get_name() const { return name; }
     std::string name;
