@@ -7,11 +7,11 @@
 #include "nvl/data/Ref.h"
 #include "nvl/data/Set.h"
 #include "nvl/geo/Box.h"
+#include "nvl/geo/HasBBox.h"
 #include "nvl/geo/Pos.h"
 #include "nvl/macros/Aliases.h"
 #include "nvl/macros/ReturnIf.h"
 #include "nvl/math/Bitwise.h"
-#include "nvl/traits/HasBBox.h"
 
 namespace nvl {
 
@@ -96,10 +96,8 @@ struct Work {
  * @tparam kMaxEntries Maximum number of entries per node. Defaults to 10.
  * @tparam kGridExpMin Minimum node grid size (2 ^ min_grid_exp). Defaults to 2.
  * @tparam kGridExpMax Initial grid size of the root. (2 ^ root_grid_exp). Defaults to 10.
- * @tparam Hash Hash function for Item type.
  */
-template <U64 N, typename Item, U64 kMaxEntries = 10, U64 kGridExpMin = 2, U64 kGridExpMax = 10,
-          typename Hash = std::hash<Item>>
+template <U64 N, typename Item, U64 kMaxEntries = 10, U64 kGridExpMin = 2, U64 kGridExpMax = 10>
     requires traits::HasBBox<Item>
 class RTree {
     friend struct Debug;
@@ -137,11 +135,7 @@ public:
     pure Range<item_iterator> unordered() { return items_.unordered_values(); }
 
     /// Returns the current bounding box for this tree.
-    pure const Box<N> &bbox() const {
-        if (bbox_.has_value())
-            return bbox_.value();
-        return Box<N>::kUnitBox;
-    }
+    pure const Box<N> &bbox() const { return bbox_.has_value() ? bbox_.value() : Box<N>::kUnitBox; }
 
     /// Returns the shape of the bounding box for this tree.
     pure Pos<N> shape() const { return bbox().shape(); }
@@ -616,7 +610,7 @@ private:
     }
 
     struct ItemHash {
-        pure U64 operator()(const Ref<const Item> &a) const { return Hash()(a.raw()); }
+        pure U64 operator()(const Ref<const Item> &a) const { return sip_hash(a.pointer()); }
     };
 
     Maybe<Box<N>> bbox_ = None;

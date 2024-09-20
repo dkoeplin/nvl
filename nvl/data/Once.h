@@ -1,8 +1,8 @@
 #pragma once
 
+#include "nvl/data/HasDereference.h"
 #include "nvl/data/IteratorPair.h"
 #include "nvl/macros/Pure.h"
-#include "nvl/traits/HasDereference.h"
 
 namespace nvl {
 

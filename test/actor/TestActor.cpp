@@ -1,27 +1,29 @@
 #include <gtest/gtest.h>
 
 #include "nvl/actor/Actor.h"
+#include "nvl/actor/TickResult.h"
 
 namespace {
 
 using nvl::Actor;
 using nvl::Box;
 using nvl::Draw;
+using nvl::List;
+using nvl::Message;
+using nvl::TickResult;
 
-struct SimpleActor final : Actor<2>::Impl {
+struct SimpleActor final : Actor {
     explicit SimpleActor(const Box<2> &box) : box_(box) {}
 
-    void tick() override {}
-    void draw(Draw &) const override {}
-    pure Box<2> bbox() const override { return box_; }
+    TickResult tick(const List<Message> &) override { return {}; }
+    void draw(Draw &, I64) const override {}
 
     Box<2> box_;
 };
 
 TEST(TestActor, construct) {
-    const auto actor = Actor<2>::get<SimpleActor>(Box<2>({0, 0}, {32, 32}));
-    EXPECT_TRUE(actor.alive());
-    EXPECT_EQ(actor.bbox(), Box<2>({0, 0}, {32, 32}));
+    SimpleActor actor(Box<2>({0, 0}, {32, 32}));
+    actor.tick({});
 }
 
 } // namespace

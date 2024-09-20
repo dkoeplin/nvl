@@ -1,0 +1,94 @@
+#pragma once
+
+#include "nvl/actor/Actor.h"
+#include "nvl/actor/Part.h"
+#include "nvl/actor/Status.h"
+#include "nvl/actor/TickResult.h"
+#include "nvl/geo/BRTree.h"
+#include "nvl/geo/Pos.h"
+#include "nvl/macros/Abstract.h"
+#include "nvl/macros/Aliases.h"
+#include "nvl/message/Message.h"
+#include "nvl/world/World.h"
+
+namespace nvl {
+
+template <U64 N>
+abstract class Entity : public Actor {
+public:
+    static constexpr U64 kMaxEntries = 10;
+    static constexpr U64 kGridExpMin = 2;
+    static constexpr U64 kGridExpMax = 10;
+    using Tree = BRTree<N, Part<N>, kMaxEntries, kGridExpMin, kGridExpMax>;
+
+    struct Debug {
+        explicit Debug(Entity &entity) : entity(entity) {}
+
+        pure const Tree &tree() const { return entity.parts_; }
+
+        Entity &entity;
+    };
+
+    pure virtual Pos<N> loc() const { return parts_.loc; }
+    pure virtual Box<N> bbox() const { return parts_.bbox(); }
+
+    pure Range<typename Tree::edge_iterator> edges() { return parts_.unordered_edges(); }
+
+    pure Range<typename Tree::item_iterator> parts() { return parts_.unordered_items(); }
+    pure Range<typename Tree::window_iterator> parts(const Box<N> &box) { return parts_[box]; }
+    pure Range<typename Tree::window_iterator> parts(const Pos<N> &pos) { return parts_[pos]; }
+
+    struct View {
+        explicit View(Entity &entity) : entity(entity) {}
+        pure Range<typename Tree::Viewed::item_iterator> parts() { return entity.parts_.view.unordered_items(); }
+        pure Range<typename Tree::Viewed::window_iterator> parts(const Box<N> &box) { return entity.parts_.view[box]; }
+        pure Range<typename Tree::Viewed::window_iterator> parts(const Pos<N> &pos) { return entity.parts_.view[pos]; }
+        Entity &entity;
+    } view = View(*this);
+
+    pure virtual bool falls() {
+        return view.parts().all([](const Part<N> &part) { return part.material().falls(); });
+    }
+
+    void draw(Draw &draw, const int64_t highlight) const override {
+        Draw::Offset offset(draw, loc());
+        for (const auto &part : parts_.view.unordered_items()) {
+            part.draw(draw, highlight);
+        }
+    }
+
+    TickResult tick(const List<Message> &messages) override;
+
+protected:
+    friend struct View;
+
+    void receive(TickResult &result, const Message &message);
+    void receive(TickResult &result, const List<Message> &messages);
+
+    Pos<N> velocity_ = Pos<N>::fill(0);
+    Pos<N> accel_ = Pos<N>::fill(0);
+    Tree parts_;
+    World<N> *world_ = nullptr;
+};
+
+template <U64 N>
+void Entity<N>::receive(TickResult &, const Message &) {}
+
+template <U64 N>
+void Entity<N>::receive(TickResult &result, const List<Message> &messages) {
+    for (const auto &message : messages) {
+        receive(result, message);
+        if (result.status & Status::Died) {
+            break;
+        }
+    }
+}
+
+template <U64 N>
+TickResult Entity<N>::tick(const List<Message> &messages) {
+    TickResult result;
+    receive(result, messages);
+    return result;
+}
+
+} // namespace nvl

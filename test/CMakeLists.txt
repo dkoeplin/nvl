@@ -19,5 +19,7 @@ endfunction()
 
 add_subdirectory(actor)
 add_subdirectory(data)
+add_subdirectory(entity)
 add_subdirectory(geo)
 add_subdirectory(math)
+add_subdirectory(reflect)

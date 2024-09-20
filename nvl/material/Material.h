@@ -4,11 +4,13 @@
 #include <string>
 
 #include "nvl/draw/Color.h"
+#include "nvl/macros/Abstract.h"
+#include "nvl/macros/Aliases.h"
 #include "nvl/macros/Pure.h"
 
 namespace nvl {
 
-class Material {
+class Material final {
 public:
     struct Impl;
 
@@ -21,18 +23,18 @@ public:
     pure Color color() const;
     pure bool falls() const;
     pure bool liquid() const;
-    pure U64 durability() const;
+    pure I64 durability() const;
 
 private:
     std::shared_ptr<Impl> impl_;
 };
 
-struct Material::Impl {
+abstract struct Material::Impl {
     std::string name;
     Color color;
     bool falls;
     bool liquid;
-    U64 durability;
+    I64 durability;
 };
 
 } // namespace nvl

@@ -2,9 +2,9 @@
 
 #include "nvl/data/Ref.h"
 #include "nvl/geo/Box.h"
+#include "nvl/geo/HasBBox.h"
 #include "nvl/macros/Aliases.h"
 #include "nvl/macros/Pure.h"
-#include "nvl/traits/HasBBox.h"
 
 namespace nvl {
 

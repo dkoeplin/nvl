@@ -24,6 +24,8 @@ include(GoogleTest)
 
 add_library(nvl SHARED
         nvl/actor/Actor.h
+        nvl/actor/Part.h
+        nvl/data/HasDereference.h
         nvl/data/IteratorPair.h
         nvl/data/List.h
         nvl/data/Map.h
@@ -37,9 +39,11 @@ add_library(nvl SHARED
         nvl/data/SipHash.cpp
         nvl/draw/Color.h
         nvl/draw/Draw.h
+        nvl/entity/Entity.h
         nvl/geo/Dir.h
         nvl/geo/Box.h
         nvl/geo/BRTree.h
+        nvl/geo/HasBBox.h
         nvl/geo/Pos.h
         nvl/geo/RTree.h
         nvl/geo/View.h
@@ -56,10 +60,15 @@ add_library(nvl SHARED
         nvl/math/Distribution.h
         nvl/math/Grid.h
         nvl/math/Random.h
+        nvl/message/Message.cpp
+        nvl/message/Message.h
+        nvl/reflect/Casting.h
+        nvl/reflect/ClassTag.cpp
+        nvl/reflect/ClassTag.h
+        nvl/reflect/PrimitiveTypes.h
         nvl/time/Duration.h
         nvl/time/TimeScale.h
-        nvl/traits/HasBBox.h
-        nvl/traits/HasDereference.h
+        nvl/world/World.h
 )
 
 target_include_directories(nvl PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

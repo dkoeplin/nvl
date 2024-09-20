@@ -1,10 +1,10 @@
 #pragma once
 
 #include "nvl/geo/Box.h"
+#include "nvl/geo/HasBBox.h"
 #include "nvl/geo/RTree.h"
 #include "nvl/geo/View.h"
 #include "nvl/macros/Aliases.h"
-#include "nvl/traits/HasBBox.h"
 
 namespace nvl {
 
@@ -122,7 +122,7 @@ public:
 
     /// Returns an unordered Range for iteration over all values in this tree.
     /// Items are returned as View<N, Item>, where the view is with respect to this tree's global offset.
-    pure Range<item_iterator> unordered_items() const { return Range<item_iterator>(this->items_.unordered(), loc); }
+    pure Range<item_iterator> unordered_items() { return Range<item_iterator>(this->items_.unordered(), loc); }
 
     /// Returns an unordered Range for iteration over all edges in this tree.
     /// Edges are returned as View<N, Edge<N>>, where the view is with respect to this tree's global offset.

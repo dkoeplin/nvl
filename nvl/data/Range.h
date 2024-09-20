@@ -1,5 +1,7 @@
 #pragma once
 
+#include <iostream>
+
 #include "nvl/data/IteratorPair.h"
 #include "nvl/data/Once.h"
 #include "nvl/macros/Pure.h"
