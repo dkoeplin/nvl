@@ -259,11 +259,15 @@ public:
         return diff(Range<typename List<Box>::const_iterator>(boxes.begin(), boxes.end()));
     }
 
-    /// Returns the side with given `width`. Distinct from edges in that sides overlap with the box.
+    /// Returns the sides with given `width`.
+    /// Sides begin at the outermost "pixel" of the box and extend inwards.
     pure List<Edge<N>> sides(I64 width = 1) const;
 
+    /// Returns the edges with given width and distance from the outermost pixel.
+    /// Edges begin at `dist` "pixels" away from the outermost 'pixel" of the box and extend outwards.
     pure List<Edge<N>> edges(I64 width = 1, I64 dist = 1) const;
 
+    /// Returns the edge on the side of the box in dimension `dim` in direction `dir`.
     pure Edge<N> edge(U64 dim, Dir dir, I64 width = 1, I64 dist = 1) const;
 
     pure std::string to_string() const {

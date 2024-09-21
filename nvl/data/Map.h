@@ -20,6 +20,7 @@ public:
     using parent::clear;
     using parent::empty;
     using parent::end;
+    using parent::erase;
     using parent::find;
     using parent::size;
 
@@ -64,6 +65,12 @@ public:
     template <typename... Args>
     pure V &emplace(Args &&...args) {
         auto [iter, _] = parent::emplace(std::forward<Args>(args)...);
+        return iter->second;
+    }
+
+    template <typename... Args>
+    pure V &try_emplace(const K &key, Args &&...args) {
+        auto [iter, _] = parent::try_emplace(key, std::forward<Args>(args)...);
         return iter->second;
     }
 

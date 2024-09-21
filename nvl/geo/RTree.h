@@ -1,5 +1,6 @@
 #pragma once
 
+#include "nvl/data/EquivalentSets.h"
 #include "nvl/data/List.h"
 #include "nvl/data/Map.h"
 #include "nvl/data/Once.h"
@@ -105,6 +106,12 @@ class RTree {
     using Node = rtree_detail::Node<N, Item>;
 
 public:
+    /// Hashing of items is done based on pointer address because the RTree itself owns the memory.
+    struct ItemHash {
+        pure U64 operator()(const Ref<Item> &a) const { return sip_hash(a.pointer()); }
+        pure U64 operator()(const Ref<const Item> &a) const { return sip_hash(a.pointer()); }
+    };
+
     class window_iterator;
     using item_iterator = typename Map<U64, Item>::value_iterator;
 
@@ -116,13 +123,19 @@ public:
         }
     }
 
-    /// Inserts the item into the tree.
+    /// Inserts a copy of the item into the tree.
     RTree &insert(const Item &item) { return insert_over(item, item.bbox()); }
 
-    /// Removes the item from the tree.
+    template <typename... Args>
+    Ref<Item> emplace(Args &&...args) {
+        return emplace_over(std::forward<Args>(args)...);
+    }
+
+    /// Removes the matching item from the tree.
     RTree &remove(const Item &item) { return remove_over(item, item.bbox(), true); }
 
-    /// Registers a item as having moved from the previous volume `prev` to its current volume.
+    /// Registers the matching item as having moved from the previous volume `prev` to its current volume.
+    /// Does nothing if no matching item exists in the tree.
     RTree &move(const Item &item, const Box<N> &prev) { return move(item.bbox(), prev); }
 
     /// Returns an iterator over all unique stored items in the given volume.
@@ -133,6 +146,24 @@ public:
 
     /// Returns a Range for unordered iteration over all items in this tree.
     pure Range<item_iterator> unordered() { return items_.unordered_values(); }
+
+    using Component = typename EquivalentSets<Ref<Item>, ItemHash>::Group;
+    List<Component> components() {
+        EquivalentSets<Ref<Item>, ItemHash> components;
+        for (Item &a : unordered()) {
+            for (const Edge<N> &edge : a.bbox().edges()) {
+                for (Item &b : (*this)[edge.bbox()]) {
+                    components.add(Ref(a), Ref(b)); // Adds neighboring boxes to the same component
+                }
+            }
+        }
+        // Need to return this as a List to avoid references to the local `components` data structure.
+        List<Component> result;
+        for (Component &set : components.sets()) {
+            result.push_back(std::move(set));
+        }
+        return result;
+    }
 
     /// Returns the current bounding box for this tree.
     pure const Box<N> &bbox() const { return bbox_.has_value() ? bbox_.value() : Box<N>::kUnitBox; }
@@ -592,6 +623,18 @@ private:
         return *this;
     }
 
+    template <typename... Args>
+    Ref<Item> emplace_over(Args &&...args) {
+        const U64 id = ++item_id_;
+        Ref<Item> item = items_.try_emplace(id, std::forward<Args>(args)...);
+        Ref<const Item> const_ref = item.raw();
+        item_ids_[const_ref] = id;
+        for (auto [node, pos] : points_in(item->bbox())) {
+            insert(node, pos, item);
+        }
+        return item;
+    }
+
     RTree &remove_over(const Item &item, const Box<N> &box, const bool remove_all) {
         if (auto pair = get_item(item)) {
             // TODO: Update bounds?
@@ -608,10 +651,6 @@ private:
         }
         return *this;
     }
-
-    struct ItemHash {
-        pure U64 operator()(const Ref<const Item> &a) const { return sip_hash(a.pointer()); }
-    };
 
     Maybe<Box<N>> bbox_ = None;
     U64 node_id_ = 0;

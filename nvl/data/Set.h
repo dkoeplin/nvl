@@ -10,7 +10,7 @@ namespace nvl {
 template <typename Value, typename Hash = std::hash<Value>>
 class Set : std::unordered_set<Value, Hash> {
 public:
-    using parent = std::unordered_set<Value>;
+    using parent = std::unordered_set<Value, Hash>;
     using value_type = typename parent::value_type;
     using iterator = typename parent::iterator;
     using const_iterator = typename parent::const_iterator;

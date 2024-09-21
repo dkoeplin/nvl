@@ -15,6 +15,7 @@ using nvl::Box;
 using nvl::List;
 using nvl::Map;
 using nvl::Pos;
+using nvl::Ref;
 using nvl::RTree;
 using nvl::Set;
 using nvl::testing::LabeledBox;
@@ -140,6 +141,15 @@ TEST(TestRTree, fetch) {
     EXPECT_THAT(range0, UnorderedElementsAre(a, b));
     EXPECT_THAT(range1, IsEmpty());
     EXPECT_THAT(range2, UnorderedElementsAre(a));
+}
+
+TEST(TestRTree, components_disconnected) {
+    using Comp = RTree<2, LabeledBox>::Component;
+    RTree<2, LabeledBox> tree;
+    const Ref<LabeledBox> a = tree.emplace(1, Box<2>({0, 0}, {10, 10}));
+    const Ref<LabeledBox> b = tree.emplace(2, Box<2>({15, 15}, {20, 20}));
+    const Ref<LabeledBox> c = tree.emplace(3, Box<2>({35, 35}, {40, 40}));
+    EXPECT_THAT(tree.components(), UnorderedElementsAre(Comp{a}, Comp{b}, Comp{c}));
 }
 
 } // namespace
