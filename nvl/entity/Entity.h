@@ -101,7 +101,7 @@ void Entity<N>::receive(TickResult &result, const List<Message> &messages) {
 }
 
 template <U64 N>
-void Entity<N>::hit(TickResult &result, Set<Actor> &neighbors, const Hit<N> &hit) {}
+void Entity<N>::hit(TickResult &, Set<Actor> &, const Hit<N> &) {}
 
 template <U64 N>
 void Entity<N>::destroy(TickResult &result) {

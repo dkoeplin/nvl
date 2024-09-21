@@ -151,10 +151,16 @@ public:
     List<Component> components() {
         EquivalentSets<Ref<Item>, ItemHash> components;
         for (Item &a : unordered()) {
+            bool had_neighbors = false;
             for (const Edge<N> &edge : a.bbox().edges()) {
                 for (Item &b : (*this)[edge.bbox()]) {
+                    had_neighbors = true;
                     components.add(Ref(a), Ref(b)); // Adds neighboring boxes to the same component
                 }
+            }
+            // Add this item to its own component if it had no neighbors
+            if (!had_neighbors) {
+                components.add(a);
             }
         }
         // Need to return this as a List to avoid references to the local `components` data structure.

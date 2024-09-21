@@ -143,13 +143,28 @@ TEST(TestRTree, fetch) {
     EXPECT_THAT(range2, UnorderedElementsAre(a));
 }
 
-TEST(TestRTree, components_disconnected) {
+TEST(TestRTree, empty_components) {
+    RTree<2, LabeledBox> tree;
+    EXPECT_THAT(tree.components(), IsEmpty());
+}
+
+TEST(TestRTree, components_individuals) {
     using Comp = RTree<2, LabeledBox>::Component;
     RTree<2, LabeledBox> tree;
     const Ref<LabeledBox> a = tree.emplace(1, Box<2>({0, 0}, {10, 10}));
     const Ref<LabeledBox> b = tree.emplace(2, Box<2>({15, 15}, {20, 20}));
     const Ref<LabeledBox> c = tree.emplace(3, Box<2>({35, 35}, {40, 40}));
     EXPECT_THAT(tree.components(), UnorderedElementsAre(Comp{a}, Comp{b}, Comp{c}));
+}
+
+TEST(TestRTree, components_pairs) {
+    using Comp = RTree<2, LabeledBox>::Component;
+    RTree<2, LabeledBox> tree;
+    const Ref<LabeledBox> a = tree.emplace(1, Box<2>({0, 0}, {10, 10}));
+    const Ref<LabeledBox> b = tree.emplace(2, Box<2>({11, 0}, {19, 10}));
+    const Ref<LabeledBox> c = tree.emplace(3, Box<2>({35, 35}, {40, 40}));
+    const Ref<LabeledBox> d = tree.emplace(4, Box<2>({38, 41}, {48, 100}));
+    EXPECT_THAT(tree.components(), UnorderedElementsAre(Comp{a, b}, Comp{c, d}));
 }
 
 } // namespace

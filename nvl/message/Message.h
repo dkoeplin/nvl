@@ -10,7 +10,7 @@
 
 namespace nvl {
 
-class Actor;
+struct Actor;
 
 abstract struct AbstractMessage {
     class_tag(AbstractMessage);

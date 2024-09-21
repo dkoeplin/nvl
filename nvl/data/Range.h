@@ -44,6 +44,7 @@ std::ostream &operator<<(std::ostream &os, const Range<Iterator> &range) {
     auto iter = range.begin();
     if (iter != range.end()) {
         os << *iter;
+        ++iter;
     }
     for (; iter != range.end(); ++iter) {
         os << ", " << *iter;
