@@ -8,7 +8,7 @@ namespace nvl {
 
 class TickResult {
 public:
-    Status status;
+    Status status = Status::None;
     List<Message> messages;
 };
 

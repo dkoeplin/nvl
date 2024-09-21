@@ -8,14 +8,18 @@
 #include "nvl/geo/Pos.h"
 #include "nvl/macros/Abstract.h"
 #include "nvl/macros/Aliases.h"
+#include "nvl/message/Destroy.h"
+#include "nvl/message/Hit.h"
 #include "nvl/message/Message.h"
+#include "nvl/message/Notify.h"
 #include "nvl/world/World.h"
 
 namespace nvl {
 
 template <U64 N>
-abstract class Entity : public Actor {
+abstract class Entity : public AbstractActor {
 public:
+    class_tag(Entity<N>, AbstractActor);
     static constexpr U64 kMaxEntries = 10;
     static constexpr U64 kGridExpMin = 2;
     static constexpr U64 kGridExpMax = 10;
@@ -62,26 +66,47 @@ public:
 protected:
     friend struct View;
 
-    void receive(TickResult &result, const Message &message);
+    void receive(TickResult &result, Set<Actor> &neighbors, const Message &message);
     void receive(TickResult &result, const List<Message> &messages);
+
+    void hit(TickResult &result, Set<Actor> &neighbors, const Hit<N> &hit);
+
+    void destroy(TickResult &result);
 
     Pos<N> velocity_ = Pos<N>::fill(0);
     Pos<N> accel_ = Pos<N>::fill(0);
     Tree parts_;
     World<N> *world_ = nullptr;
+    bool alive_ = true;
 };
 
 template <U64 N>
-void Entity<N>::receive(TickResult &, const Message &) {}
+void Entity<N>::receive(TickResult &result, Set<Actor> &neighbors, const Message &message) {
+    if (auto *h = message.dyn_cast<Hit<N>>()) {
+        hit(result, neighbors, *h);
+    } else if (message.isa<Destroy>()) {
+        destroy(result);
+    }
+}
 
 template <U64 N>
 void Entity<N>::receive(TickResult &result, const List<Message> &messages) {
+    Set<Actor> neighbors;
     for (const auto &message : messages) {
-        receive(result, message);
+        receive(result, neighbors, message);
         if (result.status & Status::Died) {
-            break;
+            return; // Early exit on death
         }
     }
+}
+
+template <U64 N>
+void Entity<N>::hit(TickResult &result, Set<Actor> &neighbors, const Hit<N> &hit) {}
+
+template <U64 N>
+void Entity<N>::destroy(TickResult &result) {
+    alive_ = false;
+    result.status |= Status::Died;
 }
 
 template <U64 N>

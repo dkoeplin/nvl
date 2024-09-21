@@ -60,8 +60,8 @@ add_library(nvl SHARED
         nvl/math/Distribution.h
         nvl/math/Grid.h
         nvl/math/Random.h
-        nvl/message/Message.cpp
         nvl/message/Message.h
+        nvl/reflect/Castable.h
         nvl/reflect/Casting.h
         nvl/reflect/ClassTag.cpp
         nvl/reflect/ClassTag.h

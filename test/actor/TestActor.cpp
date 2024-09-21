@@ -5,6 +5,7 @@
 
 namespace {
 
+using nvl::AbstractActor;
 using nvl::Actor;
 using nvl::Box;
 using nvl::Draw;
@@ -12,7 +13,8 @@ using nvl::List;
 using nvl::Message;
 using nvl::TickResult;
 
-struct SimpleActor final : Actor {
+struct SimpleActor final : AbstractActor {
+    class_tag(SimpleActor, AbstractActor);
     explicit SimpleActor(const Box<2> &box) : box_(box) {}
 
     TickResult tick(const List<Message> &) override { return {}; }
