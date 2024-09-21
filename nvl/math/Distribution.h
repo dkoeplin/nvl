@@ -4,13 +4,13 @@
 
 #include "nvl/macros/Unreachable.h"
 #include "nvl/math/Random.h"
+#include "nvl/reflect/Casting.h"
+#include "nvl/reflect/ClassTag.h"
 #include "nvl/reflect/PrimitiveTypes.h"
 
 namespace nvl {
 
 struct Distribution {
-    enum Kind { kUniform, kNormal, kCustom };
-    using Type = PrimitiveType;
     struct Impl;
 
     template <typename T>
@@ -26,42 +26,41 @@ struct Distribution {
     explicit Distribution(std::shared_ptr<Impl> impl) : impl_(std::move(impl)) {}
 
     std::shared_ptr<Impl> impl_ = nullptr;
-    pure Kind kind() const;
-    pure Type type() const;
+
+    template <typename T>
+    const T *dyn_cast() const {
+        return nvl::dyn_cast<T>(impl_.get());
+    }
 
     template <typename T>
     T next(Random &random) const;
 };
 
 struct Distribution::Impl {
-    explicit Impl(const Kind kind, const Type type) : kind(kind), type(type) {}
+    class_tag(Distribution::Impl);
     virtual ~Impl() = default;
-    Kind kind;
-    Type type;
 };
-
-inline Distribution::Kind Distribution::kind() const { return impl_->kind; }
-inline Distribution::Type Distribution::type() const { return impl_->type; }
 
 template <typename T>
 struct DistributionUniform : Distribution::Impl {
-    explicit DistributionUniform(T min, T max) : Impl(Distribution::Kind::kUniform, reflect<T>()), min(min), max(max) {}
+    class_tag(DistributionUniform<T>);
+    explicit DistributionUniform(T min, T max) : min(min), max(max) {}
     T min;
     T max;
 };
 
 template <typename T>
 struct DistributionNormal : Distribution::Impl {
-    explicit DistributionNormal(T mean, T stddev)
-        : Impl(Distribution::Kind::kNormal, reflect<T>()), mean(mean), stddev(stddev) {}
+    class_tag(DistributionNormal<T>);
+    explicit DistributionNormal(T mean, T stddev) : mean(mean), stddev(stddev) {}
     T mean;
     T stddev;
 };
 
 template <typename T>
 struct DistributionCustom : Distribution::Impl {
-    explicit DistributionCustom(const std::function<T(Random &)> &func)
-        : Impl(Distribution::Kind::kCustom, Distribution::Type::kU64), func(func) {}
+    class_tag(DistributionCustom<T>);
+    explicit DistributionCustom(const std::function<T(Random &)> &func) : func(func) {}
     std::function<T(Random &)> func;
 };
 
@@ -82,53 +81,24 @@ Distribution Distribution::Custom(const std::function<T(Random &)> &func) {
 
 template <typename T>
 T Distribution::next(Random &random) const {
-    switch (kind()) {
-    case kUniform: {
-        switch (type()) {
-        case Type::kBool: {
-            const auto &dist = *static_cast<DistributionUniform<bool> *>(impl_.get());
-            return random.uniform<T, bool>(dist.min, dist.max);
-        }
-        case Type::kU64: {
-            const auto &dist = *static_cast<DistributionUniform<U64> *>(impl_.get());
-            return random.uniform<T, U64>(dist.min, dist.max);
-        }
-        case Type::kI64: {
-            const auto &dist = *static_cast<DistributionUniform<I64> *>(impl_.get());
-            return random.uniform<T, I64>(dist.min, dist.max);
-        }
-        case Type::kF64: {
-            const auto &dist = *static_cast<DistributionUniform<F64> *>(impl_.get());
-            return random.uniform<T, F64>(dist.min, dist.max);
-        }
-        }
+    if (const auto *uniform_bool = dyn_cast<DistributionUniform<bool>>()) {
+        return random.uniform<T, bool>(uniform_bool->min, uniform_bool->max);
+    } else if (const auto *uniform_u64 = dyn_cast<DistributionUniform<U64>>()) {
+        return random.uniform<T, U64>(uniform_u64->min, uniform_u64->max);
+    } else if (const auto *uniform_i64 = dyn_cast<DistributionUniform<I64>>()) {
+        return random.uniform<T, I64>(uniform_i64->min, uniform_i64->max);
+    } else if (const auto *uniform_f64 = dyn_cast<DistributionUniform<F64>>()) {
+        return random.uniform<T, F64>(uniform_f64->min, uniform_f64->max);
+    } else if (const auto *normal_u64 = dyn_cast<DistributionNormal<U64>>()) {
+        return random.normal<T, U64>(normal_u64->mean, normal_u64->stddev);
+    } else if (const auto *normal_i64 = dyn_cast<DistributionNormal<I64>>()) {
+        return random.normal<T, I64>(normal_i64->mean, normal_i64->stddev);
+    } else if (const auto *normal_f64 = dyn_cast<DistributionNormal<F64>>()) {
+        return random.normal<T, F64>(normal_f64->mean, normal_f64->stddev);
+    } else if (const auto *custom = dyn_cast<DistributionCustom<T>>()) {
+        return custom->func(random);
     }
-    case kNormal: {
-        switch (type()) {
-        case Type::kBool: {
-            UNREACHABLE(); // What is a normal distribution of booleans??
-        }
-        case Type::kU64: {
-            const auto &dist = *static_cast<DistributionNormal<U64> *>(impl_.get());
-            return random.normal<T, U64>(dist.mean, dist.stddev);
-        }
-        case Type::kI64: {
-            const auto &dist = *static_cast<DistributionNormal<I64> *>(impl_.get());
-            return random.normal<T, I64>(dist.mean, dist.stddev);
-        }
-        case Type::kF64: {
-            const auto &dist = *static_cast<DistributionNormal<F64> *>(impl_.get());
-            return random.normal<T, F64>(dist.mean, dist.stddev);
-        }
-        }
-    }
-    case kCustom: {
-        const auto &dist = *static_cast<DistributionCustom<T> *>(impl_.get());
-        return dist.func(random);
-    }
-    default:
-        UNREACHABLE();
-    }
+    UNREACHABLE();
 }
 
 } // namespace nvl

@@ -3,30 +3,32 @@
 #include "nvl/macros/Aliases.h"
 #include "nvl/macros/Pure.h"
 #include "nvl/macros/Unreachable.h"
+#include "nvl/reflect/ClassTag.h"
 
 namespace nvl {
 
-enum class PrimitiveType { kBool, kU64, kI64, kF64 };
+namespace type {
+constexpr auto kBool = ClassTag("bool");
+constexpr auto kU64 = ClassTag("U64");
+constexpr auto kI64 = ClassTag("I64");
+constexpr auto kF64 = ClassTag("F64");
+} // namespace type
 
-template <typename T>
-pure PrimitiveType reflect() {
-    UNREACHABLE();
+template <>
+pure inline const ClassTag &reflect<bool>() {
+    return type::kBool;
 }
 template <>
-pure inline PrimitiveType reflect<bool>() {
-    return PrimitiveType::kBool;
+pure inline const ClassTag &reflect<U64>() {
+    return type::kU64;
 }
 template <>
-pure inline PrimitiveType reflect<U64>() {
-    return PrimitiveType::kU64;
+pure inline const ClassTag &reflect<I64>() {
+    return type::kI64;
 }
 template <>
-pure inline PrimitiveType reflect<I64>() {
-    return PrimitiveType::kI64;
-}
-template <>
-pure inline PrimitiveType reflect<F64>() {
-    return PrimitiveType::kF64;
+pure inline const ClassTag &reflect<F64>() {
+    return type::kF64;
 }
 
 } // namespace nvl

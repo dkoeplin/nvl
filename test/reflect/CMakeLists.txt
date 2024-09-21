@@ -1,2 +1,2 @@
-add_gtest(TestCasting.cpp)
 add_gtest(TestClassTag.cpp)
+add_gtest(TestPrimitiveTypes.cpp)

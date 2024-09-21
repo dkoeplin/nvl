@@ -55,10 +55,17 @@ struct ClassTag {
     std::array<const ClassTag *, kMaxParents> parents = {nullptr};
 };
 
+template <typename T>
+pure const ClassTag &reflect() {
+    return ClassTag::get<T>();
+}
+
 /// Registers a static ClassTag for this class and creates a virtual ClassTag getter for instances of this class.
 #define class_tag(Name, ...)                                                                                           \
     [[maybe_unused]] static constexpr auto _classtag =                                                                 \
         ::nvl::ClassTag(#Name).with_parents<0 __VA_OPT__(, ) __VA_ARGS__>();                                           \
     pure virtual const ::nvl::ClassTag &_get_classtag() const __VA_OPT__(override) { return Name::_classtag; }
+
+inline std::ostream &operator<<(std::ostream &os, const ClassTag &tag) { return os << tag.name; }
 
 } // namespace nvl

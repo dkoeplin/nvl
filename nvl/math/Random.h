@@ -4,6 +4,7 @@
 
 #include "nvl/macros/Aliases.h"
 #include "nvl/macros/Expand.h"
+#include "nvl/macros/Pure.h"
 
 namespace nvl {
 
