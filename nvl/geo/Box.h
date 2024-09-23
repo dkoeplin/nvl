@@ -270,6 +270,11 @@ public:
     /// Returns the edge on the side of the box in dimension `dim` in direction `dir`.
     pure Edge<N> edge(U64 dim, Dir dir, I64 width = 1, I64 dist = 1) const;
 
+    /// Returns a new Box which is expanded by `size` in every direction/dimension.
+    pure Box widened(const U64 size) const {
+        return Box::presorted(min - Pos<N>::fill(size), max + Pos<N>::fill(size));
+    }
+
     pure std::string to_string() const {
         std::stringstream ss;
         ss << min.to_string() << "::" << max.to_string();

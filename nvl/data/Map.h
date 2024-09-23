@@ -108,6 +108,7 @@ public:
     pure bool operator==(const Map &other) const { return std::operator==(*this, other); }
     pure bool operator!=(const Map &other) const { return std::operator!=(*this, other); }
 
+    pure Range<iterator> unordered_entries() { return {parent::begin(), parent::end()}; }
     pure Range<const_iterator> unordered_entries() const { return {parent::begin(), parent::end()}; }
     pure Range<value_iterator> unordered_values() {
         return {value_iterator(parent::begin()), value_iterator(parent::end())};
@@ -120,9 +121,11 @@ std::ostream &operator<<(std::ostream &os, const Map<K, V, Hash, Equal, Allocato
     auto range = map.unordered_entries().once();
     if (!range.empty()) {
         os << range->first << ": " << range->second;
+        ++range;
     }
     while (range.has_next()) {
         os << ", " << range->first << ": " << range->second;
+        ++range;
     }
     return os << "}";
 }

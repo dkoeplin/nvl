@@ -44,7 +44,7 @@ public:
     pure typename Iterator::reference operator*() const
         requires traits::HasDereferenceOperator<Iterator>
     {
-        return this->begin_->operator*();
+        return *(this->begin_);
     }
     pure typename Iterator::pointer operator->() const
         requires traits::HasMemberAccessOperator<Iterator>

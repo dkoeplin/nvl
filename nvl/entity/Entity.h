@@ -54,66 +54,97 @@ public:
         return view.parts().all([](const Part<N> &part) { return part.material().falls(); });
     }
 
-    void draw(Draw &draw, const int64_t highlight) const override {
+    void draw(Draw &draw, const int64_t highlight) override {
         Draw::Offset offset(draw, loc());
         for (const auto &part : parts_.view.unordered_items()) {
             part.draw(draw, highlight);
         }
     }
 
-    TickResult tick(const List<Message> &messages) override;
+    void tick(const List<Message> &messages) override;
 
 protected:
     friend struct View;
 
-    void receive(TickResult &result, Set<Actor> &neighbors, const Message &message);
-    void receive(TickResult &result, const List<Message> &messages);
+    void receive(Set<Actor> &neighbors, const Message &message);
+    void receive(const List<Message> &messages);
 
-    void hit(TickResult &result, Set<Actor> &neighbors, const Hit<N> &hit);
+    void hit(Set<Actor> &neighbors, const Hit<N> &hit);
 
-    void destroy(TickResult &result);
+    void destroy();
+
+    template <typename Msg, typename... Args>
+    void send(const Actor dst, Args &&...args) {
+        world_.template send<Msg>(self(), dst, std::forward<Args>(args)...);
+    }
+
+    template <typename Msg, typename Iterator, typename... Args>
+        requires std::is_same_v<Actor, typename Iterator::value_type>
+    void send(const Range<Iterator> &dst, Args &&...args) {
+        world_.template send<Msg>(self(), dst, std::forward<Args>(args)...);
+    }
 
     Pos<N> velocity_ = Pos<N>::fill(0);
     Pos<N> accel_ = Pos<N>::fill(0);
     Tree parts_;
-    World<N> *world_ = nullptr;
-    bool alive_ = true;
+    Ref<World<N>> world_;
 };
 
 template <U64 N>
-void Entity<N>::receive(TickResult &result, Set<Actor> &neighbors, const Message &message) {
+void Entity<N>::receive(Set<Actor> &neighbors, const Message &message) {
     if (auto *h = message.dyn_cast<Hit<N>>()) {
-        hit(result, neighbors, *h);
+        hit(neighbors, *h);
     } else if (message.isa<Destroy>()) {
-        destroy(result);
+        destroy();
     }
 }
 
 template <U64 N>
-void Entity<N>::receive(TickResult &result, const List<Message> &messages) {
+void Entity<N>::receive(const List<Message> &messages) {
     Set<Actor> neighbors;
     for (const auto &message : messages) {
-        receive(result, neighbors, message);
-        if (result.status & Status::Died) {
-            return; // Early exit on death
-        }
+        receive(neighbors, message);
+        return_if(status_ & Status::Died); // Early exit on death
     }
 }
 
 template <U64 N>
-void Entity<N>::hit(TickResult &, Set<Actor> &, const Hit<N> &) {}
+void Entity<N>::hit(Set<Actor> &neighbors, const Hit<N> &hit) {
+    const Box<N> local_box = hit.box - parts_.loc;
+    const List<Ref<Part<N>>> hit_parts(view.parts(local_box));
+    return_if(hit_parts.empty());
 
-template <U64 N>
-void Entity<N>::destroy(TickResult &result) {
-    alive_ = false;
-    result.status |= Status::Died;
+    status_ |= Status::Hit;
+    for (const Ref<Part<N>> &part : hit_parts) {
+        const Box<N> area = part->bbox().widened(1);
+        neighbors.insert(world_->entities(area));
+        if (part->health() > hit.strength) {
+            parts_.emplace(part->bbox().intersect(local_box).value(), part->material(), part->health() - hit.strength);
+        }
+        parts_.insert(part->diff(local_box));
+        parts_.remove(part);
+    }
+
+    const auto components = parts_.view.components();
+    const bool broken = components.size() != 1;
+    const auto cause = broken ? Notify::kBroken : Notify::kChanged;
+    send<Notify>(neighbors.unordered(), cause);
+
+    if (broken) {
+        status_ |= Status::Died;
+    } else {
+        status_ |= Status::Woke;
+    }
 }
 
 template <U64 N>
-TickResult Entity<N>::tick(const List<Message> &messages) {
-    TickResult result;
-    receive(result, messages);
-    return result;
+void Entity<N>::destroy() {
+    status_ |= Status::Died;
+}
+
+template <U64 N>
+void Entity<N>::tick(const List<Message> &messages) {
+    receive(messages);
 }
 
 } // namespace nvl

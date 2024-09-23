@@ -1,5 +1,8 @@
 #pragma once
 
+#include "nvl/geo/Pos.h"
+#include "nvl/macros/Pure.h"
+
 namespace nvl {
 
 class Draw {

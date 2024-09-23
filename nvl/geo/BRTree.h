@@ -10,24 +10,30 @@ namespace nvl {
 
 namespace brtree_detail {
 
-template <U64 N, typename Item, U64 kMaxEntries = 10, U64 kGridExpMin = 2, U64 kGridExpMax = 10>
+template <U64 N, typename Item, typename ItemRef = Ref<Item>, U64 kMaxEntries = 10, U64 kGridExpMin = 2,
+          U64 kGridExpMax = 10>
 class BRTreeEdges {
 protected:
-    template <typename Entry>
-    using Tree = RTree<N, Entry, kMaxEntries, kGridExpMin, kGridExpMax>;
+    using ItemTree = RTree<N, Item, ItemRef, kMaxEntries, kGridExpMin, kGridExpMax>;
+    using EdgeTree = RTree<N, Edge<N>, Ref<Edge<N>>, kMaxEntries, kGridExpMin, kGridExpMax>;
+    static Box<N> bbox(const ItemRef &item) { return static_cast<const Item *>(item.ptr())->bbox(); }
 
     void mark_changed() { changed_ = true; }
 
-    Tree<Edge<N>> &get_edges() {
+    EdgeTree &get_edges() {
         if (changed_) {
             // Clear the edges
             changed_ = false;
             edges_.clear();
 
             // Recompute edges across all values
-            for (const Item &value : items_.unordered()) {
-                for (const Edge<N> &edge : value.bbox().edges()) {
-                    for (const Edge<N> &remain : edge.diff(items_[edge.bbox()])) {
+            for (const ItemRef &item : items_.unordered()) {
+                for (const Edge<N> &edge : bbox(item).edges()) {
+                    List<Box<N>> overlap;
+                    for (const ItemRef &b : items_[edge.bbox()]) {
+                        overlap.push_back(bbox(b));
+                    }
+                    for (const Edge<N> &remain : edge.diff(overlap.range())) {
                         edges_.insert(remain);
                     }
                 }
@@ -36,11 +42,11 @@ protected:
         return edges_;
     }
 
-    Tree<Item> items_;
+    ItemTree items_;
 
 private:
     bool changed_ = false;
-    Tree<Edge<N>> edges_;
+    EdgeTree edges_;
 };
 
 } // namespace brtree_detail
@@ -55,12 +61,13 @@ private:
  * @tparam kGridExpMin Minimum node grid size (2 ^ min_grid_exp). Defaults to 2.
  * @tparam kGridExpMax Initial grid size of the root. (2 ^ root_grid_exp). Defaults to 10.
  */
-template <U64 N, typename Item, U64 kMaxEntries = 10, U64 kGridExpMin = 2, U64 kGridExpMax = 10>
+template <U64 N, typename Item, typename ItemRef = Ref<Item>, U64 kMaxEntries = 10, U64 kGridExpMin = 2,
+          U64 kGridExpMax = 10>
     requires traits::HasBBox<Item>
-class BRTree : brtree_detail::BRTreeEdges<N, Item, kMaxEntries, kGridExpMin, kGridExpMax> {
+class BRTree : brtree_detail::BRTreeEdges<N, Item, ItemRef, kMaxEntries, kGridExpMin, kGridExpMax> {
 public:
-    template <typename Entry>
-    using Tree = RTree<N, Entry, kMaxEntries, kGridExpMin, kGridExpMax>;
+    using ItemTree = RTree<N, Item, ItemRef, kMaxEntries, kGridExpMin, kGridExpMax>;
+    using EdgeTree = RTree<N, Edge<N>, Ref<Edge<N>>, kMaxEntries, kGridExpMin, kGridExpMax>;
 
     /// Provides an iterator which returns a View of each Item when dereferenced.
     template <typename iterator, typename Entry>
@@ -107,9 +114,9 @@ public:
         Pos<N> offset_;
     };
 
-    using window_iterator = view_iterator<typename Tree<Item>::window_iterator, Item>;
-    using item_iterator = view_iterator<typename Tree<Item>::item_iterator, Item>;
-    using edge_iterator = view_iterator<typename Tree<Edge<N>>::item_iterator, Edge<N>>;
+    using window_iterator = view_iterator<typename ItemTree::window_iterator, Item>;
+    using item_iterator = view_iterator<typename ItemTree::item_iterator, Item>;
+    using edge_iterator = view_iterator<typename EdgeTree::item_iterator, Edge<N>>;
 
     BRTree() = default;
 
@@ -128,14 +135,29 @@ public:
     /// Edges are returned as View<N, Edge<N>>, where the view is with respect to this tree's global offset.
     pure Range<edge_iterator> unordered_edges() { return Range<edge_iterator>(this->get_edges().unordered(), loc); }
 
-    BRTree &insert(const Item &value) {
-        this->items_.insert(value);
+    BRTree &insert(const Item &item) {
+        this->items_.insert(item);
         this->mark_changed();
         return *this;
     }
 
-    BRTree &remove(const Item &value) {
-        this->items_.remove(value);
+    template <typename Iterator>
+        requires std::is_same_v<Item, typename Iterator::value_type>
+    BRTree &insert(const Range<Iterator> &items) {
+        this->items_.insert(items);
+        this->mark_changed();
+        return *this;
+    }
+
+    template <typename... Args>
+    ItemRef emplace(Args &&...args) {
+        auto ref = this->items_.emplace(std::forward<Args>(args)...);
+        this->mark_changed();
+        return ref;
+    }
+
+    BRTree &remove(const Item &item) {
+        this->items_.remove(item);
         this->mark_changed();
         return *this;
     }
@@ -161,24 +183,32 @@ public:
         /// Returns the maximum depth of this tree, in nodes.
         pure U64 depth() const { return tree.items_.debug.depth(); }
 
-        pure const Tree<Item> &item_rtree() const { return tree.items_; }
-        pure const Tree<Edge<N>> &edge_rtree() const { return tree.get_edges(); }
+        pure const ItemTree &item_rtree() const { return tree.items_; }
+        pure const EdgeTree &edge_rtree() const { return tree.get_edges(); }
 
         BRTree &tree;
     } debug = Debug(*this);
 
     struct Viewed {
-        using window_iterator = typename Tree<Item>::window_iterator;
-        using item_iterator = typename Tree<Item>::item_iterator;
-        using edge_iterator = typename Tree<Edge<N>>::item_iterator;
+        using window_iterator = typename ItemTree::window_iterator;
+        using item_iterator = typename ItemTree::item_iterator;
+        using edge_iterator = typename EdgeTree::item_iterator;
+        using Component = typename EquivalentSets<ItemRef, typename ItemTree::ItemRefHash>::Group;
 
         explicit Viewed(BRTree &tree) : tree(tree) {}
 
+        /// Returns the connected components in this tree.
+        pure List<Component> components() { return tree.items_.components(); }
+
+        /// Returns an iterable range over all items in this tree in the given area, without their relative
+        /// offsets.
         pure Range<window_iterator> operator[](const Pos<N> &pos) { return tree.items_[pos]; }
         pure Range<window_iterator> operator[](const Box<N> &box) { return tree.items_[box]; }
 
+        /// Provides a view to the items contained in this tree, without their relative offsets.
         pure Range<item_iterator> unordered_items() const { return tree.items_.unordered(); }
 
+        /// Provides a view to the edges contained in this tree, without their relative offsets.
         pure Range<edge_iterator> unordered_edges() const { return tree.get_edges().unordered(); }
 
         BRTree &tree;

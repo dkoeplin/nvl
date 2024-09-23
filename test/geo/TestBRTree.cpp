@@ -16,9 +16,18 @@ using nvl::BRTree;
 using nvl::Edge;
 using nvl::List;
 using nvl::Pos;
+using nvl::Ref;
 using nvl::Set;
 using nvl::View;
 using nvl::testing::LabeledBox;
+
+Set<View<2, Edge<2>>> view(List<Edge<2>> &list, const Pos<2> &offset) {
+    Set<View<2, Edge<2>>> set;
+    for (Edge<2> &item : list) {
+        set.emplace(item, offset);
+    }
+    return set;
+}
 
 TEST(TestBRTree, create) {
     BRTree<2, LabeledBox> tree;
@@ -30,8 +39,7 @@ TEST(TestBRTree, create) {
 
 TEST(TestBRTree, fetch) {
     BRTree<2, LabeledBox> tree;
-    LabeledBox box{1, {{0, 0}, {32, 32}}};
-    tree.insert(box);
+    auto box = tree.emplace(1, Box<2>({0, 0}, {32, 32}));
 
     const List<View<2, LabeledBox>> list(tree[{0, 0}]);
     EXPECT_THAT(list, UnorderedElementsAre(View<2, LabeledBox>(box, {0, 0})));
@@ -39,8 +47,7 @@ TEST(TestBRTree, fetch) {
 
 TEST(TestBRTree, move) {
     BRTree<2, LabeledBox> tree;
-    LabeledBox box{1, {{0, 0}, {32, 32}}};
-    tree.insert(box);
+    auto box = tree.emplace(1, Box<2>({0, 0}, {32, 32}));
     tree.loc = {500, 500};
 
     const List<View<2, LabeledBox>> list0(tree[{0, 0}]);
@@ -50,20 +57,11 @@ TEST(TestBRTree, move) {
     EXPECT_THAT(list1, UnorderedElementsAre(View<2, LabeledBox>(box, {500, 500})));
 }
 
-Set<View<2, Edge<2>>> view(List<Edge<2>> &list, const Pos<2> &offset) {
-    Set<View<2, Edge<2>>> set;
-    for (Edge<2> &item : list) {
-        set.emplace(item, offset);
-    }
-    return set;
-}
-
 TEST(TestBRTree, edges) {
     BRTree<2, LabeledBox> tree;
-    LabeledBox box{1, {{0, 0}, {32, 32}}};
-    List<Edge<2>> edges = box.bbox().edges();
+    auto box = tree.emplace(1, Box<2>({0, 0}, {32, 32}));
+    List<Edge<2>> edges = box->bbox().edges();
 
-    tree.insert(box);
     EXPECT_EQ(tree.debug.edge_rtree().size(), 4);
 
     const Set<View<2, Edge<2>>> edges0(tree.unordered_edges());

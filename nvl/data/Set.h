@@ -32,6 +32,16 @@ public:
     using parent::insert;
     using parent::size;
 
+    template <typename Iterator>
+        requires std::same_as<typename Iterator::value_type, Value>
+    Set &insert(const Range<Iterator> &range) {
+        parent::insert(range.begin(), range.end());
+        return *this;
+    }
+
+    pure Range<iterator> unordered() { return Range(begin(), end()); }
+    pure Range<const_iterator> unordered() const { return Range(begin(), end()); }
+
     pure bool operator==(const Set &rhs) const {
         return_if(size() != rhs.size(), false);
         const auto rhs_end = rhs.end();

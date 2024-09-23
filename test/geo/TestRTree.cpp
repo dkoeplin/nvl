@@ -29,25 +29,21 @@ TEST(TestRTree, create) {
 
 TEST(TestRTree, divide) {
     RTree<2, LabeledBox> tree;
-    const LabeledBox b0{0, {{5, 5}, {100, 100}}};
-    const LabeledBox b1{1, {{3000, 1200}, {3014, 1215}}};
-    tree.insert(b0);
-    tree.insert(b1);
+    tree.emplace(0, Box<2>({5, 5}, {100, 100}));
+    tree.emplace(1, Box<2>({3000, 1200}, {3014, 1215}));
     EXPECT_EQ(tree.size(), 2);
     EXPECT_EQ(tree.debug.nodes(), 1);
+
     const Map<Box<2>, Set<U64>> expected{{Box<2>({0, 0}, {1023, 1023}), Set<U64>{0}},
                                          {Box<2>({2048, 1024}, {3071, 2047}), Set<U64>{1}}};
     EXPECT_EQ(tree.debug.collect_ids(), expected);
 }
 
 TEST(TestRTree, subdivide) {
-    RTree<2, LabeledBox, /*max_entries*/ 2> tree;
-    const LabeledBox b0{0, {{0, 5}, {10, 20}}};
-    const LabeledBox b1{1, {{10, 100}, {20, 120}}};
-    const LabeledBox b2{2, {{100, 200}, {200, 200}}};
-    tree.insert(b0);
-    tree.insert(b1);
-    tree.insert(b2);
+    RTree<2, LabeledBox, Ref<LabeledBox>, /*max_entries*/ 2> tree;
+    const auto b0 = tree.emplace(0, Box<2>({0, 5}, {10, 20}));
+    const auto b1 = tree.emplace(1, Box<2>({10, 100}, {20, 120}));
+    const auto b2 = tree.emplace(2, Box<2>({100, 200}, {200, 200}));
 
     EXPECT_EQ(tree.size(), 3);        // Number of values
     EXPECT_EQ(tree.debug.nodes(), 4); // Number of nodes
@@ -58,7 +54,7 @@ TEST(TestRTree, subdivide) {
     EXPECT_EQ(tree.debug.collect_ids(), expected);
 
     // Check that we find all values when iterating over the bounding box, but each value is returned exactly once.
-    const List<LabeledBox> elements(tree[tree.bbox()]);
+    const List<Ref<LabeledBox>> elements(tree[tree.bbox()]);
     EXPECT_THAT(elements, UnorderedElementsAre(b0, b1, b2));
 }
 
@@ -81,11 +77,11 @@ TEST(TestRTree, bracket_operator) {
     Set<U64> ids;
     constexpr Box<2> range{{98, 526}, {99, 527}};
     for (const auto &box : tree[range]) {
-        ids.insert(box.id());
+        ids.insert(box->id());
     }
     for (const auto &box : tree.unordered()) {
-        if (box.bbox().overlaps(range)) {
-            EXPECT_TRUE(ids.contains(box.id()));
+        if (box->bbox().overlaps(range)) {
+            EXPECT_TRUE(ids.contains(box->id()));
         }
     }
 }
@@ -103,7 +99,7 @@ TEST(TestRTree, keep_buckets_after_subdivide) {
     box[8] = Box<2>({615, 416}, {672, 473}) + Pos<2>(0, 82);
     box[9] = Box<2>({599, 375}, {647, 415}) + Pos<2>(0, 41);
 
-    RTree<2, LabeledBox, /*max_entries*/ 9> tree;
+    RTree<2, LabeledBox, Ref<LabeledBox>, /*max_entries*/ 9> tree;
     for (auto &[id, x] : box.unordered_entries()) {
         tree.insert({id, x});
     }
@@ -129,14 +125,12 @@ TEST(TestRTree, negative_buckets) {
 
 TEST(TestRTree, fetch) {
     RTree<2, LabeledBox> tree;
-    const LabeledBox a{1, {{0, 882}, {1512, 982}}};
-    const LabeledBox b{2, {{346, -398}, {666, -202}}};
-    tree.insert(a);
-    tree.insert(b);
+    const auto a = tree.emplace(1, Box<2>({0, 882}, {1512, 982}));
+    const auto b = tree.emplace(2, Box<2>({346, -398}, {666, -202}));
 
-    const List<LabeledBox> range0(tree[{{0, -300}, {1024, 1000}}]);
-    const List<LabeledBox> range1(tree[{{0, 0}, {100, 100}}]);
-    const List<LabeledBox> range2(tree[{{0, 885}, {100, 886}}]);
+    const List<Ref<LabeledBox>> range0(tree[{{0, -300}, {1024, 1000}}]);
+    const List<Ref<LabeledBox>> range1(tree[{{0, 0}, {100, 100}}]);
+    const List<Ref<LabeledBox>> range2(tree[{{0, 885}, {100, 886}}]);
 
     EXPECT_THAT(range0, UnorderedElementsAre(a, b));
     EXPECT_THAT(range1, IsEmpty());

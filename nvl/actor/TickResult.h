@@ -6,8 +6,7 @@
 
 namespace nvl {
 
-class TickResult {
-public:
+struct TickResult {
     Status status = Status::None;
     List<Message> messages;
 };

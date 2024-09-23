@@ -1,7 +1,7 @@
 #pragma once
 
-#include "nvl/data/SipHash.h"
-#include "nvl/geo/Box.h"
+#include "nvl/actor/Status.h"
+#include "nvl/data/List.h"
 #include "nvl/macros/Abstract.h"
 #include "nvl/macros/Aliases.h"
 #include "nvl/macros/Pure.h"
@@ -10,22 +10,24 @@
 namespace nvl {
 
 class Draw;
-class Message;
-class TickResult;
+struct Actor;
+struct Message;
+struct Status;
 
-abstract struct AbstractActor {
+abstract struct AbstractActor : Castable<Actor, AbstractActor>::BaseClass {
     class_tag(AbstractActor);
-    virtual ~AbstractActor() = default;
+    virtual void tick(const List<Message> &messages) = 0;
+    virtual void draw(Draw &draw, I64 highlight) = 0;
 
-    virtual TickResult tick(const List<Message> &messages) = 0;
-    virtual void draw(Draw &draw, I64 highlight) const = 0;
+    pure Status status() const { return status_; }
+
+protected:
+    Status status_ = Status::None;
 };
 
-struct Actor : Castable<AbstractActor> {
-    friend struct std::hash<Actor>;
-
-    TickResult tick(const List<Message> &messages);
-    void draw(Draw &draw, I64 highlight) const;
+struct Actor final : Castable<Actor, AbstractActor> {
+    using Castable::Castable;
+    using Castable::get;
 
     pure bool operator==(const Actor &rhs) const { return this == &rhs; }
     pure bool operator!=(const Actor &rhs) const { return this != &rhs; }
@@ -35,5 +37,5 @@ struct Actor : Castable<AbstractActor> {
 
 template <>
 struct std::hash<nvl::Actor> {
-    pure expand U64 operator()(const nvl::Actor &actor) const noexcept { return sip_hash(actor.impl_.get()); }
+    pure expand U64 operator()(const nvl::Actor &actor) const noexcept;
 };

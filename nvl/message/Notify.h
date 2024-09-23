@@ -10,7 +10,16 @@ namespace nvl {
  */
 struct Notify : AbstractMessage {
     class_tag(Notify);
-    enum Cause { kRemoved, kBroken, kMoved, kOther };
+    enum Cause {
+        kBroken,  // Notify recipient(s) that nearby source was broken
+        kChanged, // Notify recipient(s) that nearby source was changed
+        kCreated, // Notify recipient(s) that they were created by source
+        kDied,    // Notify recipient(s) that nearby source died
+        kMoved,   // Notify recipient(s) that nearby source moved
+        kOther
+    };
+    explicit Notify(Actor src, const Cause cause) : AbstractMessage(std::move(src)), cause(cause) {}
+
     Cause cause;
 };
 

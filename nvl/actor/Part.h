@@ -19,6 +19,14 @@ public:
     pure const Material &material() const { return material_; }
     pure I64 health() const { return health_; }
 
+    pure List<Part> diff(const Box<N> &rhs) const {
+        List<Part> result;
+        for (const auto &rest : box_.diff(rhs)) {
+            result.emplace(rest, material_, health_);
+        }
+        return result;
+    }
+
     void draw(Draw &, const I64) const {
         // TODO: Stub
     }

@@ -16,7 +16,7 @@ struct AbstractDistribution {
     virtual ~AbstractDistribution() = default;
 };
 
-class Distribution final : public Castable<AbstractDistribution> {
+class Distribution final : public Castable<Distribution, AbstractDistribution, std::shared_ptr<AbstractDistribution>> {
 public:
     template <typename T>
     static Distribution Uniform(T min, T max);

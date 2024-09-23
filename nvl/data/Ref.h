@@ -11,27 +11,28 @@ template <typename Value>
 class Ref {
 public:
     Ref() = default;
-    implicit Ref(Value &value) : ptr(&value) {}
+    implicit Ref(Value &value) : ptr_(&value) {}
+    explicit Ref(Value *value) : ptr_(value) {}
 
-    explicit operator bool() { return ptr != nullptr; }
+    explicit operator bool() { return ptr_ != nullptr; }
 
-    pure Value &operator*() { return *ptr; }
-    pure const Value &operator*() const { return *ptr; }
+    pure Value &operator*() { return *ptr_; }
+    pure const Value &operator*() const { return *ptr_; }
 
-    pure Value *operator->() { return ptr; }
-    pure const Value *operator->() const { return ptr; }
+    pure Value *operator->() { return ptr_; }
+    pure const Value *operator->() const { return ptr_; }
 
-    pure Value &raw() { return *ptr; }
-    pure const Value &raw() const { return *ptr; }
+    pure Value &raw() { return *ptr_; }
+    pure const Value &raw() const { return *ptr_; }
 
-    pure Value *pointer() { return ptr; }
-    pure const Value *pointer() const { return ptr; }
+    pure Value *ptr() { return ptr_; }
+    pure const Value *ptr() const { return ptr_; }
 
-    pure bool operator==(const Ref &rhs) const { return *ptr == *rhs.ptr; }
-    pure bool operator!=(const Ref &rhs) const { return *ptr != *rhs.ptr; }
+    pure bool operator==(const Ref &rhs) const { return *ptr_ == *rhs.ptr_; }
+    pure bool operator!=(const Ref &rhs) const { return *ptr_ != *rhs.ptr_; }
 
 private:
-    Value *ptr = nullptr;
+    Value *ptr_ = nullptr;
 };
 
 template <typename Value>

@@ -21,20 +21,21 @@ template <U64 N, typename Value>
     requires traits::HasBBox<Value>
 class View {
 public:
-    explicit View(Value &value, const Pos<N> &offset) : value_(value), offset_(offset) {}
+    explicit View(Ref<Value> value, const Pos<N> &offset) : value_(value.ptr()), offset_(offset) {}
+    explicit View(Value *value, const Pos<N> &offset) : value_(value), offset_(offset) {}
 
-    pure bool operator==(const View &rhs) const { return value_ == rhs.value_ && offset_ == rhs.offset_; }
+    pure bool operator==(const View &rhs) const { return *value_ == *rhs.value_ && offset_ == rhs.offset_; }
     pure bool operator!=(const View &rhs) const { return !(*this == rhs); }
 
-    const Value *operator->() const { return &value_.raw(); }
-    const Value &operator*() const { return value_.raw(); }
+    const Value *operator->() const { return value_; }
+    const Value &operator*() const { return *value_; }
 
-    pure Box<N> bbox() const { return value_.bbox() + offset_; }
+    pure Box<N> bbox() const { return value_->bbox() + offset_; }
 
     pure const Pos<N> &offset() const { return offset_; }
 
 private:
-    Ref<Value> value_;
+    Value *value_;
     Pos<N> offset_;
 };
 

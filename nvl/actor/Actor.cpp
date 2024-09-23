@@ -1,11 +1,11 @@
 #include "nvl/actor/Actor.h"
 
-#include "nvl/actor/TickResult.h"
+#include "nvl/data/SipHash.h"
 
 namespace nvl {
 
-TickResult Actor::tick(const List<Message> &messages) { return impl_->tick(messages); }
-
-void Actor::draw(Draw &draw, int64_t highlight) const { impl_->draw(draw, highlight); }
-
 } // namespace nvl
+
+pure expand U64 std::hash<nvl::Actor>::operator()(const nvl::Actor &actor) const noexcept {
+    return sip_hash(actor.ptr());
+}

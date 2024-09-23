@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "nvl/data/Range.h"
+#include "nvl/macros/Implicit.h"
 #include "nvl/macros/Pure.h"
 
 namespace nvl {
@@ -24,6 +25,9 @@ public:
         requires std::same_as<typename Iterator::value_type, Value>
     explicit List(const Range<Iterator> &range)
         : List<typename Range<Iterator>::value_type>(range.begin(), range.end()) {}
+
+    pure Range<iterator> range() { return Range<iterator>(begin(), end()); }
+    pure Range<const_iterator> range() const { return Range<const_iterator>(begin(), end()); }
 
     pure bool operator==(const List &rhs) const {
         return size() == rhs.size() && std::equal(begin(), end(), rhs.begin());

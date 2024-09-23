@@ -23,8 +23,11 @@ FetchContent_MakeAvailable(googletest)
 include(GoogleTest)
 
 add_library(nvl SHARED
+        nvl/actor/Actor.cpp
         nvl/actor/Actor.h
         nvl/actor/Part.h
+        nvl/actor/Status.h
+        nvl/actor/TickResult.h
         nvl/data/HasDereference.h
         nvl/data/IteratorPair.h
         nvl/data/List.h
