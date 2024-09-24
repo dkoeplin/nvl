@@ -49,12 +49,15 @@ protected:
     };
 
     void tick() {
+        static const List<Message> kNoMessages = {};
+
         Set<Actor> died;
         Set<Ref<Entity<N>>, EntityHash> idled;
         for (Ref<Entity<N>> entity : awake_) {
             const Actor actor = entity->self();
             const Box<N> prev_bbox = entity->bbox();
-            const List<Message> &messages = messages_[actor];
+            auto messages_iter = messages_.find(actor);
+            const List<Message> &messages = messages_iter == messages_.end() ? kNoMessages : messages_iter->second;
             const Status status = entity->tick(messages);
             if (status == Status::kDied) {
                 died.insert(actor);
@@ -62,6 +65,9 @@ protected:
                 idled.insert(entity);
             } else if (status == Status::kMove) {
                 entities_.move(actor, prev_bbox);
+            }
+            if (messages_iter != messages_.end()) {
+                messages_.erase(messages_iter);
             }
         }
         awake_.erase(died.begin(), died.end());
