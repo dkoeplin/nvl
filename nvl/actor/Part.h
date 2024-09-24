@@ -13,7 +13,7 @@ class Part {
 public:
     explicit Part(const Box<N> &box, Material material, const I64 health)
         : box_(box), material_(std::move(material)), health_(health) {}
-    explicit Part(const Box<N> &box, const Material &material) : Part(box, material, material.durability()) {}
+    explicit Part(const Box<N> &box, const Material &material) : Part(box, material, material->durability) {}
 
     pure const Box<N> &bbox() const { return box_; }
     pure const Material &material() const { return material_; }
@@ -21,8 +21,8 @@ public:
 
     pure List<Part> diff(const Box<N> &rhs) const {
         List<Part> result;
-        for (const auto &rest : box_.diff(rhs)) {
-            result.emplace(rest, material_, health_);
+        for (const Box<N> &rest : box_.diff(rhs)) {
+            result.emplace_back(rest, material_, health_);
         }
         return result;
     }

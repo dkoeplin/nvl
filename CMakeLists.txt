@@ -57,7 +57,6 @@ add_library(nvl SHARED
         nvl/macros/Pure.h
         nvl/macros/ReturnIf.h
         nvl/macros/Unreachable.h
-        nvl/material/Material.cpp
         nvl/material/Material.h
         nvl/math/Bitwise.h
         nvl/math/Distribution.h

@@ -3,7 +3,6 @@
 #include "nvl/actor/Actor.h"
 #include "nvl/actor/Part.h"
 #include "nvl/actor/Status.h"
-#include "nvl/actor/TickResult.h"
 #include "nvl/geo/BRTree.h"
 #include "nvl/geo/Pos.h"
 #include "nvl/macros/Abstract.h"
@@ -23,7 +22,7 @@ public:
     static constexpr U64 kMaxEntries = 10;
     static constexpr U64 kGridExpMin = 2;
     static constexpr U64 kGridExpMax = 10;
-    using Tree = BRTree<N, Part<N>, kMaxEntries, kGridExpMin, kGridExpMax>;
+    using Tree = BRTree<N, Part<N>, Ref<Part<N>>, kMaxEntries, kGridExpMin, kGridExpMax>;
 
     struct Debug {
         explicit Debug(Entity &entity) : entity(entity) {}
@@ -42,46 +41,46 @@ public:
     pure Range<typename Tree::window_iterator> parts(const Box<N> &box) { return parts_[box]; }
     pure Range<typename Tree::window_iterator> parts(const Pos<N> &pos) { return parts_[pos]; }
 
-    struct View {
-        explicit View(Entity &entity) : entity(entity) {}
+    struct RelativeView {
+        explicit RelativeView(Entity &entity) : entity(entity) {}
         pure Range<typename Tree::Viewed::item_iterator> parts() { return entity.parts_.view.unordered_items(); }
         pure Range<typename Tree::Viewed::window_iterator> parts(const Box<N> &box) { return entity.parts_.view[box]; }
         pure Range<typename Tree::Viewed::window_iterator> parts(const Pos<N> &pos) { return entity.parts_.view[pos]; }
         Entity &entity;
-    } view = View(*this);
+    } view = RelativeView(*this);
 
     pure virtual bool falls() {
-        return view.parts().all([](const Part<N> &part) { return part.material().falls(); });
+        return view.parts().all([](const Ref<Part<N>> part) { return part->material()->falls; });
     }
 
     void draw(Draw &draw, const int64_t highlight) override {
         Draw::Offset offset(draw, loc());
-        for (const auto &part : parts_.view.unordered_items()) {
-            part.draw(draw, highlight);
+        for (Ref<Part<N>> part : parts_.view.unordered_items()) {
+            part->draw(draw, highlight);
         }
     }
 
-    void tick(const List<Message> &messages) override;
+    Status tick(const List<Message> &messages) override;
 
 protected:
-    friend struct View;
+    friend struct RelativeView;
 
-    void receive(Set<Actor> &neighbors, const Message &message);
-    void receive(const List<Message> &messages);
+    Set<Actor> above();
 
-    void hit(Set<Actor> &neighbors, const Hit<N> &hit);
+    Status receive(Set<Actor> &neighbors, const Message &message);
+    Status receive(const List<Message> &messages);
 
-    void destroy();
+    Status hit(Set<Actor> &neighbors, const Hit<N> &hit);
 
     template <typename Msg, typename... Args>
     void send(const Actor dst, Args &&...args) {
-        world_.template send<Msg>(self(), dst, std::forward<Args>(args)...);
+        world_->template send<Msg>(self(), dst, std::forward<Args>(args)...);
     }
 
     template <typename Msg, typename Iterator, typename... Args>
         requires std::is_same_v<Actor, typename Iterator::value_type>
     void send(const Range<Iterator> &dst, Args &&...args) {
-        world_.template send<Msg>(self(), dst, std::forward<Args>(args)...);
+        world_->template send<Msg>(self(), dst, std::forward<Args>(args)...);
     }
 
     Pos<N> velocity_ = Pos<N>::fill(0);
@@ -91,37 +90,52 @@ protected:
 };
 
 template <U64 N>
-void Entity<N>::receive(Set<Actor> &neighbors, const Message &message) {
-    if (auto *h = message.dyn_cast<Hit<N>>()) {
-        hit(neighbors, *h);
-    } else if (message.isa<Destroy>()) {
-        destroy();
+Set<Actor> Entity<N>::above() {
+    Set<Actor> above;
+    for (const View<N, Edge<N>> &edge : parts_.unordered_edges()) {
+        if (World<N>::is_vertical(edge->dim, edge->dir)) {
+            above.insert(world_->entities(edge.bbox()));
+        }
     }
+    return above;
 }
 
 template <U64 N>
-void Entity<N>::receive(const List<Message> &messages) {
+Status Entity<N>::receive(Set<Actor> &neighbors, const Message &message) {
+    if (auto *h = message.dyn_cast<Hit<N>>()) {
+        return hit(neighbors, *h);
+    } else if (message.isa<Destroy>()) {
+        return Status::kDied;
+    }
+    return Status::kNone;
+}
+
+template <U64 N>
+Status Entity<N>::receive(const List<Message> &messages) {
+    Status status = Status::kNone;
     Set<Actor> neighbors;
     for (const auto &message : messages) {
-        receive(neighbors, message);
-        return_if(status_ & Status::Died); // Early exit on death
+        status = std::max(status, receive(neighbors, message));
+        return_if(status == Status::kDied, status); // Early exit on death
     }
+    return status;
 }
 
 template <U64 N>
-void Entity<N>::hit(Set<Actor> &neighbors, const Hit<N> &hit) {
+Status Entity<N>::hit(Set<Actor> &neighbors, const Hit<N> &hit) {
     const Box<N> local_box = hit.box - parts_.loc;
     const List<Ref<Part<N>>> hit_parts(view.parts(local_box));
-    return_if(hit_parts.empty());
+    return_if(hit_parts.empty(), Status::kNone);
 
-    status_ |= Status::Hit;
     for (const Ref<Part<N>> &part : hit_parts) {
         const Box<N> area = part->bbox().widened(1);
         neighbors.insert(world_->entities(area));
         if (part->health() > hit.strength) {
             parts_.emplace(part->bbox().intersect(local_box).value(), part->material(), part->health() - hit.strength);
         }
-        parts_.insert(part->diff(local_box));
+        for (auto diff : part->diff(local_box)) {
+            parts_.insert(diff);
+        }
         parts_.remove(part);
     }
 
@@ -130,21 +144,30 @@ void Entity<N>::hit(Set<Actor> &neighbors, const Hit<N> &hit) {
     const auto cause = broken ? Notify::kBroken : Notify::kChanged;
     send<Notify>(neighbors.unordered(), cause);
 
-    if (broken) {
-        status_ |= Status::Died;
+    return broken ? Status::kDied : Status::kNone;
+}
+
+template <U64 N>
+Status Entity<N>::tick(const List<Message> &messages) {
+    Status status = receive(messages);
+    return_if(status == Status::kDied, status);
+
+    const Pos<N> init_velocity = velocity_;
+
+    if (velocity_ != Pos<N>::zero) {
+        if (init_velocity != Pos<N>::zero) {
+            // When starting to move, notify anything above
+            const Set<Actor> neighbors = above();
+            send<Notify>(neighbors.unordered(), Notify::kMoved);
+        }
+        // Move by velocity per tick
+        parts_.loc += velocity_;
+        status = Status::kMove;
     } else {
-        status_ |= Status::Woke;
+        status = Status::kIdle;
     }
-}
 
-template <U64 N>
-void Entity<N>::destroy() {
-    status_ |= Status::Died;
-}
-
-template <U64 N>
-void Entity<N>::tick(const List<Message> &messages) {
-    receive(messages);
+    return status;
 }
 
 } // namespace nvl

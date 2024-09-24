@@ -25,10 +25,8 @@ public:
 
     expand F64 uniform(const F64 min, const F64 max) { return std::uniform_real_distribution(min, max)(engine_); }
 
-    template <typename I>
-        requires std::is_integral_v<I> || std::is_floating_point_v<I>
-    expand I normal(const I mean, const I stddev) {
-        return std::normal_distribution<I>(mean, stddev)(engine_);
+    expand double normal(const double mean, const double stddev) {
+        return std::normal_distribution(mean, stddev)(engine_);
     }
 
     template <typename V, typename I, typename Gen = RandomGen<V>>
@@ -69,11 +67,9 @@ struct RandomGen {
         }
         return *(V *)(&data);
     }
-    template <typename I>
-        requires std::is_integral_v<I> || std::is_floating_point_v<I>
-    pure V normal(Random &random, const I mean, const I stddev) const {
-        std::array<I, sizeof(V)> data;
-        std::normal_distribution<I> distribution(mean, stddev);
+    pure V normal(Random &random, const double mean, const double stddev) const {
+        std::array<double, sizeof(V)> data;
+        std::normal_distribution distribution(mean, stddev);
         for (U64 i = 0; i < sizeof(V); ++i) {
             data[i] = distribution(random.engine());
         }

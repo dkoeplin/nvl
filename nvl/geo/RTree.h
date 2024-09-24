@@ -161,11 +161,11 @@ public:
     }
 
     /// Removes the matching item from the tree.
-    RTree &remove(const Item &item) { return remove_over(item, item.bbox(), true); }
+    RTree &remove(const ItemRef &item) { return remove_over(item, item->bbox(), true); }
 
     /// Registers the matching item as having moved from the previous volume `prev` to its current volume.
     /// Does nothing if no matching item exists in the tree.
-    RTree &move(const Item &item, const Box<N> &prev) { return move(item.bbox(), prev); }
+    RTree &move(const ItemRef &item, const Box<N> &prev) { return move(item->bbox(), prev); }
 
     /// Returns an iterator over all unique stored items in the given volume.
     pure Range<window_iterator> operator[](const Pos<N> &pos) {
@@ -359,8 +359,7 @@ private:
 
         bool skip_item(Work &current) {
             ItemRef ref = current.item();
-            Item &item = *ref;
-            return visited.contains(ref) || !item.bbox().overlaps(box);
+            return visited.contains(ref) || !bbox(ref).overlaps(box);
         }
 
         bool visit_next_pair(Work &current) {
@@ -618,13 +617,8 @@ private:
     Range<entry_iterator> entries_in(const Box<N> &box) { return Range<entry_iterator>(*this, box); }
 
     Maybe<std::pair<U64, ItemRef>> get_item(const ItemRef &item) {
-        ItemRef ref = item;
-        if (auto iter_id = item_ids_.find(ref); iter_id != item_ids_.end()) {
-            if (auto iter = items_.find(iter_id->second); iter != items_.end()) {
-                const U64 id = iter->first;
-                const ItemRef ref2 = iter->second;
-                return Some(std::pair<U64, ItemRef>{id, ref2});
-            }
+        if (auto iter = item_ids_.find(item); iter != item_ids_.end()) {
+            return Some(std::pair<U64, ItemRef>{iter->second, iter->first});
         }
         return None;
     }
@@ -669,7 +663,7 @@ private:
         return ref;
     }
 
-    RTree &remove_over(const Item &item, const Box<N> &box, const bool remove_all) {
+    RTree &remove_over(const ItemRef item, const Box<N> &box, const bool remove_all) {
         if (auto pair = get_item(item)) {
             // TODO: Update bounds?
             for (auto [node, pos] : entries_in(box)) {

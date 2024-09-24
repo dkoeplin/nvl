@@ -30,10 +30,10 @@ TEST(TestPos, unit) {
 }
 
 TEST(TestPos, zero) {
-    const auto z4 = Pos<4>::zero();
+    const auto z4 = Pos<4>::zero;
     EXPECT_THAT(z4, ElementsAre(0, 0, 0, 0));
 
-    const auto z3 = Pos<3>::zero();
+    const auto z3 = Pos<3>::zero;
     EXPECT_THAT(z3, ElementsAre(0, 0, 0));
 }
 

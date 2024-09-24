@@ -85,7 +85,7 @@ public:
     }
 
     /// Returns a Pos of rank `N` where all elements are zero.
-    static Pos zero() { return fill(0); }
+    static const Pos zero;
 
     /// Returns a Pos of rank `N` with uninitialized elements.
     explicit constexpr Pos() = default;
@@ -398,6 +398,9 @@ private:
     friend struct std::hash<Pos>;
     I64 indices_[N];
 };
+
+template <U64 N>
+const Pos<N> Pos<N>::zero = Pos::fill(0);
 
 template <U64 N>
 Pos<N> min(const Pos<N> &a, const Pos<N> &b) {

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "nvl/data/Iterator.h"
 #include "nvl/data/List.h"
 #include "nvl/data/Maybe.h"
 #include "nvl/data/Range.h"
@@ -13,7 +14,7 @@
 namespace nvl {
 
 template <U64 N>
-class Edge;
+struct Edge;
 
 template <U64 N>
 class Box {
@@ -40,14 +41,8 @@ public:
     /// Returns a Box with only one point.
     static Box unit(const Pos<N> &pt) { return Box::presorted(pt, pt); }
 
-    class pos_iterator {
+    class pos_iterator : public Iterator<std::input_iterator_tag, Pos<N>> {
     public:
-        using value_type = Pos<N>;
-        using pointer = Pos<N> *;
-        using reference = Pos<N> &;
-        using difference_type = std::ptrdiff_t;            // TODO: This likely isn't right
-        using iterator_category = std::input_iterator_tag; // TODO: This may not be right
-
         static pos_iterator begin(const Box &box, const Pos<N> &step) { return pos_iterator(box, box.min, step); }
         static pos_iterator end(const Box &box, const Pos<N> &step) { return pos_iterator(box, None, step); }
 
@@ -87,19 +82,13 @@ public:
             }
         }
 
-        Box box_;
+        Box<N> box_;
         Maybe<Pos<N>> pos_;
         Pos<N> step_;
     };
 
-    class box_iterator {
+    class box_iterator : public Iterator<std::input_iterator_tag, Box<N>> {
     public:
-        using value_type = Box;
-        using pointer = Box *;
-        using reference = Box &;
-        using difference_type = std::ptrdiff_t;
-        using iterator_category = std::input_iterator_tag;
-
         static box_iterator begin(const Box &box, const Pos<N> &shape = Pos<N>::fill(1)) {
             return box_iterator(box, Box::presorted(box.min, box.min + shape - 1), shape);
         }
@@ -144,11 +133,10 @@ public:
                 ASSERT(shape_[i] > 0, "TODO: Support negative step");
             }
         }
-        Box box_;
+        Box<N> box_;
         Maybe<Box> current_;
         Pos<N> shape_;
     };
-
     explicit Box() = default;
 
     /// Returns a Box from points `a` to `b` (inclusive).
@@ -322,15 +310,14 @@ private:
 };
 
 template <U64 N>
-class Edge {
-public:
+struct Edge {
     Edge() = default;
-    explicit Edge(const U64 dim, const Dir dir, const Box<N> &box) : dim_(dim), dir_(dir), box_(box) {}
+    explicit Edge(const U64 dim, const Dir dir, const Box<N> &box) : dim(dim), dir(dir), box(box) {}
 
     pure List<Edge> diff(const Box<N> &rhs) const {
         List<Edge> result;
-        for (const auto &b : box_.diff(rhs)) {
-            result.emplace_back(dim_, dir_, b);
+        for (const Box<N> &b : box.diff(rhs)) {
+            result.emplace_back(dim, dir, b);
         }
         return result;
     }
@@ -339,25 +326,21 @@ public:
         requires traits::HasBBox<typename Iterator::value_type>
     pure List<Edge> diff(const Range<Iterator> &range) const {
         List<Edge> result;
-        for (const auto &b : box_.diff(range)) {
-            result.emplace_back(dim_, dir_, b);
+        for (const Box<N> &b : box.diff(range)) {
+            result.emplace_back(dim, dir, b);
         }
         return result;
     }
 
-    pure bool operator==(const Edge &rhs) const { return dim_ == rhs.dim_ && dir_ == rhs.dir_ && box_ == rhs.box_; }
+    pure bool operator==(const Edge &rhs) const { return dim == rhs.dim && dir == rhs.dir && box == rhs.box; }
     pure bool operator!=(const Edge &rhs) const { return !(*this == rhs); }
 
-    pure U64 thickness() const { return box_.shape(dim_); }
+    pure U64 thickness() const { return box.shape(dim); }
+    pure Box<N> bbox() const { return box; }
 
-    pure U64 dim() const { return dim_; }
-    pure Dir dir() const { return dir_; }
-    pure const Box<N> &bbox() const { return box_; }
-
-private:
-    U64 dim_ = 0;
-    Dir dir_;
-    Box<N> box_;
+    U64 dim = 0;
+    Dir dir;
+    Box<N> box;
 };
 
 template <U64 N>
@@ -409,7 +392,7 @@ std::ostream &operator<<(std::ostream &os, const Box<N> &box) {
 
 template <U64 N>
 std::ostream &operator<<(std::ostream &os, const Edge<N> &edge) {
-    return os << "Edge(" << edge.dim() << ", " << edge.dir() << ", " << edge.bbox() << ")";
+    return os << "Edge(" << edge.dim << ", " << edge.dir << ", " << edge.box << ")";
 }
 
 /// Returns the minimal Box which includes all of both Box `a` and `b`.

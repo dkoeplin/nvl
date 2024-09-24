@@ -12,7 +12,8 @@ class Castable {
 public:
     struct BaseClass {
         virtual ~BaseClass() = default;
-        T self() const { return T(Ptr(this)); }
+        Ref self() const { return Ref(Ptr(static_cast<const T *>(this))); }
+        Ref self() { return Ref(Ptr(static_cast<T *>(this))); }
     };
 
     template <typename R, typename... Args>

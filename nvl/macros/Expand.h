@@ -1,5 +1,7 @@
 #pragma once
 
+#include <sys/cdefs.h>
+
 namespace nvl {
 
 /// Stronger hint than the standard inline keyword which tells the compiler to "always" inline this function.

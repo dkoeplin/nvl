@@ -156,7 +156,7 @@ public:
         return ref;
     }
 
-    BRTree &remove(const Item &item) {
+    BRTree &remove(const ItemRef item) {
         this->items_.remove(item);
         this->mark_changed();
         return *this;

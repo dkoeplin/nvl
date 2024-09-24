@@ -7,6 +7,7 @@
 namespace nvl {
 
 struct Color {
+    Color() = default;
     explicit Color(const U64 r, const U64 g, const U64 b) : Color(r, g, b, 0xFF) {}
     explicit Color(const U64 r, const U64 g, const U64 b, const U64 a) {
         value = ((a << 24) & 0xFF) | ((r << 16) & 0xFF) | ((g << 8) & 0xFF) | ((b << 0) & 0xFF);
@@ -20,7 +21,7 @@ struct Color {
     pure bool operator==(const Color &rhs) const { return value == rhs.value; }
     pure bool operator!=(const Color &rhs) const { return value != rhs.value; }
 
-    U64 value;
+    U64 value = 0;
 };
 
 } // namespace nvl

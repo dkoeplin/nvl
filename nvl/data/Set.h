@@ -39,8 +39,8 @@ public:
         return *this;
     }
 
-    pure Range<iterator> unordered() { return Range(begin(), end()); }
-    pure Range<const_iterator> unordered() const { return Range(begin(), end()); }
+    pure Range<iterator> unordered() { return {begin(), end()}; }
+    pure Range<const_iterator> unordered() const { return {begin(), end()}; }
 
     pure bool operator==(const Set &rhs) const {
         return_if(size() != rhs.size(), false);

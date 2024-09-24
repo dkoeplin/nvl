@@ -1,9 +1,11 @@
 #pragma once
 
+#include "nvl/data/HasEquality.h"
 #include "nvl/macros/Aliases.h"
 #include "nvl/macros/Expand.h"
 #include "nvl/macros/Implicit.h"
 #include "nvl/macros/Pure.h"
+#include "nvl/macros/ReturnIf.h"
 
 namespace nvl {
 
@@ -28,8 +30,14 @@ public:
     pure Value *ptr() { return ptr_; }
     pure const Value *ptr() const { return ptr_; }
 
-    pure bool operator==(const Ref &rhs) const { return *ptr_ == *rhs.ptr_; }
-    pure bool operator!=(const Ref &rhs) const { return *ptr_ != *rhs.ptr_; }
+    pure bool operator==(const Ref &rhs) const {
+        return_if(ptr_ == rhs.ptr_, true);
+        if constexpr (HasEquality<Value>) {
+            return_if(*ptr_ == *rhs.ptr_, true);
+        }
+        return false;
+    }
+    pure bool operator!=(const Ref &rhs) const { return !(*this == rhs); }
 
 private:
     Value *ptr_ = nullptr;
@@ -41,8 +49,3 @@ expand std::ostream &operator<<(std::ostream &os, const Ref<Value> &ref) {
 }
 
 } // namespace nvl
-
-template <typename Value>
-struct std::hash<nvl::Ref<Value>> {
-    pure U64 operator()(const nvl::Ref<Value> &a) const { return std::hash<Value>()(a.raw()); }
-};
