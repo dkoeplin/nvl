@@ -6,6 +6,7 @@
 #include "nvl/data/List.h"
 #include "nvl/data/Map.h"
 #include "nvl/data/Once.h"
+#include "nvl/data/PointerHash.h"
 #include "nvl/data/Range.h"
 #include "nvl/data/Ref.h"
 #include "nvl/data/Set.h"
@@ -108,9 +109,7 @@ class RTree {
 
 public:
     /// Hashing of items is done based on pointer address because the RTree itself owns the memory.
-    struct ItemRefHash {
-        pure U64 operator()(const ItemRef &a) const noexcept { return sip_hash(&(*a)); }
-    };
+    using ItemRefHash = PointerHash<ItemRef>;
 
     class window_iterator;
 
@@ -144,7 +143,8 @@ public:
     }
 
     /// Inserts a copy of the item into the tree.
-    RTree &insert(const Item &item) { return insert_over(item, item.bbox()); }
+    /// Returns a reference to the copy held by the tree.
+    ItemRef insert(const Item &item) { return insert_over(item, item.bbox()); }
 
     /// Inserts a copy of each item into the tree.
     template <typename Iterator>
@@ -155,9 +155,11 @@ public:
         return *this;
     }
 
-    template <typename... Args>
+    /// Constructs a new item and adds it to this tree.
+    /// Returns a reference to the new item held by the tree.
+    template <typename T = Item, typename... Args>
     ItemRef emplace(Args &&...args) {
-        return emplace_over(std::forward<Args>(args)...);
+        return emplace_over<T>(std::forward<Args>(args)...);
     }
 
     /// Removes the matching item from the tree.
@@ -636,7 +638,7 @@ private:
         return *this;
     }
 
-    RTree &insert_over(const Item &item, const Box<N> &box) {
+    ItemRef insert_over(const Item &item, const Box<N> &box) {
         bbox_ = bbox_ ? bounding_box(*bbox_, box) : box;
         const U64 id = ++item_id_;
         auto &unique = items_[id] = std::make_unique<Item>(item); // Copy constructor
@@ -646,13 +648,13 @@ private:
             node->map[pos].list.emplace_back(ref);
             balance(node, pos);
         }
-        return *this;
+        return ref;
     }
 
-    template <typename... Args>
+    template <typename T, typename... Args>
     ItemRef emplace_over(Args &&...args) {
         const U64 id = ++item_id_;
-        auto &unique = items_[id] = std::move(std::make_unique<Item>(std::forward<Args>(args)...));
+        auto &unique = items_[id] = std::move(std::make_unique<T>(std::forward<Args>(args)...));
         bbox_ = bbox_ ? bounding_box(*bbox_, unique->bbox()) : unique->bbox();
         ItemRef ref(unique.get());
         item_ids_[ref] = id;

@@ -65,7 +65,13 @@ public:
 protected:
     friend struct RelativeView;
 
+    using Component = typename Tree::ItemTree::Component;
+    virtual Status broken(const List<Component> &components) = 0;
+
     Set<Actor> above();
+    Set<Actor> below();
+
+    Pos<N> next_velocity();
 
     Status receive(Set<Actor> &neighbors, const Message &message);
     Status receive(const List<Message> &messages);
@@ -93,11 +99,49 @@ template <U64 N>
 Set<Actor> Entity<N>::above() {
     Set<Actor> above;
     for (const View<N, Edge<N>> &edge : parts_.unordered_edges()) {
-        if (World<N>::is_vertical(edge->dim, edge->dir)) {
+        if (World<N>::is_up(edge->dim, edge->dir)) {
             above.insert(world_->entities(edge.bbox()));
         }
     }
     return above;
+}
+
+template <U64 N>
+Set<Actor> Entity<N>::below() {
+    Set<Actor> below;
+    for (const View<N, Edge<N>> &edge : parts_.unordered_edges()) {
+        if (World<N>::is_down(edge->dim, edge->dir)) {
+            below.insert(world_->entities(edge.bbox()));
+        }
+    }
+    return below;
+}
+
+template <U64 N>
+Pos<N> Entity<N>::next_velocity() {
+    Pos<N> velocity;
+    for (U64 i = 0; i < N; ++i) {
+        const I64 v = velocity_[i];
+        const I64 a = accel_[i];
+        I64 v_next = std::clamp(v + a, -World<N>::kMaxVelocity, World<N>::kMaxVelocity);
+        if (v != 0 || a != 0) {
+            for (const Ref<Part<N>> part : parts()) {
+                const Box<N> box = part->bbox();
+                const U64 x = (v >= 0) ? box.min[i] : box.max[i];
+                const Box<N> trj = box.with(i, x, x + v_next);
+                for (Actor actor : world_->entities(trj)) {
+                    if (auto *entity = actor.dyn_cast<Entity<N>>()) {
+                        for (const Part<N> other : entity->parts()) {
+                            const I64 bound = (v >= 0) ? other.bbox().min[i] - 1 : other.bbox().max[i] + 1;
+                            v_next = (v >= 0) ? std::min(v_next, bound) : std::max(v_next, bound);
+                        }
+                    }
+                }
+            }
+        }
+        velocity[i] = v_next;
+    }
+    return velocity;
 }
 
 template <U64 N>
@@ -140,11 +184,10 @@ Status Entity<N>::hit(Set<Actor> &neighbors, const Hit<N> &hit) {
     }
 
     const auto components = parts_.view.components();
-    const bool broken = components.size() != 1;
-    const auto cause = broken ? Notify::kBroken : Notify::kChanged;
+    const bool was_broken = components.size() != 1;
+    const auto cause = was_broken ? Notify::kBroken : Notify::kChanged;
     send<Notify>(neighbors.unordered(), cause);
-
-    return broken ? Status::kDied : Status::kNone;
+    return was_broken ? broken(components) : Status::kNone;
 }
 
 template <U64 N>

@@ -21,9 +21,12 @@ public:
     using EntityTree = RTree<N, Entity<N>, Actor, kMaxEntries, kGridExpMin, kGridExpMax>;
     using window_iterator = typename EntityTree::window_iterator;
 
-    static bool is_vertical(const U64 dim, const Dir dir) { return dim == 1 && dir == Dir::Neg; }
-
+    static constexpr I64 kGravity = 3; // px / tick^2: (10 m/s^2) * (1000 px/m) * (1 ms /1000 s)^2 * (50 ms / tick)^2
+    static constexpr I64 kMaxVelocity = 1500; // px / tick    (50 m/s) * (1 s / 1000 ms) * (30 ms / tick) * (1000 px/m)
     static constexpr I64 kMaxY = 10000;
+
+    pure static bool is_up(const U64 dim, const Dir dir) { return dim == 1 && dir == Dir::Neg; }
+    pure static bool is_down(const U64 dim, const Dir dir) { return dim == 1 && dir == Dir::Pos; }
 
     pure Range<window_iterator> entities(const Pos<N> &pos) { return entities_[pos]; }
     pure Range<window_iterator> entities(const Box<N> &box) { return entities_[box]; }
@@ -43,32 +46,47 @@ public:
         }
     }
 
+    template <typename T, typename... Args>
+    Actor spawn(Args &&...args) {
+        return entities_.template emplace<T>(std::forward<Args>(args)...);
+    }
+
 protected:
-    struct EntityHash {
-        pure U64 operator()(const Ref<Entity<N>> &a) const { return sip_hash(a.ptr()); }
-    };
+    using EntityHash = PointerHash<Ref<Entity<N>>>;
+    using EntitySet = Set<Ref<Entity<N>>, EntityHash>;
+
+    void tick_entity(Set<Actor> &died, EntitySet &idled, Ref<Entity<N>> entity) {
+        static const List<Message> kNoMessages = {};
+
+        const Actor actor = entity->self();
+        const Box<N> prev_bbox = entity->bbox();
+        auto messages_iter = messages_.find(actor);
+        const List<Message> &messages = messages_iter == messages_.end() ? kNoMessages : messages_iter->second;
+        const Status status = entity->tick(messages);
+        if (status == Status::kDied) {
+            died.insert(actor);
+        } else if (status == Status::kIdle) {
+            idled.insert(entity);
+        } else if (status == Status::kMove) {
+            entities_.move(actor, prev_bbox);
+        }
+        if (messages_iter != messages_.end()) {
+            messages_.erase(messages_iter);
+        }
+    }
 
     void tick() {
-        static const List<Message> kNoMessages = {};
+        // Wake any entities with pending messages
+        for (auto [actor, _] : messages_) {
+            if (auto *entity = actor.template dyn_cast<Entity<N>>()) {
+                awake_.emplace(entity);
+            }
+        }
 
         Set<Actor> died;
         Set<Ref<Entity<N>>, EntityHash> idled;
         for (Ref<Entity<N>> entity : awake_) {
-            const Actor actor = entity->self();
-            const Box<N> prev_bbox = entity->bbox();
-            auto messages_iter = messages_.find(actor);
-            const List<Message> &messages = messages_iter == messages_.end() ? kNoMessages : messages_iter->second;
-            const Status status = entity->tick(messages);
-            if (status == Status::kDied) {
-                died.insert(actor);
-            } else if (status == Status::kIdle) {
-                idled.insert(entity);
-            } else if (status == Status::kMove) {
-                entities_.move(actor, prev_bbox);
-            }
-            if (messages_iter != messages_.end()) {
-                messages_.erase(messages_iter);
-            }
+            tick_entity(died, idled, entity);
         }
         awake_.erase(died.begin(), died.end());
         awake_.erase(idled.begin(), idled.end());

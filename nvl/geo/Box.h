@@ -153,6 +153,10 @@ public:
 
     pure Pos<N> shape() const { return max - min + 1; }
 
+    pure Box with(const U64 dim, const I64 lo, const I64 hi) const {
+        return Box(this->min.with(dim, lo), this->max.with(dim, hi));
+    }
+
     /// Returns a new Box scaled by -1.
     pure Box operator-() const { return Box(-min, -max); }
 

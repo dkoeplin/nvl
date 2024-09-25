@@ -53,10 +53,6 @@ public:
 
     pure bool has(const Item &item) const { return ids_.contains(item); }
 
-    /*template <typename Iterator>
-        requires std::is_same_v<typename Iterator::value_type, Item>
-    EquivalentSets &add(const Range<Iterator> &range) {}*/
-
     using set_iterator = typename Map<U64, Group>::value_iterator;
     Range<set_iterator> sets() { return groups_.unordered_values(); }
 
