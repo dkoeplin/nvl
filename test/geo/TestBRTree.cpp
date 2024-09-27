@@ -47,7 +47,7 @@ TEST(TestBRTree, fetch) {
 
 TEST(TestBRTree, move) {
     BRTree<2, LabeledBox> tree;
-    auto box = tree.emplace(1, Box<2>({0, 0}, {32, 32}));
+    const auto box = tree.emplace(1, Box<2>({0, 0}, {32, 32}));
     tree.loc = {500, 500};
 
     const List<At<2, LabeledBox>> list0(tree[Pos<2>::zero]);
@@ -59,17 +59,19 @@ TEST(TestBRTree, move) {
 
 TEST(TestBRTree, edges) {
     BRTree<2, LabeledBox> tree;
-    auto box = tree.emplace(1, Box<2>({0, 0}, {32, 32}));
+    const auto box = tree.emplace(1, Box<2>({0, 0}, {32, 32}));
     List<Edge<2>> edges = box->bbox().edges();
 
     EXPECT_EQ(tree.debug.edge_rtree().size(), 4);
 
     const Set edges0(tree.unordered_edges());
-    EXPECT_EQ(edges0, view(edges, tree.loc));
+    const Set expect0 = view(edges, tree.loc);
+    EXPECT_EQ(edges0, expect0);
 
     tree.loc = {500, 500};
     const Set edges1(tree.unordered_edges());
-    EXPECT_EQ(edges1, view(edges, tree.loc));
+    const Set expect1 = view(edges, tree.loc);
+    EXPECT_EQ(edges1, expect1);
 }
 
 } // namespace
