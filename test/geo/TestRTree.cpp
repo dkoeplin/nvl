@@ -20,11 +20,32 @@ using nvl::RTree;
 using nvl::Set;
 using nvl::testing::LabeledBox;
 
+template <typename T>
+concept HasID = requires(T a) { a.id(); };
+
+/// Returns a Map from the lowest level volume buckets to all IDs contained in that bucket.
+template <U64 N, typename Item, typename ItemRef, U64 kMaxEntries>
+pure Map<Box<N>, Set<U64>> collect_ids(RTree<N, Item, ItemRef, kMaxEntries> &tree)
+    requires HasID<Item>
+{
+    using Node = typename RTree<N, Item, ItemRef>::Node;
+    Map<Box<N>, Set<U64>> ids;
+    for (const auto &[node, pos] : tree.entries_in(tree.get_bbox().value_or(Box<N>::kUnitBox))) {
+        if (auto *entry = node->get(pos); entry && entry->kind == Node::Entry::kList) {
+            const Box<N> box(pos, pos + node->grid - 1);
+            for (const auto &item : entry->list) {
+                ids[box].insert(item->id());
+            }
+        }
+    }
+    return ids;
+}
+
 TEST(TestRTree, create) {
     RTree<2, LabeledBox> tree;
     tree.insert({0, {{0, 5}, {5, 10}}});
     EXPECT_EQ(tree.size(), 1);
-    EXPECT_EQ(tree.debug.nodes(), 1);
+    EXPECT_EQ(tree.nodes(), 1);
 }
 
 TEST(TestRTree, divide) {
@@ -32,11 +53,11 @@ TEST(TestRTree, divide) {
     tree.emplace(0, Box<2>({5, 5}, {100, 100}));
     tree.emplace(1, Box<2>({3000, 1200}, {3014, 1215}));
     EXPECT_EQ(tree.size(), 2);
-    EXPECT_EQ(tree.debug.nodes(), 1);
+    EXPECT_EQ(tree.nodes(), 1);
 
     const Map<Box<2>, Set<U64>> expected{{Box<2>({0, 0}, {1023, 1023}), Set<U64>{0}},
                                          {Box<2>({2048, 1024}, {3071, 2047}), Set<U64>{1}}};
-    EXPECT_EQ(tree.debug.collect_ids(), expected);
+    EXPECT_EQ(collect_ids(tree), expected);
 }
 
 TEST(TestRTree, subdivide) {
@@ -45,13 +66,13 @@ TEST(TestRTree, subdivide) {
     const auto b1 = tree.emplace(1, Box<2>({10, 100}, {20, 120}));
     const auto b2 = tree.emplace(2, Box<2>({100, 200}, {200, 200}));
 
-    EXPECT_EQ(tree.size(), 3);        // Number of values
-    EXPECT_EQ(tree.debug.nodes(), 4); // Number of nodes
+    EXPECT_EQ(tree.size(), 3);  // Number of values
+    EXPECT_EQ(tree.nodes(), 4); // Number of nodes
 
     const Map<Box<2>, Set<U64>> expected{{Box<2>({0, 0}, {127, 127}), Set<U64>{0, 1}},
                                          {Box<2>({0, 128}, {127, 255}), Set<U64>{2}},
                                          {Box<2>({128, 128}, {255, 255}), Set<U64>{2}}};
-    EXPECT_EQ(tree.debug.collect_ids(), expected);
+    EXPECT_EQ(collect_ids(tree), expected);
 
     // Check that we find all values when iterating over the bounding box, but each value is returned exactly once.
     const List<Ref<LabeledBox>> elements(tree[tree.bbox()]);
@@ -79,7 +100,7 @@ TEST(TestRTree, bracket_operator) {
     for (const auto &box : tree[range]) {
         ids.insert(box->id());
     }
-    for (const auto &box : tree.unordered.items()) {
+    for (const auto &box : tree) {
         if (box->bbox().overlaps(range)) {
             EXPECT_TRUE(ids.has(box->id()));
         }
@@ -109,7 +130,7 @@ TEST(TestRTree, keep_buckets_after_subdivide) {
                                          {Box<2>({512, 512}, {1023, 1023}), Set<U64>{0, 1, 2, 3, 4, 5, 6, 7, 8}},
                                          {Box<2>({0, 512}, {511, 1023}), Set<U64>{1}},
                                          {Box<2>({512, 0}, {1023, 511}), Set<U64>{8, 9}}};
-    EXPECT_EQ(tree.debug.collect_ids(), expected);
+    EXPECT_EQ(collect_ids(tree), expected);
 }
 
 TEST(TestRTree, negative_buckets) {
@@ -120,7 +141,7 @@ TEST(TestRTree, negative_buckets) {
     const Map<Box<2>, Set<U64>> expected{{Box<2>({0, -1024}, {1023, -1}), Set<U64>{1}},
                                          {Box<2>({0, 0}, {1023, 1023}), Set<U64>{0}},
                                          {Box<2>({1024, 0}, {2047, 1023}), Set<U64>{0}}};
-    EXPECT_EQ(tree.debug.collect_ids(), expected);
+    EXPECT_EQ(collect_ids(tree), expected);
 }
 
 TEST(TestRTree, fetch) {

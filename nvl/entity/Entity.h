@@ -24,28 +24,19 @@ public:
     static constexpr U64 kGridExpMax = 10;
     using Tree = BRTree<N, Part<N>, Ref<Part<N>>, kMaxEntries, kGridExpMin, kGridExpMax>;
 
-    struct Debug {
-        explicit Debug(Entity &entity) : entity(entity) {}
-
-        pure const Tree &tree() const { return entity.parts_; }
-
-        Entity &entity;
-    };
-
     pure virtual Pos<N> loc() const { return parts_.loc; }
     pure virtual Box<N> bbox() const { return parts_.bbox(); }
 
-    pure Range<At<N,Edge<N>>> edges() { return parts_.unordered_edges(); }
-
-    pure Range<At<N,Part<N>>> parts() { return parts_.unordered_items(); }
-    pure Range<At<N,Part<N>>> parts(const Box<N> &box) { return parts_[box]; }
-    pure Range<At<N,Part<N>>> parts(const Pos<N> &pos) { return parts_[pos]; }
+    pure Range<At<N, Edge<N>>> edges() const { return parts_.edges(); }
+    pure Range<At<N, Part<N>>> parts() const { return parts_.items(); }
+    pure Range<At<N, Part<N>>> parts(const Box<N> &box) const { return parts_[box]; }
+    pure Range<At<N, Part<N>>> parts(const Pos<N> &pos) const { return parts_[pos]; }
 
     struct Relative {
         explicit Relative(Entity &entity) : entity(entity) {}
-        pure Range<Ref<Part<N>>> parts() { return entity.parts_.relative.unordered_items(); }
-        pure Range<Ref<Part<N>>> parts(const Box<N> &box) { return entity.parts_.relative[box]; }
-        pure Range<Ref<Part<N>>> parts(const Pos<N> &pos) { return entity.parts_.relative[pos]; }
+        pure Range<Ref<Part<N>>> parts() const { return entity.parts_.relative.items(); }
+        pure Range<Ref<Part<N>>> parts(const Box<N> &box) const { return entity.parts_.relative[box]; }
+        pure Range<Ref<Part<N>>> parts(const Pos<N> &pos) const { return entity.parts_.relative[pos]; }
         Entity &entity;
     } relative = Relative(*this);
 
@@ -55,12 +46,14 @@ public:
 
     void draw(Draw &draw, const int64_t highlight) override {
         Draw::Offset offset(draw, loc());
-        for (Ref<Part<N>> part : parts_.relative.unordered_items()) {
+        for (Ref<Part<N>> part : parts_.relative.items()) {
             part->draw(draw, highlight);
         }
     }
 
     Status tick(const List<Message> &messages) override;
+
+    pure const Tree &tree() const { return parts_; }
 
 protected:
     friend struct RelativeView;
@@ -97,7 +90,7 @@ protected:
 template <U64 N>
 Set<Actor> Entity<N>::above() {
     Set<Actor> above;
-    for (const At<N, Edge<N>> &edge : parts_.unordered_edges()) {
+    for (const At<N, Edge<N>> &edge : parts_.edges()) {
         if (World<N>::is_up(edge->dim, edge->dir)) {
             above.insert(world_->entities(edge.bbox()));
         }
@@ -108,7 +101,7 @@ Set<Actor> Entity<N>::above() {
 template <U64 N>
 Set<Actor> Entity<N>::below() {
     Set<Actor> below;
-    for (const At<N, Edge<N>> &edge : parts_.unordered_edges()) {
+    for (const At<N, Edge<N>> &edge : parts_.edges()) {
         if (World<N>::is_down(edge->dim, edge->dir)) {
             below.insert(world_->entities(edge.bbox()));
         }

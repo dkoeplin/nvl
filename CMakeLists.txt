@@ -27,9 +27,8 @@ add_library(nvl SHARED
         nvl/actor/Actor.h
         nvl/actor/Part.h
         nvl/actor/Status.h
-        nvl/actor/TickResult.h
         nvl/data/HasDereference.h
-        nvl/data/IteratorPair.h
+        nvl/data/Iterator.h
         nvl/data/List.h
         nvl/data/Map.h
         nvl/data/Maybe.h
@@ -37,7 +36,6 @@ add_library(nvl SHARED
         nvl/data/Range.h
         nvl/data/Ref.h
         nvl/data/Set.h
-        nvl/data/SetVector.h
         nvl/data/SipHash.h
         nvl/data/SipHash.cpp
         nvl/draw/Color.h

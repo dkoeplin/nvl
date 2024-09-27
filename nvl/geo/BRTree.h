@@ -21,14 +21,14 @@ protected:
 
     void mark_changed() { changed_ = true; }
 
-    EdgeTree &get_edges() {
+    EdgeTree &get_edges() const {
         if (changed_) {
             // Clear the edges
             changed_ = false;
             edges_.clear();
 
             // Recompute edges across all values
-            for (const ItemRef &item : items_.unordered) {
+            for (const ItemRef &item : items_) {
                 for (const Edge<N> &edge : bbox(item).edges()) {
                     List<Box<N>> overlap;
                     for (const ItemRef &b : items_[edge.bbox()]) {
@@ -47,8 +47,8 @@ protected:
     ItemTree items_;
 
 private:
-    bool changed_ = false;
-    EdgeTree edges_;
+    mutable bool changed_ = false;
+    mutable EdgeTree edges_;
 };
 
 } // namespace brtree_detail
@@ -152,23 +152,17 @@ public:
     /// Returns the current number of values in this tree.
     pure U64 size() const { return this->items_.size(); }
 
+    /// Returns the number of nodes currently in this tree.
+    pure U64 nodes() const { return this->items_.nodes(); }
+
+    /// Returns the maximum depth of this tree, in nodes.
+    pure U64 depth() const { return this->items_.depth(); }
+
     /// Returns true if this tree is empty.
     pure bool empty() const { return this->items_.empty(); }
 
-    struct Debug {
-        explicit Debug(BRTree &tree) : tree(tree) {}
-
-        /// Returns the number of nodes currently in this tree.
-        pure U64 nodes() const { return tree.items_.debug.nodes(); }
-
-        /// Returns the maximum depth of this tree, in nodes.
-        pure U64 depth() const { return tree.items_.debug.depth(); }
-
-        pure const ItemTree &item_rtree() const { return tree.items_; }
-        pure const EdgeTree &edge_rtree() const { return tree.get_edges(); }
-
-        BRTree &tree;
-    } debug = Debug(*this);
+    pure const ItemTree &item_rtree() const { return this->items_; }
+    pure const EdgeTree &edge_rtree() const { return this->get_edges(); }
 
     using window_iterator = view_iterator<Item, ItemRef>;
     using item_iterator = view_iterator<Item, ItemRef>;
@@ -176,22 +170,25 @@ public:
 
     /// Returns an unordered Range for iteration over all values in this tree in the given volume.
     /// Items are returned as View<N, Item>, where the view is with respect to this tree's global offset.
-    pure Range<At<N, Item>, View::kMutable> operator[](const Pos<N> &pos) {
-        return make_range<window_iterator, View::kMutable>(this->items_[pos - loc], loc);
-    }
+    pure Range<At<N, Item>, View::kMutable> operator[](const Pos<N> &pos) { return operator[](Box<N>::unit(pos)); }
     pure Range<At<N, Item>, View::kMutable> operator[](const Box<N> &box) {
+        return make_range<window_iterator, View::kMutable>(this->items_[box - loc], loc);
+    }
+    pure Range<At<N, Item>> operator[](const Pos<N> &pos) const { return operator[](Box<N>::unit(pos)); }
+    pure Range<At<N, Item>> operator[](const Box<N> &box) const {
         return make_range<window_iterator, View::kMutable>(this->items_[box - loc], loc);
     }
 
     /// Returns an unordered Range for iteration over all values in this tree.
     /// Items are returned as View<N, Item>, where the view is with respect to this tree's global offset.
-    pure Range<At<N, Item>> unordered_items() { return make_range<item_iterator>(this->items_.unordered.items(), loc); }
+    pure Range<At<N, Item>, View::kMutable> items() {
+        return make_range<item_iterator, View::kMutable>(this->items_.items(), loc);
+    }
+    pure Range<At<N, Item>> items() const { return make_range<item_iterator>(this->items_.items(), loc); }
 
     /// Returns an unordered Range for iteration over all edges in this tree.
     /// Edges are returned as View<N, Edge<N>>, where the view is with respect to this tree's global offset.
-    pure Range<At<N, Edge<N>>> unordered_edges() {
-        return make_range<edge_iterator>(this->get_edges().unordered.items(), loc);
-    }
+    pure Range<At<N, Edge<N>>> edges() const { return make_range<edge_iterator>(this->get_edges().items(), loc); }
 
     struct Relative {
         using window_iterator = typename ItemTree::window_iterator;
@@ -205,14 +202,16 @@ public:
         pure List<Component> components() { return tree.items_.components(); }
 
         /// Returns an iterable range over all items in this tree in the given area relative to the tree's offset.
-        pure Range<ItemRef> operator[](const Pos<N> &pos) { return tree.items_[pos]; }
-        pure Range<ItemRef> operator[](const Box<N> &box) { return tree.items_[box]; }
+        pure Range<ItemRef, View::kMutable> operator[](const Pos<N> &pos) { return tree.items_[pos]; }
+        pure Range<ItemRef, View::kMutable> operator[](const Box<N> &box) { return tree.items_[box]; }
+        pure Range<ItemRef> operator[](const Pos<N> &pos) const { return tree.items_[pos]; }
+        pure Range<ItemRef> operator[](const Box<N> &box) const { return tree.items_[box]; }
 
         /// Provides a view to the items contained in this tree relative to the tree's offset.
-        pure Range<ItemRef> unordered_items() const { return tree.items_.unordered.items(); }
+        pure Range<ItemRef> items() const { return tree.items_.items(); }
 
         /// Provides a view to the edges contained in this tree relative to the tree's offset.
-        pure Range<Ref<Edge<N>>> unordered_edges() const { return tree.get_edges().unordered.items(); }
+        pure Range<Ref<Edge<N>>> edges() const { return tree.get_edges().items(); }
 
         BRTree &tree;
     } relative = Relative(*this);

@@ -4,7 +4,7 @@
 #include "nvl/data/Map.h"
 #include "nvl/data/Set.h"
 #include "nvl/geo/Box.h"
-#include "nvl/geo/BRTree.h"
+#include "nvl/geo/RTree.h"
 #include "nvl/message/Message.h"
 
 namespace nvl {
@@ -54,18 +54,18 @@ protected:
     using EntityHash = PointerHash<Ref<Entity<N>>>;
     using EntitySet = Set<Ref<Entity<N>>, EntityHash>;
 
-    void tick_entity(Set<Actor> &died, EntitySet &idled, Ref<Entity<N>> entity) {
+    void tick_entity(Set<Actor> &died, Set<Actor> &idled, Ref<Entity<N>> entity) {
         static const List<Message> kNoMessages = {};
 
         const Actor actor = entity->self();
         const Box<N> prev_bbox = entity->bbox();
-        auto messages_iter = messages_.find(actor);
+        const auto messages_iter = messages_.find(actor);
         const List<Message> &messages = messages_iter == messages_.end() ? kNoMessages : messages_iter->second;
         const Status status = entity->tick(messages);
         if (status == Status::kDied) {
             died.insert(actor);
         } else if (status == Status::kIdle) {
-            idled.insert(entity);
+            idled.insert(actor);
         } else if (status == Status::kMove) {
             entities_.move(actor, prev_bbox);
         }
@@ -83,12 +83,12 @@ protected:
         }
 
         Set<Actor> died;
-        Set<Ref<Entity<N>>, EntityHash> idled;
+        Set<Actor> idled;
         for (Ref<Entity<N>> entity : awake_) {
             tick_entity(died, idled, entity);
         }
-        // awake_.remove(died.unordered);
-        // awake_.remove(idled.unordered);
+        awake_.remove(died.unordered);
+        awake_.remove(idled.unordered);
     }
 
     EntityTree entities_;

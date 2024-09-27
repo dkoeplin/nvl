@@ -34,7 +34,7 @@ TEST(TestBRTree, create) {
     tree.insert({1, {{0, 0}, {32, 32}}});
 
     EXPECT_EQ(tree.size(), 1);
-    EXPECT_EQ(tree.debug.nodes(), 1);
+    EXPECT_EQ(tree.nodes(), 1);
 }
 
 TEST(TestBRTree, fetch) {
@@ -62,14 +62,14 @@ TEST(TestBRTree, edges) {
     const auto box = tree.emplace(1, Box<2>({0, 0}, {32, 32}));
     List<Edge<2>> edges = box->bbox().edges();
 
-    EXPECT_EQ(tree.debug.edge_rtree().size(), 4);
+    EXPECT_EQ(tree.edge_rtree().size(), 4);
 
-    const Set edges0(tree.unordered_edges());
+    const Set edges0(tree.edges());
     const Set expect0 = view(edges, tree.loc);
     EXPECT_EQ(edges0, expect0);
 
     tree.loc = {500, 500};
-    const Set edges1(tree.unordered_edges());
+    const Set edges1(tree.edges());
     const Set expect1 = view(edges, tree.loc);
     EXPECT_EQ(edges1, expect1);
 }

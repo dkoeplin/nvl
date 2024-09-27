@@ -13,16 +13,14 @@
 #include "nvl/geo/Box.h"
 #include "nvl/geo/HasBBox.h"
 #include "nvl/geo/Pos.h"
+#include "nvl/io/IO.h"
 #include "nvl/macros/Aliases.h"
 #include "nvl/macros/ReturnIf.h"
 #include "nvl/math/Bitwise.h"
 
 namespace nvl {
 
-namespace rtree_detail {
-
-template <typename T>
-concept HasID = requires(T a) { a.id(); };
+namespace detail {
 
 /**
  * @class Node
@@ -66,20 +64,35 @@ struct Work {
     explicit Work(Node *node, const Box<N> &volume) : node(node), vol(volume) {}
 
     pure const Pos<N> &pos() const { return *pair_range.begin(); }
-
     pure const ItemRef &item() const { return *list_range; }
 
     Node *node;
     Box<N> vol;
 
-    // 1) Iterating across items
-    Once<ItemRef> list_range;
-
-    // 2) Iterating within a node - (node, pos) pairs
-    Once<Pos<N>> pair_range;
+    Once<ItemRef> list_range; // 1) Iterating across items
+    Once<Pos<N>> pair_range;  // 2) Iterating within a node - (node, pos) pairs
 };
 
-} // namespace rtree_detail
+template <U64 N, typename ItemRef>
+struct PreorderWork {
+    using Node = Node<N, ItemRef>;
+
+    PreorderWork(Node *node, const U64 depth) : node(node), depth(depth) {
+        ASSERT(node->parent.has_value(), "No parent defined for node #" << node->id);
+        const Box<N> &node_range = node->parent->box;
+        indented(depth - 1) << ">>[" << node->id << "] @ " << node->grid << std::endl;
+        pos_range = node_range.pos_iter(node->grid).once();
+    }
+    PreorderWork(Node *node, const Box<N> &bounds) : node(node), depth(0) {
+        indented(depth) << "[" << node->id << "] @ " << node->grid << std::endl;
+        pos_range = bounds.clamp(node->grid).pos_iter(node->grid).once();
+    }
+    Node *node;
+    U64 depth;
+    Once<typename Box<N>::pos_iterator> pos_range;
+};
+
+} // namespace detail
 
 /**
  * @class RTree
@@ -95,272 +108,18 @@ template <U64 N, typename Item, typename ItemRef = Ref<Item>, U64 kMaxEntries = 
           U64 kGridExpMax = 10>
     requires traits::HasBBox<Item>
 class RTree {
-    friend struct Debug;
-    using Work = rtree_detail::Work<N, ItemRef>;
-    using Node = rtree_detail::Node<N, ItemRef>;
-
-    static constexpr I64 grid_min = 0x1 << kGridExpMin;
-    static constexpr I64 grid_max = 0x1 << kGridExpMax;
-
-    static Box<N> bbox(const ItemRef &item) { return static_cast<const Item *>(item.ptr())->bbox(); }
-
 public:
-    /// Hashing of items is done based on pointer address because the RTree itself owns the memory.
-    using ItemRefHash = PointerHash<ItemRef>;
+    using PreorderWork = detail::PreorderWork<N, ItemRef>;
+    using Work = detail::Work<N, ItemRef>;
+    using Node = detail::Node<N, ItemRef>;
+    using ItemRefHash = PointerHash<ItemRef>; // Hashing is done based on pointer, not value
+    using Component = typename EquivalentSets<ItemRef, ItemRefHash>::Group;
 
-    struct window_iterator;
-
-    struct item_iterator final : AbstractIterator<ItemRef> {
-        class_tag(item_iterator, AbstractIterator<ItemRef>);
-        using ItemMap = Map<U64, std::unique_ptr<Item>>;
-
-        template <View Type = View::kImmutable>
-        pure static Iterator<ItemRef, Type> begin(const ItemMap &map) {
-            return make_iterator<item_iterator, Type>(map.unordered.values_begin());
-        }
-        template <View Type = View::kImmutable>
-        pure static Iterator<ItemRef, Type> end(const ItemMap &map) {
-            return make_iterator<item_iterator, Type>(map.unordered.values_end());
-        }
-
-        explicit item_iterator(Iterator<std::unique_ptr<Item>> iter) : iter(iter) {}
-
-        pure std::unique_ptr<AbstractIterator<ItemRef>> copy() const override {
-            return std::make_unique<item_iterator>(*this);
-        }
-
-        void increment() override {
-            item = None;
-            ++iter;
-        }
-
-        pure const ItemRef *ptr() override {
-            if (!item.has_value()) {
-                // Lazily set the item on dereference to avoid dereferencing an empty iterator
-                item = ItemRef(iter->get());
-            }
-            return &item.value();
-        }
-
-        pure bool equals(const AbstractIterator<ItemRef> &rhs) const override {
-            auto *b = dyn_cast<item_iterator>(&rhs);
-            return b && iter == b->iter;
-        }
-
-    private:
-        Maybe<ItemRef> item = None;
-        Iterator<std::unique_ptr<Item>> iter;
+    struct Point {
+        Node *node;
+        Pos<N> pos;
     };
 
-    explicit RTree() : root_(next_node(None, grid_max, {})) {}
-
-    explicit RTree(const List<Item> &items) : RTree() {
-        for (const auto &item : items) {
-            insert(item);
-        }
-    }
-
-    /// Inserts a copy of the item into the tree.
-    /// Returns a reference to the copy held by the tree.
-    ItemRef insert(const Item &item) { return insert_over(item, item.bbox()); }
-
-    /// Inserts a copy of each item into the tree.
-    template <typename Iterator>
-        requires std::is_same_v<Item, typename Iterator::value_type>
-    RTree &insert(const Range<Iterator> &items) {
-        for (const Item &item : items)
-            insert_over(item, item.bbox());
-        return *this;
-    }
-
-    /// Constructs a new item and adds it to this tree.
-    /// Returns a reference to the new item held by the tree.
-    template <typename T = Item, typename... Args>
-    ItemRef emplace(Args &&...args) {
-        return emplace_over<T>(std::forward<Args>(args)...);
-    }
-
-    /// Removes the matching item from the tree.
-    RTree &remove(const ItemRef &item) { return remove_over(item, item->bbox(), true); }
-
-    /// Registers the matching item as having moved from the previous volume `prev` to its current volume.
-    /// Does nothing if no matching item exists in the tree.
-    RTree &move(const ItemRef &item, const Box<N> &prev) { return move(item->bbox(), prev); }
-
-    /// Returns an iterable range over all unique stored items in the given volume.
-    pure Range<ItemRef, View::kMutable> operator[](const Pos<N> &pos) {
-        return make_range<window_iterator, View::kMutable>(*this, Box<N>::unit(pos));
-    }
-    pure Range<ItemRef, View::kMutable> operator[](const Box<N> &box) {
-        return make_range<window_iterator, View::kMutable>(*this, box);
-    }
-
-    struct Unordered {
-        explicit Unordered(RTree &tree) : tree(tree) {}
-
-        pure Range<ItemRef, View::kMutable> items() { return {begin(), end()}; }
-        pure Range<ItemRef> items() const { return {begin(), end()}; }
-
-        pure Iterator<ItemRef, View::kMutable> begin() {
-            return item_iterator::template begin<View::kMutable>(tree.items_);
-        }
-        pure Iterator<ItemRef, View::kMutable> end() {
-            return item_iterator::template end<View::kMutable>(tree.items_);
-        }
-        pure Iterator<ItemRef> begin() const { return item_iterator::template begin(tree.items_); }
-        pure Iterator<ItemRef> end() const { return item_iterator::template end(tree.items_); }
-
-        RTree &tree;
-    } unordered = Unordered(*this);
-
-    /// Returns a Range for unordered iteration over all items in this tree.
-
-    using Component = typename EquivalentSets<ItemRef, ItemRefHash>::Group;
-    /// Returns the connected components in this tree.
-    List<Component> components() {
-        EquivalentSets<ItemRef, ItemRefHash> components;
-        for (const std::unique_ptr<Item> &a : items_.unordered.values()) {
-            ItemRef a_ref(a.get());
-            bool had_neighbors = false;
-            for (const Edge<N> &edge : a->bbox().edges()) {
-                for (const ItemRef &b : (*this)[edge.bbox()]) {
-                    had_neighbors = true;
-                    components.add(a_ref, b); // Adds neighboring boxes to the same component
-                }
-            }
-            // Add this item to its own component if it had no neighbors
-            if (!had_neighbors) {
-                components.add(a_ref);
-            }
-        }
-        // Need to return this as a List to avoid references to the local `components` data structure.
-        List<Component> result;
-        for (const Component &set : components.sets()) {
-            result.push_back(std::move(set));
-        }
-        return result;
-    }
-
-    /// Returns the current bounding box for this tree.
-    pure const Box<N> &bbox() const { return bbox_.has_value() ? bbox_.value() : Box<N>::kUnitBox; }
-
-    /// Returns the shape of the bounding box for this tree.
-    pure Pos<N> shape() const { return bbox().shape(); }
-
-    /// Returns the total number of distinct items stored in this tree.
-    pure U64 size() const { return items_.size(); }
-
-    /// Returns true if this tree is empty.
-    pure bool empty() const { return items_.empty(); }
-
-    void clear() {
-        bbox_ = None;
-        node_id_ = 0;
-        item_id_ = 0;
-        items_.clear();
-        nodes_.clear();
-        item_ids_.clear();
-        garbage_.clear();
-        root_ = next_node(None, grid_max, {});
-    }
-
-    struct Debug {
-        static std::ostream &indented(const U64 n) {
-            for (U64 i = 0; i < n; i++) {
-                std::cout << "  ";
-            }
-            return std::cout;
-        }
-
-        explicit Debug(RTree &tree) : tree(tree) {}
-
-        struct PreorderWork {
-            PreorderWork(Node *node, const U64 depth) : node(node), depth(depth) {
-                ASSERT(node->parent.has_value(), "No parent defined for node #" << node->id);
-                const Box<N> &node_range = node->parent->box;
-                indented(depth - 1) << ">>[" << node->id << "] @ " << node->grid << std::endl;
-                pos_range = node_range.pos_iter(node->grid).once();
-            }
-            PreorderWork(Node *node, const Box<N> &bounds) : node(node), depth(0) {
-                indented(depth) << "[" << node->id << "] @ " << node->grid << std::endl;
-                pos_range = bounds.clamp(node->grid).pos_iter(node->grid).once();
-            }
-            Node *node;
-            U64 depth;
-            Once<typename Box<N>::pos_iterator> pos_range;
-        };
-
-        /// Dumps a string representation of this tree to stdout.
-        void dump() const {
-            const auto bounds = tree.bbox_.value_or(Box<N>::unit(Pos<N>::fill(1)));
-            std::cout << "[[RTree with bounds " << bounds << "]]" << std::endl;
-
-            List<PreorderWork> worklist;
-            worklist.emplace_back(tree.root_, bounds);
-
-            while (!worklist.empty()) {
-                PreorderWork &current = worklist.back();
-                Node *node = current.node;
-                const U64 depth = current.depth;
-                bool found_node = false;
-                while (!found_node && current.pos_range.has_next()) {
-                    const Pos<N> pos = *current.pos_range.begin();
-                    ++current.pos_range.begin();
-                    if (auto *entry = node->get(pos)) {
-                        const Box<N> range(pos, pos + node->grid - 1);
-                        indented(depth) << "[" << node->id << "][" << range << "]:" << std::endl;
-                        if (entry->kind == Node::Entry::kList) {
-                            if (entry->list.empty()) {
-                                indented(depth) << ">> EMPTY LIST" << std::endl;
-                            }
-                            for (const auto item : entry->list) {
-                                indented(depth) << ">> " << item << std::endl;
-                            }
-                        } else {
-                            worklist.emplace_back(entry->node, depth + 1);
-                            found_node = true;
-                        }
-                    }
-                }
-                if (!worklist.back().pos_range.has_next()) {
-                    worklist.pop_back();
-                }
-            }
-        }
-
-        /// Returns a Map from the lowest level volume buckets to all IDs contained in that bucket.
-        pure Map<Box<N>, Set<U64>> collect_ids() const
-            requires rtree_detail::HasID<Item>
-        {
-            Map<Box<N>, Set<U64>> ids;
-            for (const auto &[node, pos] : tree.entries_in(tree.bbox_.value_or(Box<N>::kUnitBox))) {
-                if (auto *entry = node->get(pos); entry && entry->kind == Node::Entry::kList) {
-                    const Box<N> box(pos, pos + node->grid - 1);
-                    for (const auto &item : entry->list) {
-                        ids[box].insert(item->id());
-                    }
-                }
-            }
-            return ids;
-        }
-
-        /// Returns the total number of nodes in this tree.
-        pure U64 nodes() const { return tree.nodes_.size(); }
-
-        /// Returns the maximum depth, in nodes, of this tree.
-        pure U64 depth() const {
-            const U64 root_grid = tree.root_->grid;
-            U64 min_grid = root_grid;
-            for (auto &[_, node] : tree.nodes_) {
-                min_grid = (node.grid < min_grid) ? node.grid : min_grid;
-            }
-            return ceil_log2(root_grid) - ceil_log2(min_grid) + 1;
-        }
-
-        RTree &tree;
-    } debug = Debug(*this);
-
-private:
     enum class Traversal {
         kPoints,  // All possible points in existing nodes
         kEntries, // All existing entries
@@ -371,7 +130,7 @@ private:
         class_tag(abstract_iterator, AbstractIterator<Value>);
 
         template <View Type = View::kImmutable>
-        static Iterator<Value, Type> begin(RTree &tree, const Box<N> &box) {
+        static Iterator<Value, Type> begin(const RTree &tree, const Box<N> &box) {
             std::unique_ptr<Concrete> iter = std::make_unique<Concrete>(&tree, box);
             if (tree.root_ != nullptr) {
                 iter->worklist.emplace_back(tree.root_, box);
@@ -381,11 +140,11 @@ private:
         }
 
         template <View Type = View::kImmutable>
-        static Iterator<Value, Type> end(RTree &tree, const Box<N> &box) {
+        static Iterator<Value, Type> end(const RTree &tree, const Box<N> &box) {
             return make_iterator<Concrete, Type>(&tree, box);
         }
 
-        explicit abstract_iterator(RTree *tree, const Box<N> &box) : tree(tree), box(box) {}
+        explicit abstract_iterator(const RTree *tree, const Box<N> &box) : tree(tree), box(box) {}
         pure std::unique_ptr<AbstractIterator<Value>> copy() const override {
             return std::make_unique<Concrete>(*static_cast<const Concrete *>(this));
         }
@@ -482,13 +241,8 @@ private:
         List<Work> worklist = {};
         Set<ItemRef, ItemRefHash> visited;
 
-        RTree *tree;
+        const RTree *tree;
         Box<N> box;
-    };
-
-    struct Point {
-        Node *node;
-        Pos<N> pos;
     };
 
     struct entry_iterator final : abstract_iterator<entry_iterator, Traversal::kEntries, Point> {
@@ -533,18 +287,224 @@ private:
         Maybe<Point> point = None;
     };
 
-public:
     struct window_iterator final : abstract_iterator<window_iterator, Traversal::kItems, ItemRef> {
         class_tag(window_iterator, abstract_iterator<window_iterator, Traversal::kItems, ItemRef>);
         using parent = abstract_iterator<window_iterator, Traversal::kItems, ItemRef>;
         using parent::parent;
-
         const ItemRef *ptr() override { return &this->worklist.back().item(); }
     };
 
-private:
+    struct item_iterator final : AbstractIterator<ItemRef> {
+        class_tag(item_iterator, AbstractIterator<ItemRef>);
+        using ItemMap = Map<U64, std::unique_ptr<Item>>;
+
+        template <View Type = View::kImmutable>
+        pure static Iterator<ItemRef, Type> begin(const ItemMap &map) {
+            return make_iterator<item_iterator, Type>(map.unordered.values_begin());
+        }
+        template <View Type = View::kImmutable>
+        pure static Iterator<ItemRef, Type> end(const ItemMap &map) {
+            return make_iterator<item_iterator, Type>(map.unordered.values_end());
+        }
+
+        explicit item_iterator(Iterator<std::unique_ptr<Item>> iter) : iter(iter) {}
+
+        pure std::unique_ptr<AbstractIterator<ItemRef>> copy() const override {
+            return std::make_unique<item_iterator>(*this);
+        }
+
+        void increment() override {
+            item = None;
+            ++iter;
+        }
+
+        pure const ItemRef *ptr() override {
+            if (!item.has_value()) {
+                // Lazily set the item on dereference to avoid dereferencing an empty iterator
+                item = ItemRef(iter->get());
+            }
+            return &item.value();
+        }
+
+        pure bool equals(const AbstractIterator<ItemRef> &rhs) const override {
+            auto *b = dyn_cast<item_iterator>(&rhs);
+            return b && iter == b->iter;
+        }
+
+    private:
+        Maybe<ItemRef> item = None;
+        Iterator<std::unique_ptr<Item>> iter;
+    };
+
+    static Box<N> bbox(const ItemRef &item) { return static_cast<const Item *>(item.ptr())->bbox(); }
     static bool should_increase_depth(const U64 size, const U64 grid) { return size > kMaxEntries && grid > grid_min; }
 
+    static constexpr I64 grid_min = 0x1 << kGridExpMin;
+    static constexpr I64 grid_max = 0x1 << kGridExpMax;
+
+    explicit RTree() : root_(next_node(None, grid_max, {})) {}
+
+    explicit RTree(std::initializer_list<Item> items) : RTree() {
+        for (const auto &item : items) {
+            insert(item);
+        }
+    }
+
+    /// Inserts a copy of the item into the tree.
+    /// Returns a reference to the copy held by the tree.
+    ItemRef insert(const Item &item) { return insert_over(item, item.bbox()); }
+
+    /// Inserts a copy of each item into the tree.
+    RTree &insert(const Range<Item> &items) {
+        for (const Item &item : items)
+            insert_over(item, item.bbox());
+        return *this;
+    }
+
+    /// Constructs a new item and adds it to this tree.
+    /// Returns a reference to the new item held by the tree.
+    template <typename T = Item, typename... Args>
+    ItemRef emplace(Args &&...args) {
+        return emplace_over<T>(std::forward<Args>(args)...);
+    }
+
+    /// Removes the matching item from the tree.
+    RTree &remove(const ItemRef &item) { return remove_over(item, item->bbox(), true); }
+
+    /// Registers the matching item as having moved from the previous volume `prev` to its current volume.
+    /// Does nothing if no matching item exists in the tree.
+    RTree &move(const ItemRef &item, const Box<N> &prev) { return move(item->bbox(), prev); }
+
+    /// Returns a mutable range over all _possible_ points in the given volume, including those without Nodes.
+    Range<Point, View::kMutable> points_in(const Box<N> &box) {
+        return make_range<point_iterator, View::kMutable>(*this, box);
+    }
+
+    /// Returns a mutable range over all existing nodes in the given volume.
+    Range<Point, View::kMutable> entries_in(const Box<N> &box) {
+        return make_range<entry_iterator, View::kMutable>(*this, box);
+    }
+
+    /// Returns an iterable range over all unique stored items in the given volume.
+    pure Range<ItemRef, View::kMutable> operator[](const Pos<N> &pos) { return operator[](Box<N>::unit(pos)); }
+    pure Range<ItemRef, View::kMutable> operator[](const Box<N> &box) {
+        return make_range<window_iterator, View::kMutable>(*this, box);
+    }
+
+    pure Range<ItemRef> operator[](const Pos<N> &pos) const { return operator[](Box<N>::unit(pos)); }
+    pure Range<ItemRef> operator[](const Box<N> &box) const { return make_range<window_iterator>(*this, box); }
+
+    /// Returns a Range for unordered iteration over all items in this tree.
+    pure Range<ItemRef, View::kMutable> items() { return {begin(), end()}; }
+    pure Range<ItemRef> items() const { return {begin(), end()}; }
+
+    pure Iterator<ItemRef, View::kMutable> begin() { return item_iterator::template begin<View::kMutable>(items_); }
+    pure Iterator<ItemRef, View::kMutable> end() { return item_iterator::template end<View::kMutable>(items_); }
+
+    pure Iterator<ItemRef> begin() const { return item_iterator::template begin(items_); }
+    pure Iterator<ItemRef> end() const { return item_iterator::template end(items_); }
+
+    /// Returns the connected components in this tree.
+    List<Component> components() {
+        EquivalentSets<ItemRef, ItemRefHash> components;
+        for (const std::unique_ptr<Item> &a : items_.unordered.values()) {
+            ItemRef a_ref(a.get());
+            bool had_neighbors = false;
+            for (const Edge<N> &edge : a->bbox().edges()) {
+                for (const ItemRef &b : (*this)[edge.bbox()]) {
+                    had_neighbors = true;
+                    components.add(a_ref, b); // Adds neighboring boxes to the same component
+                }
+            }
+            // Add this item to its own component if it had no neighbors
+            if (!had_neighbors) {
+                components.add(a_ref);
+            }
+        }
+        // Need to return this as a List to avoid references to the local `components` data structure.
+        List<Component> result;
+        for (const Component &set : components.sets()) {
+            result.push_back(std::move(set));
+        }
+        return result;
+    }
+
+    /// Returns the current bounding box for this tree.
+    pure const Box<N> &bbox() const { return bbox_.has_value() ? bbox_.value() : Box<N>::kUnitBox; }
+    pure Maybe<Box<N>> get_bbox() const { return bbox_; }
+
+    /// Returns the shape of the bounding box for this tree.
+    pure Pos<N> shape() const { return bbox().shape(); }
+
+    /// Returns the total number of distinct items stored in this tree.
+    pure U64 size() const { return items_.size(); }
+
+    /// Returns the total number of nodes in this tree.
+    pure U64 nodes() const { return nodes_.size(); }
+
+    /// Returns true if this tree is empty.
+    pure bool empty() const { return items_.empty(); }
+
+    /// Returns the maximum depth, in nodes, of this tree.
+    pure U64 depth() const {
+        const U64 root_grid = root_->grid;
+        U64 min_grid = root_grid;
+        for (auto &[_, node] : nodes_) {
+            min_grid = (node.grid < min_grid) ? node.grid : min_grid;
+        }
+        return ceil_log2(root_grid) - ceil_log2(min_grid) + 1;
+    }
+
+    void clear() {
+        bbox_ = None;
+        node_id_ = 0;
+        item_id_ = 0;
+        items_.clear();
+        nodes_.clear();
+        item_ids_.clear();
+        garbage_.clear();
+        root_ = next_node(None, grid_max, {});
+    }
+
+    /// Dumps a string representation of this tree to stdout.
+    void dump() const {
+        const auto bounds = bbox_.value_or(Box<N>::unit(Pos<N>::fill(1)));
+        std::cout << "[[RTree with bounds " << bounds << "]]" << std::endl;
+
+        List<PreorderWork> worklist;
+        worklist.emplace_back(root_, bounds);
+
+        while (!worklist.empty()) {
+            PreorderWork &current = worklist.back();
+            Node *node = current.node;
+            const U64 depth = current.depth;
+            bool found_node = false;
+            while (!found_node && current.pos_range.has_next()) {
+                const Pos<N> pos = *current.pos_range.begin();
+                ++current.pos_range.begin();
+                if (auto *entry = node->get(pos)) {
+                    const Box<N> range(pos, pos + node->grid - 1);
+                    indented(depth) << "[" << node->id << "][" << range << "]:" << std::endl;
+                    if (entry->kind == Node::Entry::kList) {
+                        if (entry->list.empty()) {
+                            indented(depth) << ">> EMPTY LIST" << std::endl;
+                        }
+                        for (const auto item : entry->list) {
+                            indented(depth) << ">> " << item << std::endl;
+                        }
+                    } else {
+                        worklist.emplace_back(entry->node, depth + 1);
+                        found_node = true;
+                    }
+                }
+            }
+            if (!worklist.back().pos_range.has_next()) {
+                worklist.pop_back();
+            }
+        }
+    }
+
+private:
     Node *next_node(const Maybe<typename Node::Parent> &parent, const I64 grid, const List<ItemRef> &items) {
         const Pos<N> grid_fill = Pos<N>::fill(grid);
         const U64 id = node_id_++;
@@ -624,13 +584,6 @@ private:
                 remove(node, pos);
             }
         }
-    }
-
-    Range<Point, View::kMutable> points_in(const Box<N> &box) {
-        return make_range<point_iterator, View::kMutable>(*this, box);
-    }
-    Range<Point, View::kMutable> entries_in(const Box<N> &box) {
-        return make_range<entry_iterator, View::kMutable>(*this, box);
     }
 
     Maybe<std::pair<U64, ItemRef>> get_item(const ItemRef &item) {
