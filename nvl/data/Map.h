@@ -2,6 +2,7 @@
 
 #include <unordered_map>
 
+#include "nvl/data/Iterator.h"
 #include "nvl/data/Range.h"
 #include "nvl/macros/Pure.h"
 
@@ -12,8 +13,7 @@ template <typename K, typename V, typename Hash = std::hash<K>, typename Equal =
 class Map : std::unordered_map<K, V, Hash, Equal, Allocator> {
 public:
     using parent = std::unordered_map<K, V, Hash, Equal, Allocator>;
-    using iterator = typename parent::iterator;
-    using const_iterator = typename parent::const_iterator;
+    using Entry = std::pair<const K, V>;
 
     using parent::operator[];
     using parent::at;
@@ -24,26 +24,60 @@ public:
     using parent::find;
     using parent::size;
 
-    class value_iterator {
-    public:
-        using value_type = V;
-        using pointer = V *;
-        using reference = V &;
-
-        explicit value_iterator(typename Map<K, V>::iterator iter) : iter_(iter) {}
-
-        value_iterator &operator++() {
-            ++iter_;
-            return *this;
+    struct entry_iterator final : AbstractIterator<Entry> {
+        class_tag(Map::entry_iterator, AbstractIterator<Entry>);
+        template <View Type = View::kImmutable>
+        static Iterator<Entry, Type> begin(const Map &map) {
+            return make_iterator<entry_iterator, Type>(map._begin());
         }
-        V &operator*() { return iter_->second; }
-        V *operator->() { return &iter_->second; }
+        template <View Type = View::kImmutable>
+        static Iterator<Entry, Type> end(const Map &map) {
+            return make_iterator<entry_iterator, Type>(map._end());
+        }
 
-        pure bool operator==(const value_iterator &rhs) const { return iter_ == rhs.iter_; }
-        pure bool operator!=(const value_iterator &rhs) const { return iter_ != rhs.iter_; }
+        explicit entry_iterator(typename parent::const_iterator iter) : iter_(iter) {}
+        pure std::unique_ptr<AbstractIterator<Entry>> copy() const override {
+            return std::make_unique<entry_iterator>(*this);
+        }
+
+        void increment() override { ++iter_; }
+        const Entry *ptr() override { return &*iter_; }
+
+        // const pair<nvl::Pos<2>, nvl::rtree_detail::Node<2, nvl::Ref<nvl::testing::LabeledBox>>::Entry> *
+        // const pair<const nvl::Pos<2>, nvl::rtree_detail::Node<2, nvl::Ref<nvl::testing::LabeledBox>>::Entry> *
+        pure bool equals(const AbstractIterator<Entry> &rhs) const override {
+            auto *b = dyn_cast<entry_iterator>(&rhs);
+            return b && iter_ == b->iter_;
+        }
 
     private:
-        typename Map<K, V>::iterator iter_;
+        typename parent::const_iterator iter_;
+    };
+
+    struct viterator final : AbstractIterator<V> {
+        class_tag(Map::viterator, AbstractIterator<V>);
+        template <View Type = View::kImmutable>
+        static Iterator<V, Type> begin(const Map &map) {
+            return make_iterator<viterator, Type>(map._begin());
+        }
+        template <View Type = View::kImmutable>
+        static Iterator<V, Type> end(const Map &map) {
+            return make_iterator<viterator, Type>(map._end());
+        }
+
+        explicit viterator(typename parent::const_iterator iter) : iter_(iter) {}
+        pure std::unique_ptr<AbstractIterator<V>> copy() const override { return std::make_unique<viterator>(*this); }
+
+        void increment() override { ++iter_; }
+        const V *ptr() override { return &iter_->second; }
+
+        pure bool equals(const AbstractIterator<V> &rhs) const override {
+            auto *b = dyn_cast<viterator>(&rhs);
+            return b && iter_ == b->iter_;
+        }
+
+    private:
+        typename parent::const_iterator iter_;
     };
 
     Map() : parent() {}
@@ -63,13 +97,13 @@ public:
     }
 
     template <typename... Args>
-    pure V &emplace(Args &&...args) {
+    V &emplace(Args &&...args) {
         auto [iter, _] = parent::emplace(std::forward<Args>(args)...);
         return iter->second;
     }
 
     template <typename... Args>
-    pure V &try_emplace(const K &key, Args &&...args) {
+    V &try_emplace(const K &key, Args &&...args) {
         auto [iter, _] = parent::try_emplace(key, std::forward<Args>(args)...);
         return iter->second;
     }
@@ -108,17 +142,36 @@ public:
     pure bool operator==(const Map &other) const { return std::operator==(*this, other); }
     pure bool operator!=(const Map &other) const { return std::operator!=(*this, other); }
 
-    pure Range<iterator> unordered_entries() { return {parent::begin(), parent::end()}; }
-    pure Range<const_iterator> unordered_entries() const { return {parent::begin(), parent::end()}; }
-    pure Range<value_iterator> unordered_values() {
-        return {value_iterator(parent::begin()), value_iterator(parent::end())};
-    }
+    struct Unordered {
+        explicit Unordered(Map &map) : map(map) {}
+        pure Range<Entry, View::kMutable> entries() { return {begin(), end()}; }
+        pure Range<Entry> entries() const { return {begin(), end()}; }
+
+        pure Iterator<Entry, View::kMutable> begin() { return entry_iterator::template begin<View::kMutable>(map); }
+        pure Iterator<Entry, View::kMutable> end() { return entry_iterator::template end<View::kMutable>(map); }
+        pure Iterator<Entry> begin() const { return entry_iterator::template begin(map); }
+        pure Iterator<Entry> end() const { return entry_iterator::template end(map); }
+
+        pure Range<V, View::kMutable> values() { return {values_begin(), values_end()}; }
+        pure Range<V> values() const { return {values_begin(), values_end()}; }
+
+        pure Iterator<V, View::kMutable> values_begin() { return viterator::template begin<View::kMutable>(map); }
+        pure Iterator<V, View::kMutable> values_end() { return viterator::template end<View::kMutable>(map); }
+        pure Iterator<V> values_begin() const { return viterator::template begin(map); }
+        pure Iterator<V> values_end() const { return viterator::template end(map); }
+
+        Map &map;
+    } unordered = Unordered(*this);
+
+protected:
+    pure typename parent::const_iterator _begin() const { return parent::begin(); }
+    pure typename parent::const_iterator _end() const { return parent::end(); }
 };
 
 template <typename K, typename V, typename Hash, typename Equal, typename Allocator>
 std::ostream &operator<<(std::ostream &os, const Map<K, V, Hash, Equal, Allocator> &map) {
     os << "{";
-    auto range = map.unordered_entries().once();
+    auto range = map.unordered.entries().once();
     if (!range.empty()) {
         os << range->first << ": " << range->second;
         ++range;

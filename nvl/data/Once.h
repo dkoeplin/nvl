@@ -1,7 +1,6 @@
 #pragma once
 
-#include "nvl/data/HasDereference.h"
-#include "nvl/data/IteratorPair.h"
+#include "nvl/data/Iterator.h"
 #include "nvl/macros/Pure.h"
 
 namespace nvl {
@@ -21,36 +20,44 @@ namespace nvl {
  *   static Iterator Iterator::end(args...);
  * };
  */
-template <typename Iterator>
-class Once : public IteratorPair<Once, Iterator, Iterator &, const Iterator &> {
+template <typename Value, View Type = View::kImmutable>
+class Once final {
 public:
-    using parent = IteratorPair<Once, Iterator, Iterator &, const Iterator &>;
-    using value_type = typename Iterator::value_type;
+    using value_type = Value;
 
-    using parent::parent;
+    Once() = default;
+    Once(Iterator<Value, Type> begin, Iterator<Value, Type> end) : begin_(begin), end_(end) {}
 
-    template <typename... Args>
-    explicit Once(Args &&...args)
-        : parent(Iterator::begin(std::forward<Args>(args)...), Iterator::end(std::forward<Args>(args)...)) {}
+    pure Iterator<Value, Type> &begin() { return begin_; }
+    pure Iterator<Value, Type> &end() { return end_; }
+    pure const Iterator<Value, Type> &begin() const { return begin_; }
+    pure const Iterator<Value, Type> &end() const { return end_; }
 
-    pure bool has_next() const { return this->begin_ != this->end_; }
-    pure bool has_value() const { return this->begin_ != this->end_; }
+    pure bool empty() const { return begin_ == end_; }
+    pure bool has_next() const { return begin_ != this->end_; }
+    pure bool has_value() const { return begin_ != this->end_; }
+
+    pure bool operator==(const Once &rhs) const { return begin_ == rhs.begin_; }
+    pure bool operator!=(const Once &rhs) const { return begin_ != rhs.begin_; }
 
     Once &operator++() {
         ++this->begin_;
         return *this;
     }
 
-    pure typename Iterator::reference operator*() const
-        requires traits::HasDereferenceOperator<Iterator>
-    {
-        return *(this->begin_);
-    }
-    pure typename Iterator::pointer operator->() const
-        requires traits::HasMemberAccessOperator<Iterator>
-    {
-        return this->begin_.operator->();
-    }
+    pure const Value &operator*() const { return *begin_; }
+    pure const Value *operator->() const { return &*begin_; }
+
+private:
+    Iterator<Value, Type> begin_;
+    Iterator<Value, Type> end_;
 };
+
+template <typename IterType, View Type = View::kImmutable, typename... Args>
+Once<typename IterType::value_type, Type> make_once(Args &&...args) {
+    auto i0 = IterType::template begin<Type>(std::forward<Args>(args)...);
+    auto i1 = IterType::template end<Type>(std::forward<Args>(args)...);
+    return {i0, i1};
+}
 
 } // namespace nvl

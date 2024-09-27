@@ -3,12 +3,14 @@
 #include <sstream>
 #include <string>
 
+#include "nvl/data/Iterator.h"
 #include "nvl/data/Maybe.h"
 #include "nvl/data/SipHash.h"
 #include "nvl/macros/Aliases.h"
 #include "nvl/macros/Assert.h"
 #include "nvl/macros/Pure.h"
 #include "nvl/math/Grid.h"
+#include "nvl/reflect/Casting.h"
 
 namespace nvl {
 
@@ -17,54 +19,32 @@ class Pos {
 public:
     using value_type = I64;
 
-    class iterator {
-    public:
-        using value_type = I64;
-        using pointer = I64 *;
-        using reference = I64 &;
-        static iterator begin(Pos &parent) { return iterator(parent, 0); }
-        static iterator end(Pos &parent) { return iterator(parent, N); }
+    struct iterator final : AbstractIterator<I64> {
+        class_tag(Pos<N>::iterator, AbstractIterator<I64>);
 
-        pure bool operator==(const iterator &rhs) const { return parent_ == rhs.parent_ && index_ == rhs.index_; }
-        pure bool operator!=(const iterator &rhs) const { return !(*this == rhs); }
-
-        I64 *operator->() const { return &parent_.indices_[index_]; }
-        I64 &operator*() const { return parent_.indices_[index_]; }
-        iterator &operator++() {
-            ++index_;
-            return *this;
+        template <View Type>
+        static Iterator<I64, Type> begin(const Pos &pos) {
+            return make_iterator<iterator, Type>(pos, 0);
+        }
+        template <View Type>
+        static Iterator<I64, Type> end(const Pos &pos) {
+            return make_iterator<iterator, Type>(pos, N);
         }
 
-    private:
-        explicit iterator(Pos &parent, U64 index) : index_(index), parent_(parent) {}
-        U64 index_ = 0;
-        Pos &parent_;
-    };
-    class const_iterator {
-    public:
-        using value_type = I64;
-        using pointer = I64 *;
-        using reference = I64 &;
-        static const_iterator begin(const Pos &parent) { return const_iterator(parent, 0); }
-        static const_iterator end(const Pos &parent) { return const_iterator(parent, N); }
+        explicit iterator(const Pos &pos, const U64 index) : index_(index), pos_(pos) {}
+        pure std::unique_ptr<AbstractIterator<I64>> copy() const override { return std::make_unique<iterator>(*this); }
 
-        const_iterator() : parent_(Pos::fill(0)) {}
+        void increment() override { ++index_; }
 
-        pure bool operator==(const const_iterator &rhs) const { return parent_ == rhs.parent_ && index_ == rhs.index_; }
-        pure bool operator!=(const const_iterator &rhs) const { return !(*this == rhs); }
+        pure const I64 *ptr() override { return &pos_.indices_[index_]; }
 
-        pure const I64 *operator->() const { return &parent_.indices_[index_]; }
-        pure const I64 &operator*() const { return parent_.indices_[index_]; }
-        const_iterator &operator++() {
-            ++index_;
-            return *this;
+        pure bool equals(const AbstractIterator &rhs) const override {
+            auto *b = dyn_cast<iterator>(&rhs);
+            return b && pos_ == b->pos_ && index_ == b->index_;
         }
 
-    private:
-        explicit const_iterator(const Pos &parent, U64 index) : index_(index), parent_(parent) {}
-
         U64 index_ = 0;
-        Pos parent_;
+        const Pos &pos_;
     };
 
     /// Returns a Pos of rank `N` where all elements are `value`.
@@ -86,6 +66,9 @@ public:
 
     /// Returns a Pos of rank `N` where all elements are zero.
     static const Pos zero;
+
+    /// Returns a Pos of rank `N` where all elements are one.
+    static const Pos ones;
 
     /// Returns a Pos of rank `N` with uninitialized elements.
     explicit constexpr Pos() = default;
@@ -112,10 +95,10 @@ public:
         return indices_[0];
     }
 
-    iterator begin() { return iterator::begin(*this); }
-    iterator end() { return iterator::end(*this); }
-    pure const_iterator begin() const { return const_iterator::begin(*this); }
-    pure const_iterator end() const { return const_iterator::end(*this); }
+    pure Iterator<I64, View::kMutable> begin() { return iterator::template begin<View::kMutable>(*this); }
+    pure Iterator<I64, View::kMutable> end() { return iterator::template end<View::kMutable>(*this); }
+    pure Iterator<I64> begin() const { return iterator::template begin<View::kImmutable>(*this); }
+    pure Iterator<I64> end() const { return iterator::template end<View::kImmutable>(*this); }
 
     /// Returns the rank of this Pos.
     pure constexpr U64 rank() const { return N; }
@@ -401,6 +384,9 @@ private:
 
 template <U64 N>
 const Pos<N> Pos<N>::zero = Pos::fill(0);
+
+template <U64 N>
+const Pos<N> Pos<N>::ones = Pos::fill(1);
 
 template <U64 N>
 Pos<N> min(const Pos<N> &a, const Pos<N> &b) {

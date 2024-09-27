@@ -9,7 +9,7 @@
 namespace nvl {
 
 /**
- * @class View
+ * @class At
  * @brief Views a Value at an offset within an N-dimensional space.
  *
  * Holds a reference to the value, and allows inspecting the bounding box of the value at the offset with .box().
@@ -19,13 +19,13 @@ namespace nvl {
  */
 template <U64 N, typename Value>
     requires traits::HasBBox<Value>
-class View {
+class At {
 public:
-    explicit View(Ref<Value> value, const Pos<N> &offset) : value_(value.ptr()), offset_(offset) {}
-    explicit View(Value *value, const Pos<N> &offset) : value_(value), offset_(offset) {}
+    explicit At(Ref<Value> value, const Pos<N> &offset) : value_(value.ptr()), offset_(offset) {}
+    explicit At(Value *value, const Pos<N> &offset) : value_(value), offset_(offset) {}
 
-    pure bool operator==(const View &rhs) const { return *value_ == *rhs.value_ && offset_ == rhs.offset_; }
-    pure bool operator!=(const View &rhs) const { return !(*this == rhs); }
+    pure bool operator==(const At &rhs) const { return *value_ == *rhs.value_ && offset_ == rhs.offset_; }
+    pure bool operator!=(const At &rhs) const { return !(*this == rhs); }
 
     const Value *operator->() const { return value_; }
     const Value &operator*() const { return *value_; }
@@ -40,13 +40,13 @@ private:
 };
 
 template <U64 N, typename Value>
-std::ostream &operator<<(std::ostream &os, const View<N, Value> &view) {
+std::ostream &operator<<(std::ostream &os, const At<N, Value> &view) {
     return os << *view << " @ " << view.offset();
 }
 
 } // namespace nvl
 
 template <U64 N, typename Value>
-struct std::hash<nvl::View<N, Value>> {
-    pure U64 operator()(const nvl::View<N, Value> &a) const { return std::hash<Value>()(*a); }
+struct std::hash<nvl::At<N, Value>> {
+    pure U64 operator()(const nvl::At<N, Value> &a) const { return std::hash<Value>()(*a); }
 };

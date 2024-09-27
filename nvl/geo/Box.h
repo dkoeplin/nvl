@@ -41,16 +41,41 @@ public:
     /// Returns a Box with only one point.
     static Box unit(const Pos<N> &pt) { return Box::presorted(pt, pt); }
 
-    class pos_iterator : public Iterator<std::input_iterator_tag, Pos<N>> {
-    public:
-        static pos_iterator begin(const Box &box, const Pos<N> &step) { return pos_iterator(box, box.min, step); }
-        static pos_iterator end(const Box &box, const Pos<N> &step) { return pos_iterator(box, None, step); }
+    struct pos_iterator final : AbstractIterator<Pos<N>> {
+        class_tag(Box<N>::pos_iterator, AbstractIterator<Pos<N>>);
+
+        template <View Type = View::kImmutable>
+            requires(Type == View::kImmutable)
+        static Iterator<Pos<N>, Type> begin(const Box &box, const Pos<N> &step) {
+            return make_iterator<pos_iterator>(box, box.min, step);
+        }
+        template <View Type = View::kImmutable>
+            requires(Type == View::kImmutable)
+        static Iterator<Pos<N>, Type> end(const Box &box, const Pos<N> &step) {
+            return make_iterator<pos_iterator>(box, None, step);
+        }
 
         pos_iterator() : pos_iterator(kUnitBox, None, Pos<N>::fill(1)) {}
+        explicit pos_iterator(const Box &box, const Maybe<Pos<N>> &pos, const Pos<N> &step)
+            : box_(box), pos_(pos), step_(step) {
+            for (U64 i = 0; i < N; i++) {
+                ASSERT(step_[i] != 0, "Invalid iterator step size of 0");
+                ASSERT(step_[i] > 0, "TODO: Support negative step");
+            }
+        }
 
-        const Pos<N> &operator*() const { return pos_.value(); }
-        const Pos<N> *operator->() const { return &pos_.value(); }
-        pos_iterator &operator++() {
+        pure std::unique_ptr<AbstractIterator<Pos<N>>> copy() const override {
+            return std::make_unique<pos_iterator>(*this);
+        }
+
+        const Pos<N> *ptr() override { return &pos_.value(); }
+
+        pure bool equals(const AbstractIterator<Pos<N>> &rhs) const override {
+            auto *b = dyn_cast<pos_iterator>(&rhs);
+            return b && pos_ == b->pos_ && box_ == b->box_ && step_ == b->step_;
+        }
+
+        void increment() override {
             // Increment only does something if this is not the end iterator.
             if (pos_.has_value()) {
                 auto &pos = pos_.value();
@@ -66,20 +91,6 @@ public:
                     }
                 }
             }
-            return *this;
-        }
-        pure bool operator==(const pos_iterator &rhs) const {
-            return pos_ == rhs.pos_ && box_ == rhs.box_ && step_ == rhs.step_;
-        }
-        pure bool operator!=(const pos_iterator &rhs) const { return !(*this == rhs); }
-
-    private:
-        explicit pos_iterator(const Box &box, const Maybe<Pos<N>> &pos, const Pos<N> &step)
-            : box_(box), pos_(pos), step_(step) {
-            for (U64 i = 0; i < N; i++) {
-                ASSERT(step_[i] != 0, "Invalid iterator step size of 0");
-                ASSERT(step_[i] > 0, "TODO: Support negative step");
-            }
         }
 
         Box<N> box_;
@@ -87,20 +98,43 @@ public:
         Pos<N> step_;
     };
 
-    class box_iterator : public Iterator<std::input_iterator_tag, Box<N>> {
-    public:
-        static box_iterator begin(const Box &box, const Pos<N> &shape = Pos<N>::fill(1)) {
-            return box_iterator(box, Box::presorted(box.min, box.min + shape - 1), shape);
+    struct box_iterator final : AbstractIterator<Box<N>> {
+        class_tag(Box<N>::box_iterator, AbstractIterator<Box<N>>);
+
+        template <View Type = View::kImmutable>
+            requires(Type == View::kImmutable)
+        static Iterator<Box<N>, Type> begin(const Box &box, const Pos<N> &shape = Pos<N>::fill(1)) {
+            return make_iterator<box_iterator, Type>(box, Box::presorted(box.min, box.min + shape - 1), shape);
         }
-        static box_iterator end(const Box &box, const Pos<N> &shape = Pos<N>::fill(1)) {
-            return box_iterator(box, None, shape);
+        template <View Type = View::kImmutable>
+            requires(Type == View::kImmutable)
+        static Iterator<Box<N>, Type> end(const Box &box, const Pos<N> &shape = Pos<N>::fill(1)) {
+            return make_iterator<box_iterator, Type>(box, None, shape);
         }
 
         box_iterator() : box_iterator(kUnitBox, None, Pos<N>::fill(1)) {}
+        explicit box_iterator(const Box &box, const Maybe<Box> &cur, const Pos<N> &shape)
+            : box_(box), current_(cur), shape_(shape) {
+            for (U64 i = 0; i < N; i++) {
+                ASSERT(shape_[i] != 0, "Invalid iterator shape size of 0");
+                ASSERT(shape_[i] > 0, "TODO: Support negative step");
+            }
+        }
 
-        const Box &operator*() const { return current_.value(); }
-        const Box *operator->() { return &current_.value(); }
-        box_iterator &operator++() {
+        pure std::unique_ptr<AbstractIterator<Box<N>>> copy() const override {
+            return std::make_unique<box_iterator>(*this);
+        }
+
+        const Box *ptr() override { return &current_.value(); }
+
+        pure bool equals(const AbstractIterator<Box<N>> &rhs) const override {
+            if (auto *b = dyn_cast<box_iterator>(&rhs)) {
+                return current_ == b->current_ && box_ == b->box_ && shape_ == b->shape_;
+            }
+            return false;
+        }
+
+        void increment() override {
             if (current_.has_value()) {
                 I64 i = N - 1;
                 auto &current = current_.value();
@@ -118,21 +152,8 @@ public:
                     }
                 }
             }
-            return *this;
         }
-        pure bool operator==(const box_iterator &rhs) const {
-            return current_ == rhs.current_ && box_ == rhs.box_ && shape_ == rhs.shape_;
-        }
-        pure bool operator!=(const box_iterator &rhs) const { return !(*this == rhs); }
 
-    private:
-        explicit box_iterator(const Box &box, const Maybe<Box> &cur, const Pos<N> &shape)
-            : box_(box), current_(cur), shape_(shape) {
-            for (U64 i = 0; i < N; i++) {
-                ASSERT(shape_[i] != 0, "Invalid iterator shape size of 0");
-                ASSERT(shape_[i] > 0, "TODO: Support negative step");
-            }
-        }
         Box<N> box_;
         Maybe<Box> current_;
         Pos<N> shape_;
@@ -177,22 +198,20 @@ public:
     pure Box clamp(const I64 grid) const { return Box::presorted(min.grid_min(grid), max.grid_max(grid)); }
 
     /// Returns an iterator over points in this box with the given `step` size in each dimension.
-    pure Range<pos_iterator> pos_iter(const I64 step = 1) const {
-        return Range<pos_iterator>(*this, Pos<N>::fill(step));
-    }
+    pure Range<Pos<N>> pos_iter(const I64 step = 1) const { return pos_iter(Pos<N>::fill(step)); }
 
     /// Returns an iterator over points in this box with the given multidimensional `step` size.
-    pure Range<pos_iterator> pos_iter(const Pos<N> &step) const { return Range<pos_iterator>(*this, step); }
+    pure Range<Pos<N>> pos_iter(const Pos<N> &step) const { return make_range<pos_iterator>(*this, step); }
 
     /// Returns an iterator over sub-boxes with the given `step` size in each dimension.
-    pure Range<box_iterator> box_iter(const I64 step) const { return Range<box_iterator>(*this, Pos<N>::fill(step)); }
+    pure Range<Box<N>> box_iter(const I64 step) const { return make_range<box_iterator>(*this, Pos<N>::fill(step)); }
 
     /// Returns an iterator over sub-boxes with the given multidimensional `step` size.
-    pure Range<box_iterator> box_iter(const Pos<N> &shape) const { return Range<box_iterator>(*this, shape); }
+    pure Range<Box<N>> box_iter(const Pos<N> &shape) const { return make_range<box_iterator>(*this, shape); }
 
     /// Provides iteration over all points in this box.
-    pure pos_iterator begin() const { return pos_iterator::begin(*this, Pos<N>::fill(1)); }
-    pure pos_iterator end() const { return pos_iterator::end(*this, Pos<N>::fill(1)); }
+    pure Iterator<Pos<N>> begin() const { return pos_iterator::template begin(*this, Pos<N>::ones); }
+    pure Iterator<Pos<N>> end() const { return pos_iterator::template end(*this, Pos<N>::ones); }
 
     pure bool operator==(const Box &rhs) const { return min == rhs.min && max == rhs.max; }
     pure bool operator!=(const Box &rhs) const { return !(*this == rhs); }
@@ -233,9 +252,9 @@ public:
         return result;
     }
 
-    template <typename Iterator>
-        requires traits::HasBBox<typename Iterator::value_type>
-    pure List<Box> diff(const Range<Iterator> &range) const {
+    template <typename Value>
+        requires traits::HasBBox<Value>
+    pure List<Box> diff(const Range<Value> &range) const {
         List<Box> result{*this};
         for (const auto &value : range) {
             List<Box> next;
@@ -279,7 +298,7 @@ public:
     Pos<N> max;
 
 private:
-    friend class pos_iterator;
+    friend struct pos_iterator;
 
     void push_diff(List<Box> &result, const Box &rhs) const {
         const Maybe<Box> intersect = this->intersect(rhs);
@@ -326,9 +345,9 @@ struct Edge {
         return result;
     }
 
-    template <typename Iterator>
-        requires traits::HasBBox<typename Iterator::value_type>
-    pure List<Edge> diff(const Range<Iterator> &range) const {
+    template <typename Value>
+        requires traits::HasBBox<Value>
+    pure List<Edge> diff(Range<Value> range) const {
         List<Edge> result;
         for (const Box<N> &b : box.diff(range)) {
             result.emplace_back(dim, dir, b);

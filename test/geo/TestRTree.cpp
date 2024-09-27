@@ -79,9 +79,9 @@ TEST(TestRTree, bracket_operator) {
     for (const auto &box : tree[range]) {
         ids.insert(box->id());
     }
-    for (const auto &box : tree.unordered()) {
+    for (const auto &box : tree.unordered.items()) {
         if (box->bbox().overlaps(range)) {
-            EXPECT_TRUE(ids.contains(box->id()));
+            EXPECT_TRUE(ids.has(box->id()));
         }
     }
 }
@@ -100,7 +100,7 @@ TEST(TestRTree, keep_buckets_after_subdivide) {
     box[9] = Box<2>({599, 375}, {647, 415}) + Pos<2>(0, 41);
 
     RTree<2, LabeledBox, Ref<LabeledBox>, /*max_entries*/ 9> tree;
-    for (auto &[id, x] : box.unordered_entries()) {
+    for (auto &[id, x] : box.unordered) {
         tree.insert({id, x});
     }
 

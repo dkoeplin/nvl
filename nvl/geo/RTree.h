@@ -51,9 +51,7 @@ struct Node {
 
     pure Entry *get(const Pos<N> &pos) const { return map.get(pos.grid_min(grid)); }
 
-    pure Range<typename Box<N>::pos_iterator> pos_iter(const Box<N> &vol) const {
-        return vol.clamp(grid).pos_iter(Pos<N>::fill(grid));
-    }
+    pure Range<Pos<N>> pos_iter(const Box<N> &vol) const { return vol.clamp(grid).pos_iter(Pos<N>::fill(grid)); }
 
     U64 id = -1;
     Maybe<Parent> parent;
@@ -67,24 +65,18 @@ struct Work {
 
     explicit Work(Node *node, const Box<N> &volume) : node(node), vol(volume) {}
 
-    pure const Pos<N> &pos() const {
-        ASSERT(pair_range.has_value(), "Attempted to dereference an empty iterator.");
-        return *pair_range.begin();
-    }
+    pure const Pos<N> &pos() const { return *pair_range.begin(); }
 
-    pure ItemRef item() const {
-        ASSERT(node != nullptr && list_range.has_value(), "Attempted to dereference an empty iterator.");
-        return *list_range;
-    }
+    pure const ItemRef &item() const { return *list_range; }
 
     Node *node;
     Box<N> vol;
 
     // 1) Iterating across items
-    Once<typename List<ItemRef>::iterator> list_range;
+    Once<ItemRef> list_range;
 
     // 2) Iterating within a node - (node, pos) pairs
-    Once<typename Box<N>::pos_iterator> pair_range;
+    Once<Pos<N>> pair_range;
 };
 
 } // namespace rtree_detail
@@ -107,31 +99,57 @@ class RTree {
     using Work = rtree_detail::Work<N, ItemRef>;
     using Node = rtree_detail::Node<N, ItemRef>;
 
+    static constexpr I64 grid_min = 0x1 << kGridExpMin;
+    static constexpr I64 grid_max = 0x1 << kGridExpMax;
+
+    static Box<N> bbox(const ItemRef &item) { return static_cast<const Item *>(item.ptr())->bbox(); }
+
 public:
     /// Hashing of items is done based on pointer address because the RTree itself owns the memory.
     using ItemRefHash = PointerHash<ItemRef>;
 
-    class window_iterator;
+    struct window_iterator;
 
-    struct item_iterator {
-        using value_type = ItemRef;
-        using pointer = Item *;
-        using reference = ItemRef;
+    struct item_iterator final : AbstractIterator<ItemRef> {
+        class_tag(item_iterator, AbstractIterator<ItemRef>);
+        using ItemMap = Map<U64, std::unique_ptr<Item>>;
 
-        explicit item_iterator(typename Map<U64, std::unique_ptr<Item>>::iterator iter) : iter_(iter) {}
-
-        item_iterator &operator++() {
-            ++iter_;
-            return *this;
+        template <View Type = View::kImmutable>
+        pure static Iterator<ItemRef, Type> begin(const ItemMap &map) {
+            return make_iterator<item_iterator, Type>(map.unordered.values_begin());
         }
-        ItemRef operator*() { return ItemRef(iter_->second.get()); }
-        Item *operator->() { return &iter_->second.get(); }
+        template <View Type = View::kImmutable>
+        pure static Iterator<ItemRef, Type> end(const ItemMap &map) {
+            return make_iterator<item_iterator, Type>(map.unordered.values_end());
+        }
 
-        pure bool operator==(const item_iterator &rhs) const { return iter_ == rhs.iter_; }
-        pure bool operator!=(const item_iterator &rhs) const { return iter_ != rhs.iter_; }
+        explicit item_iterator(Iterator<std::unique_ptr<Item>> iter) : iter(iter) {}
+
+        pure std::unique_ptr<AbstractIterator<ItemRef>> copy() const override {
+            return std::make_unique<item_iterator>(*this);
+        }
+
+        void increment() override {
+            item = None;
+            ++iter;
+        }
+
+        pure const ItemRef *ptr() override {
+            if (!item.has_value()) {
+                // Lazily set the item on dereference to avoid dereferencing an empty iterator
+                item = ItemRef(iter->get());
+            }
+            return &item.value();
+        }
+
+        pure bool equals(const AbstractIterator<ItemRef> &rhs) const override {
+            auto *b = dyn_cast<item_iterator>(&rhs);
+            return b && iter == b->iter;
+        }
 
     private:
-        typename Map<U64, std::unique_ptr<Item>>::iterator iter_;
+        Maybe<ItemRef> item = None;
+        Iterator<std::unique_ptr<Item>> iter;
     };
 
     explicit RTree() : root_(next_node(None, grid_max, {})) {}
@@ -169,23 +187,39 @@ public:
     /// Does nothing if no matching item exists in the tree.
     RTree &move(const ItemRef &item, const Box<N> &prev) { return move(item->bbox(), prev); }
 
-    /// Returns an iterator over all unique stored items in the given volume.
-    pure Range<window_iterator> operator[](const Pos<N> &pos) {
-        return Range<window_iterator>(*this, Box<N>::unit(pos));
+    /// Returns an iterable range over all unique stored items in the given volume.
+    pure Range<ItemRef, View::kMutable> operator[](const Pos<N> &pos) {
+        return make_range<window_iterator, View::kMutable>(*this, Box<N>::unit(pos));
     }
-    pure Range<window_iterator> operator[](const Box<N> &box) { return Range<window_iterator>(*this, box); }
+    pure Range<ItemRef, View::kMutable> operator[](const Box<N> &box) {
+        return make_range<window_iterator, View::kMutable>(*this, box);
+    }
+
+    struct Unordered {
+        explicit Unordered(RTree &tree) : tree(tree) {}
+
+        pure Range<ItemRef, View::kMutable> items() { return {begin(), end()}; }
+        pure Range<ItemRef> items() const { return {begin(), end()}; }
+
+        pure Iterator<ItemRef, View::kMutable> begin() {
+            return item_iterator::template begin<View::kMutable>(tree.items_);
+        }
+        pure Iterator<ItemRef, View::kMutable> end() {
+            return item_iterator::template end<View::kMutable>(tree.items_);
+        }
+        pure Iterator<ItemRef> begin() const { return item_iterator::template begin(tree.items_); }
+        pure Iterator<ItemRef> end() const { return item_iterator::template end(tree.items_); }
+
+        RTree &tree;
+    } unordered = Unordered(*this);
 
     /// Returns a Range for unordered iteration over all items in this tree.
-    pure Range<item_iterator> unordered() {
-        auto range = items_.unordered_entries();
-        return {item_iterator(range.begin()), item_iterator(range.end())};
-    }
 
     using Component = typename EquivalentSets<ItemRef, ItemRefHash>::Group;
     /// Returns the connected components in this tree.
     List<Component> components() {
         EquivalentSets<ItemRef, ItemRefHash> components;
-        for (const auto &a : items_.unordered_values()) {
+        for (const std::unique_ptr<Item> &a : items_.unordered.values()) {
             ItemRef a_ref(a.get());
             bool had_neighbors = false;
             for (const Edge<N> &edge : a->bbox().edges()) {
@@ -201,7 +235,7 @@ public:
         }
         // Need to return this as a List to avoid references to the local `components` data structure.
         List<Component> result;
-        for (Component &set : components.sets()) {
+        for (const Component &set : components.sets()) {
             result.push_back(std::move(set));
         }
         return result;
@@ -332,36 +366,33 @@ private:
         kEntries, // All existing entries
         kItems    // All existing items
     };
-    template <Traversal mode, typename Concrete>
-    class abstract_iterator {
-    public:
-        static Concrete begin(RTree &tree, const Box<N> &box) {
-            Concrete iter(tree, box);
+    template <typename Concrete, Traversal mode, typename Value>
+    struct abstract_iterator : AbstractIterator<Value> {
+        class_tag(abstract_iterator, AbstractIterator<Value>);
+
+        template <View Type = View::kImmutable>
+        static Iterator<Value, Type> begin(RTree &tree, const Box<N> &box) {
+            std::unique_ptr<Concrete> iter = std::make_unique<Concrete>(&tree, box);
             if (tree.root_ != nullptr) {
-                iter.worklist.emplace_back(tree.root_, box);
-                iter.advance();
+                iter->worklist.emplace_back(tree.root_, box);
+                iter->increment();
             }
-            return iter;
+            return Iterator<Value, Type>(std::move(iter));
         }
 
-        static Concrete end(RTree &tree, const Box<N> &box) { return Concrete(tree, box); }
-
-        Concrete &operator++() {
-            advance();
-            return *static_cast<Concrete *>(this);
+        template <View Type = View::kImmutable>
+        static Iterator<Value, Type> end(RTree &tree, const Box<N> &box) {
+            return make_iterator<Concrete, Type>(&tree, box);
         }
 
-        pure bool operator==(const abstract_iterator &rhs) const {
-            return &tree == &rhs.tree && worklist.get_back() == rhs.worklist.get_back();
+        explicit abstract_iterator(RTree *tree, const Box<N> &box) : tree(tree), box(box) {}
+        pure std::unique_ptr<AbstractIterator<Value>> copy() const override {
+            return std::make_unique<Concrete>(*static_cast<const Concrete *>(this));
         }
-        pure bool operator!=(const abstract_iterator &rhs) const { return !(*this == rhs); }
-
-    protected:
-        explicit abstract_iterator(RTree &tree, const Box<N> &box) : tree(tree), box(box) {}
 
         bool skip_item(Work &current) {
             ItemRef ref = current.item();
-            return visited.contains(ref) || !bbox(ref).overlaps(box);
+            return visited.has(ref) || !bbox(ref).overlaps(box);
         }
 
         bool visit_next_pair(Work &current) {
@@ -429,7 +460,7 @@ private:
         }
 
         /// Advances this iterator to either the next list item, next (node, pos) pair, or next child node.
-        void advance() {
+        void increment() override {
             while (!worklist.empty()) {
                 auto &current = worklist.back();
                 if (current.list_range.has_next()) {
@@ -442,93 +473,73 @@ private:
             }
         }
 
+        pure bool equals(const AbstractIterator<Value> &rhs) const override {
+            auto *b = dyn_cast<abstract_iterator>(&rhs);
+            return b && (this->tree == b->tree && this->worklist.get_back() == b->worklist.get_back());
+        }
+
         // 3) Iterating across nodes
         List<Work> worklist = {};
         Set<ItemRef, ItemRefHash> visited;
 
-        RTree &tree;
+        RTree *tree;
         Box<N> box;
     };
 
-    class entry_iterator : public abstract_iterator<Traversal::kEntries, entry_iterator> {
-    public:
-        using Parent = abstract_iterator<Traversal::kEntries, entry_iterator>;
-        using value_type = std::pair<Node *, Pos<N>>;
-        using pointer = value_type;
-        using reference = value_type;
-
-        entry_iterator() = delete;
-
-        value_type operator*() const {
-            ASSERT(!this->worklist.empty(), "Attempted to dereference an empty iterator");
-            auto &current = this->worklist.back();
-            return {current.node, current.pos()};
-        }
-        value_type operator->() const {
-            ASSERT(!this->worklist.empty(), "Attempted to dereference an empty iterator");
-            auto &current = this->worklist.back();
-            return {current.node, current.pos()};
-        }
-
-    private:
-        friend class RTree;
-        using Parent::Parent;
+    struct Point {
+        Node *node;
+        Pos<N> pos;
     };
 
-    class point_iterator : public abstract_iterator<Traversal::kPoints, point_iterator> {
-    public:
-        using Parent = abstract_iterator<Traversal::kPoints, point_iterator>;
-        using value_type = std::pair<Node *, Pos<N>>;
-        using pointer = value_type;
-        using reference = value_type;
+    struct entry_iterator final : abstract_iterator<entry_iterator, Traversal::kEntries, Point> {
+        class_tag(entry_iterator, abstract_iterator<entry_iterator, Traversal::kEntries, Point>);
+        using parent = abstract_iterator<entry_iterator, Traversal::kEntries, Point>;
+        using parent::parent;
 
-        point_iterator() = delete;
-
-        value_type operator*() const {
-            ASSERT(!this->worklist.empty(), "Attempted to dereference an empty iterator");
-            auto &current = this->worklist.back();
-            return {current.node, current.pos()};
-        }
-        value_type operator->() const {
-            ASSERT(!this->worklist.empty(), "Attempted to dereference an empty iterator");
-            auto &current = this->worklist.back();
-            return {current.node, current.pos()};
+        const Point *ptr() override {
+            if (!point.has_value()) {
+                auto &current = this->worklist.back();
+                point = {current.node, current.pos()};
+            }
+            return &point.value();
         }
 
-    private:
-        friend class RTree;
-        using Parent::Parent;
+        void increment() override {
+            parent::increment();
+            point = None;
+        }
+
+        Maybe<Point> point = None;
     };
 
-    static constexpr I64 grid_min = 0x1 << kGridExpMin;
-    static constexpr I64 grid_max = 0x1 << kGridExpMax;
+    struct point_iterator final : abstract_iterator<point_iterator, Traversal::kPoints, Point> {
+        class_tag(point_iterator, abstract_iterator<point_iterator, Traversal::kPoints, Point>);
+        using parent = abstract_iterator<point_iterator, Traversal::kPoints, Point>;
+        using parent::parent;
+
+        const Point *ptr() override {
+            if (!point.has_value()) {
+                auto &current = this->worklist.back();
+                point = {current.node, current.pos()};
+            }
+            return &point.value();
+        }
+
+        void increment() override {
+            parent::increment();
+            point = None;
+        }
+
+        Maybe<Point> point = None;
+    };
 
 public:
-    class window_iterator : public abstract_iterator<Traversal::kItems, window_iterator> {
-    public:
-        using Parent = abstract_iterator<Traversal::kItems, window_iterator>;
-        using value_type = ItemRef;
-        using pointer = Item *;
-        using reference = ItemRef;
-        using difference_type = std::ptrdiff_t;
-        using iterator_category = std::input_iterator_tag;
+    struct window_iterator final : abstract_iterator<window_iterator, Traversal::kItems, ItemRef> {
+        class_tag(window_iterator, abstract_iterator<window_iterator, Traversal::kItems, ItemRef>);
+        using parent = abstract_iterator<window_iterator, Traversal::kItems, ItemRef>;
+        using parent::parent;
 
-        window_iterator() = delete;
-
-        pure expand bool has_value() const { return !this->worklist.empty(); }
-
-        ItemRef operator*() const {
-            ASSERT(has_value(), "Attempted to dereference empty iterator");
-            return this->worklist.back().item();
-        }
-        Item *operator->() const {
-            ASSERT(has_value(), "Attempted to dereference empty iterator");
-            return this->worklist.back().item().ptr();
-        }
-
-    private:
-        friend class RTree;
-        using Parent::Parent;
+        const ItemRef *ptr() override { return &this->worklist.back().item(); }
     };
 
 private:
@@ -543,7 +554,7 @@ private:
         node->grid = grid;
         for (const ItemRef &item : items) {
             const Box<N> item_box = bbox(item);
-            Range<typename Box<N>::box_iterator> points; // empty iterable to start with
+            Range<Box<N>> points; // empty iterable to start with
             if (parent.has_value()) {
                 if (const Maybe<Box<N>> intersection = item_box.intersect(parent->box)) {
                     points = intersection->clamp(grid_fill).box_iter(grid_fill);
@@ -582,7 +593,7 @@ private:
 
     void balance(Node *node) {
         return_if(node->grid <= grid_min); // Can't further balance
-        for (auto &[pos, _] : node->map.unordered_entries()) {
+        for (auto &[pos, _] : node->map.unordered) {
             balance_pos(node, pos);
         }
     }
@@ -615,8 +626,12 @@ private:
         }
     }
 
-    Range<point_iterator> points_in(const Box<N> &box) { return Range<point_iterator>(*this, box); }
-    Range<entry_iterator> entries_in(const Box<N> &box) { return Range<entry_iterator>(*this, box); }
+    Range<Point, View::kMutable> points_in(const Box<N> &box) {
+        return make_range<point_iterator, View::kMutable>(*this, box);
+    }
+    Range<Point, View::kMutable> entries_in(const Box<N> &box) {
+        return make_range<entry_iterator, View::kMutable>(*this, box);
+    }
 
     Maybe<std::pair<U64, ItemRef>> get_item(const ItemRef &item) {
         if (auto iter = item_ids_.find(item); iter != item_ids_.end()) {
@@ -681,8 +696,6 @@ private:
         }
         return *this;
     }
-
-    static Box<N> bbox(const ItemRef &item) { return static_cast<const Item *>(item.ptr())->bbox(); }
 
     Maybe<Box<N>> bbox_ = None;
     U64 node_id_ = 0;

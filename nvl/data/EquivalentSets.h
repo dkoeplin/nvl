@@ -53,14 +53,14 @@ public:
 
     pure bool has(const Item &item) const { return ids_.contains(item); }
 
-    using set_iterator = typename Map<U64, Group>::value_iterator;
-    Range<set_iterator> sets() { return groups_.unordered_values(); }
+    pure Range<Group> sets() const { return groups_.unordered.values(); }
 
 private:
     void move_to_current_group(U64 dst, U64 &src, Group &group, const Item &item) {
         if (src != dst) {
             if (auto iter = groups_.find(src); iter != groups_.end()) {
-                group.insert(iter->second.begin(), iter->second.end());
+                const auto &set = iter->second;
+                group.insert(set.unordered.values());
                 groups_.erase(iter);
             } else {
                 group.insert(item);

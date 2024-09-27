@@ -35,27 +35,27 @@ public:
     pure virtual Pos<N> loc() const { return parts_.loc; }
     pure virtual Box<N> bbox() const { return parts_.bbox(); }
 
-    pure Range<typename Tree::edge_iterator> edges() { return parts_.unordered_edges(); }
+    pure Range<At<N,Edge<N>>> edges() { return parts_.unordered_edges(); }
 
-    pure Range<typename Tree::item_iterator> parts() { return parts_.unordered_items(); }
-    pure Range<typename Tree::window_iterator> parts(const Box<N> &box) { return parts_[box]; }
-    pure Range<typename Tree::window_iterator> parts(const Pos<N> &pos) { return parts_[pos]; }
+    pure Range<At<N,Part<N>>> parts() { return parts_.unordered_items(); }
+    pure Range<At<N,Part<N>>> parts(const Box<N> &box) { return parts_[box]; }
+    pure Range<At<N,Part<N>>> parts(const Pos<N> &pos) { return parts_[pos]; }
 
-    struct RelativeView {
-        explicit RelativeView(Entity &entity) : entity(entity) {}
-        pure Range<typename Tree::Viewed::item_iterator> parts() { return entity.parts_.view.unordered_items(); }
-        pure Range<typename Tree::Viewed::window_iterator> parts(const Box<N> &box) { return entity.parts_.view[box]; }
-        pure Range<typename Tree::Viewed::window_iterator> parts(const Pos<N> &pos) { return entity.parts_.view[pos]; }
+    struct Relative {
+        explicit Relative(Entity &entity) : entity(entity) {}
+        pure Range<Ref<Part<N>>> parts() { return entity.parts_.relative.unordered_items(); }
+        pure Range<Ref<Part<N>>> parts(const Box<N> &box) { return entity.parts_.relative[box]; }
+        pure Range<Ref<Part<N>>> parts(const Pos<N> &pos) { return entity.parts_.relative[pos]; }
         Entity &entity;
-    } view = RelativeView(*this);
+    } relative = Relative(*this);
 
     pure virtual bool falls() {
-        return view.parts().all([](const Ref<Part<N>> part) { return part->material()->falls; });
+        return relative.parts().all([](const Ref<Part<N>> part) { return part->material()->falls; });
     }
 
     void draw(Draw &draw, const int64_t highlight) override {
         Draw::Offset offset(draw, loc());
-        for (Ref<Part<N>> part : parts_.view.unordered_items()) {
+        for (Ref<Part<N>> part : parts_.relative.unordered_items()) {
             part->draw(draw, highlight);
         }
     }
@@ -83,9 +83,8 @@ protected:
         world_->template send<Msg>(self(), dst, std::forward<Args>(args)...);
     }
 
-    template <typename Msg, typename Iterator, typename... Args>
-        requires std::is_same_v<Actor, typename Iterator::value_type>
-    void send(const Range<Iterator> &dst, Args &&...args) {
+    template <typename Msg, typename... Args>
+    void send(const Range<Actor> &dst, Args &&...args) {
         world_->template send<Msg>(self(), dst, std::forward<Args>(args)...);
     }
 
@@ -98,7 +97,7 @@ protected:
 template <U64 N>
 Set<Actor> Entity<N>::above() {
     Set<Actor> above;
-    for (const View<N, Edge<N>> &edge : parts_.unordered_edges()) {
+    for (const At<N, Edge<N>> &edge : parts_.unordered_edges()) {
         if (World<N>::is_up(edge->dim, edge->dir)) {
             above.insert(world_->entities(edge.bbox()));
         }
@@ -109,7 +108,7 @@ Set<Actor> Entity<N>::above() {
 template <U64 N>
 Set<Actor> Entity<N>::below() {
     Set<Actor> below;
-    for (const View<N, Edge<N>> &edge : parts_.unordered_edges()) {
+    for (const At<N, Edge<N>> &edge : parts_.unordered_edges()) {
         if (World<N>::is_down(edge->dim, edge->dir)) {
             below.insert(world_->entities(edge.bbox()));
         }
@@ -168,7 +167,7 @@ Status Entity<N>::receive(const List<Message> &messages) {
 template <U64 N>
 Status Entity<N>::hit(Set<Actor> &neighbors, const Hit<N> &hit) {
     const Box<N> local_box = hit.box - parts_.loc;
-    const List<Ref<Part<N>>> hit_parts(view.parts(local_box));
+    const List<Ref<Part<N>>> hit_parts(relative.parts(local_box));
     return_if(hit_parts.empty(), Status::kNone);
 
     for (const Ref<Part<N>> &part : hit_parts) {
@@ -183,10 +182,10 @@ Status Entity<N>::hit(Set<Actor> &neighbors, const Hit<N> &hit) {
         parts_.remove(part);
     }
 
-    const auto components = parts_.view.components();
+    const List<Component> components = parts_.relative.components();
     const bool was_broken = components.size() != 1;
     const auto cause = was_broken ? Notify::kBroken : Notify::kChanged;
-    send<Notify>(neighbors.unordered(), cause);
+    send<Notify>(neighbors.unordered.values(), cause);
     return was_broken ? broken(components) : Status::kNone;
 }
 
@@ -201,7 +200,7 @@ Status Entity<N>::tick(const List<Message> &messages) {
         if (init_velocity != Pos<N>::zero) {
             // When starting to move, notify anything above
             const Set<Actor> neighbors = above();
-            send<Notify>(neighbors.unordered(), Notify::kMoved);
+            send<Notify>(neighbors.unordered.values(), Notify::kMoved);
         }
         // Move by velocity per tick
         parts_.loc += velocity_;

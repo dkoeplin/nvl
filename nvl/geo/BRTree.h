@@ -1,5 +1,6 @@
 #pragma once
 
+#include "nvl/data/Iterator.h"
 #include "nvl/geo/Box.h"
 #include "nvl/geo/HasBBox.h"
 #include "nvl/geo/RTree.h"
@@ -27,13 +28,14 @@ protected:
             edges_.clear();
 
             // Recompute edges across all values
-            for (const ItemRef &item : items_.unordered()) {
+            for (const ItemRef &item : items_.unordered) {
                 for (const Edge<N> &edge : bbox(item).edges()) {
                     List<Box<N>> overlap;
                     for (const ItemRef &b : items_[edge.bbox()]) {
                         overlap.push_back(bbox(b));
                     }
-                    for (const Edge<N> &remain : edge.diff(overlap.range())) {
+                    Range<Box<N>> overlap_range = overlap.range();
+                    for (const Edge<N> &remain : edge.diff(overlap_range)) {
                         edges_.insert(remain);
                     }
                 }
@@ -70,70 +72,51 @@ public:
     using EdgeTree = RTree<N, Edge<N>, Ref<Edge<N>>, kMaxEntries, kGridExpMin, kGridExpMax>;
 
     /// Provides an iterator which returns a View of each Item when dereferenced.
-    template <typename iterator, typename Entry>
-    class view_iterator {
-    public:
-        using value_type = View<N, Entry>;
-        using pointer = View<N, Entry> *;
-        using reference = View<N, Entry> &;
-        using difference_type = std::ptrdiff_t;
-        using iterator_category = std::input_iterator_tag;
+    template <typename Entry, typename EntryRef>
+    struct view_iterator final : AbstractIterator<At<N, Entry>> {
+        class_tag(view_iterator, AbstractIterator<Entry>);
 
-        static view_iterator begin(const Range<iterator> &range, const Pos<N> &offset) {
-            return view_iterator(range.begin(), offset);
+        template <View Type = View::kImmutable>
+        static Iterator<At<N, Entry>, Type> begin(const Range<EntryRef> &range, const Pos<N> &offset) {
+            return make_iterator<view_iterator, Type>(range.begin(), offset);
         }
-        static view_iterator end(const Range<iterator> &range, const Pos<N> &offset) {
-            return view_iterator(range.end(), offset);
+        template <View Type = View::kImmutable>
+        static Iterator<At<N, Entry>, Type> end(const Range<EntryRef> &range, const Pos<N> &offset) {
+            return make_iterator<view_iterator, Type>(range.end(), offset);
         }
 
-        pointer operator->() { return &value(); }
-        reference operator*() { return value(); }
+        explicit view_iterator(Iterator<EntryRef> iter, const Pos<N> &offset) : iter_(iter), offset_(offset) {}
+        pure std::unique_ptr<AbstractIterator<At<N, Entry>>> copy() const override {
+            return std::make_unique<view_iterator>(*this);
+        }
 
-        view_iterator &operator++() {
+        const At<N, Entry> *ptr() override { return &value(); }
+
+        void increment() override {
             ++iter_;
             value_ = None;
-            return *this;
         }
 
-        pure bool operator==(const view_iterator &rhs) const { return iter_ == rhs.iter_; }
-        pure bool operator!=(const view_iterator &rhs) const { return iter_ != rhs.iter_; }
+        pure bool equals(const AbstractIterator<At<N, Entry>> &rhs) const override {
+            auto *b = dyn_cast<view_iterator>(&rhs);
+            return b && iter_ == b->iter_;
+        }
 
     private:
-        explicit view_iterator(iterator iter, const Pos<N> &offset) : iter_(iter), offset_(offset) {}
-
-        View<N, Entry> &value() {
+        At<N, Entry> &value() {
             // Views are lazily created to avoid dereferencing an end/empty iterator.
             if (!value_.has_value()) {
-                value_ = Some(View<N, Entry>(*iter_, offset_));
+                value_ = Some(At<N, Entry>(*iter_, offset_));
             }
             return value_.value();
         }
 
-        iterator iter_;
-        Maybe<View<N, Entry>> value_ = None;
+        Iterator<EntryRef> iter_;
+        Maybe<At<N, Entry>> value_ = None;
         Pos<N> offset_;
     };
 
-    using window_iterator = view_iterator<typename ItemTree::window_iterator, Item>;
-    using item_iterator = view_iterator<typename ItemTree::item_iterator, Item>;
-    using edge_iterator = view_iterator<typename EdgeTree::item_iterator, Edge<N>>;
-
     BRTree() = default;
-
-    pure Range<window_iterator> operator[](const Pos<N> &pos) {
-        return Range<window_iterator>(this->items_[pos - loc], loc);
-    }
-    pure Range<window_iterator> operator[](const Box<N> &box) {
-        return Range<window_iterator>(this->items_[box - loc], loc);
-    }
-
-    /// Returns an unordered Range for iteration over all values in this tree.
-    /// Items are returned as View<N, Item>, where the view is with respect to this tree's global offset.
-    pure Range<item_iterator> unordered_items() { return Range<item_iterator>(this->items_.unordered(), loc); }
-
-    /// Returns an unordered Range for iteration over all edges in this tree.
-    /// Edges are returned as View<N, Edge<N>>, where the view is with respect to this tree's global offset.
-    pure Range<edge_iterator> unordered_edges() { return Range<edge_iterator>(this->get_edges().unordered(), loc); }
 
     BRTree &insert(const Item &item) {
         this->items_.insert(item);
@@ -141,17 +124,15 @@ public:
         return *this;
     }
 
-    template <typename Iterator>
-        requires std::is_same_v<Item, typename Iterator::value_type>
-    BRTree &insert(const Range<Iterator> &items) {
+    BRTree &insert(const Range<Item> &items) {
         this->items_.insert(items);
         this->mark_changed();
         return *this;
     }
 
-    template <typename... Args>
+    template <typename T = Item, typename... Args>
     ItemRef emplace(Args &&...args) {
-        auto ref = this->items_.emplace(std::forward<Args>(args)...);
+        auto ref = this->items_.template emplace<T>(std::forward<Args>(args)...);
         this->mark_changed();
         return ref;
     }
@@ -189,30 +170,52 @@ public:
         BRTree &tree;
     } debug = Debug(*this);
 
-    struct Viewed {
+    using window_iterator = view_iterator<Item, ItemRef>;
+    using item_iterator = view_iterator<Item, ItemRef>;
+    using edge_iterator = view_iterator<Edge<N>, Ref<Edge<N>>>;
+
+    /// Returns an unordered Range for iteration over all values in this tree in the given volume.
+    /// Items are returned as View<N, Item>, where the view is with respect to this tree's global offset.
+    pure Range<At<N, Item>, View::kMutable> operator[](const Pos<N> &pos) {
+        return make_range<window_iterator, View::kMutable>(this->items_[pos - loc], loc);
+    }
+    pure Range<At<N, Item>, View::kMutable> operator[](const Box<N> &box) {
+        return make_range<window_iterator, View::kMutable>(this->items_[box - loc], loc);
+    }
+
+    /// Returns an unordered Range for iteration over all values in this tree.
+    /// Items are returned as View<N, Item>, where the view is with respect to this tree's global offset.
+    pure Range<At<N, Item>> unordered_items() { return make_range<item_iterator>(this->items_.unordered.items(), loc); }
+
+    /// Returns an unordered Range for iteration over all edges in this tree.
+    /// Edges are returned as View<N, Edge<N>>, where the view is with respect to this tree's global offset.
+    pure Range<At<N, Edge<N>>> unordered_edges() {
+        return make_range<edge_iterator>(this->get_edges().unordered.items(), loc);
+    }
+
+    struct Relative {
         using window_iterator = typename ItemTree::window_iterator;
         using item_iterator = typename ItemTree::item_iterator;
         using edge_iterator = typename EdgeTree::item_iterator;
         using Component = typename EquivalentSets<ItemRef, typename ItemTree::ItemRefHash>::Group;
 
-        explicit Viewed(BRTree &tree) : tree(tree) {}
+        explicit Relative(BRTree &tree) : tree(tree) {}
 
-        /// Returns the connected components in this tree.
+        /// Returns the connected components in this tree with coordinates relative to this tree's offset.
         pure List<Component> components() { return tree.items_.components(); }
 
-        /// Returns an iterable range over all items in this tree in the given area, without their relative
-        /// offsets.
-        pure Range<window_iterator> operator[](const Pos<N> &pos) { return tree.items_[pos]; }
-        pure Range<window_iterator> operator[](const Box<N> &box) { return tree.items_[box]; }
+        /// Returns an iterable range over all items in this tree in the given area relative to the tree's offset.
+        pure Range<ItemRef> operator[](const Pos<N> &pos) { return tree.items_[pos]; }
+        pure Range<ItemRef> operator[](const Box<N> &box) { return tree.items_[box]; }
 
-        /// Provides a view to the items contained in this tree, without their relative offsets.
-        pure Range<item_iterator> unordered_items() const { return tree.items_.unordered(); }
+        /// Provides a view to the items contained in this tree relative to the tree's offset.
+        pure Range<ItemRef> unordered_items() const { return tree.items_.unordered.items(); }
 
-        /// Provides a view to the edges contained in this tree, without their relative offsets.
-        pure Range<edge_iterator> unordered_edges() const { return tree.get_edges().unordered(); }
+        /// Provides a view to the edges contained in this tree relative to the tree's offset.
+        pure Range<Ref<Edge<N>>> unordered_edges() const { return tree.get_edges().unordered.items(); }
 
         BRTree &tree;
-    } view = Viewed(*this);
+    } relative = Relative(*this);
 
     Pos<N> loc = Pos<N>::fill(0);
 

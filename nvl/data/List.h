@@ -2,8 +2,8 @@
 
 #include <vector>
 
+#include "nvl/data/Iterator.h"
 #include "nvl/data/Range.h"
-#include "nvl/macros/Implicit.h"
 #include "nvl/macros/Pure.h"
 
 namespace nvl {
@@ -13,33 +13,43 @@ class List : std::vector<Value> {
 public:
     using parent = std::vector<Value>;
     using value_type = typename parent::value_type;
-    using iterator = typename parent::iterator;
-    using const_iterator = typename parent::const_iterator;
-    using reverse_iterator = typename parent::reverse_iterator;
-    using const_reverse_iterator = typename parent::const_reverse_iterator;
+
+    struct iterator final : AbstractIterator<Value> {
+        class_tag(List::iterator, AbstractIterator<Value>);
+        template <View Type = View::kImmutable>
+        static Iterator<Value, Type> begin(const List &list) {
+            return make_iterator<iterator, Type>(list._begin());
+        }
+        template <View Type = View::kImmutable>
+        static Iterator<Value, Type> end(const List &list) {
+            return make_iterator<iterator, Type>(list._end());
+        }
+        explicit iterator(typename parent::const_iterator iter) : iter(iter) {}
+        pure std::unique_ptr<AbstractIterator<Value>> copy() const override {
+            return std::make_unique<iterator>(*this);
+        }
+        void increment() override { ++iter; }
+        pure const Value *ptr() override { return &*iter; }
+        pure bool equals(const AbstractIterator<Value> &rhs) const override {
+            auto *b = dyn_cast<iterator>(&rhs);
+            return b && iter == b->iter;
+        }
+
+        typename parent::const_iterator iter;
+    };
 
     using parent::parent;
     List() = default;
 
-    template <typename Iterator>
-        requires std::same_as<typename Iterator::value_type, Value>
-    explicit List(const Range<Iterator> &range)
-        : List<typename Range<Iterator>::value_type>(range.begin(), range.end()) {}
+    explicit List(Range<Value> range) : List(range.begin(), range.end()) {}
 
-    pure Range<iterator> range() { return Range<iterator>(begin(), end()); }
-    pure Range<const_iterator> range() const { return Range<const_iterator>(begin(), end()); }
+    pure Range<Value, View::kMutable> range() { return {begin(), end()}; }
+    pure Range<Value> range() const { return {begin(), end()}; }
 
     pure bool operator==(const List &rhs) const {
         return size() == rhs.size() && std::equal(begin(), end(), rhs.begin());
     }
     pure bool operator!=(const List &other) const { return !(*this == other); }
-
-    using parent::begin;
-    using parent::cbegin;
-    using parent::cend;
-    using parent::end;
-    using parent::rbegin;
-    using parent::rend;
 
     using parent::operator[];
     using parent::at;
@@ -51,6 +61,11 @@ public:
     using parent::push_back;
     using parent::size;
 
+    pure Iterator<Value, View::kMutable> begin() { return iterator::template begin<View::kMutable>(*this); }
+    pure Iterator<Value, View::kMutable> end() { return iterator::template end<View::kMutable>(*this); }
+    pure Iterator<Value> begin() const { return iterator::template begin<View::kImmutable>(*this); }
+    pure Iterator<Value> end() const { return iterator::template end<View::kImmutable>(*this); }
+
     pure const Value *get_back() const { return empty() ? nullptr : &back(); }
 
     List<Value> &append(const List<Value> &rhs) {
@@ -59,20 +74,24 @@ public:
     }
 
     List<Value> &remove(const Value &value) {
-        auto it = std::remove(begin(), end(), value);
-        parent::erase(it, end());
+        auto it = std::remove(parent::begin(), parent::end(), value);
+        parent::erase(it, parent::end());
         return *this;
     }
 
     void clear() { parent::clear(); }
 
 private:
+    friend struct iterator;
+    typename std::vector<Value>::const_iterator _begin() const { return parent::begin(); }
+    typename std::vector<Value>::const_iterator _end() const { return parent::end(); }
+
     using std::vector<Value>::insert;
 };
 
 template <typename Value>
 std::ostream &operator<<(std::ostream &os, const List<Value> &list) {
-    return os << Range<typename List<Value>::const_iterator>(list.begin(), list.end());
+    return os << list.range();
 }
 
 } // namespace nvl

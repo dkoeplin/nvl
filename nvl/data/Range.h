@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-#include "nvl/data/IteratorPair.h"
+#include "nvl/data/Iterator.h"
 #include "nvl/data/Once.h"
 #include "nvl/macros/Pure.h"
 
@@ -22,31 +22,67 @@ namespace nvl {
  *   static Iterator Iterator::end(args...);
  * };
  */
-template <typename Iterator>
-class Range : public IteratorPair<Range, Iterator, Iterator, Iterator> {
+template <typename Value, View Type = View::kImmutable>
+class Range {
 public:
-    using parent = IteratorPair<Range, Iterator, Iterator, Iterator>;
-    using value_type = typename Iterator::value_type;
+    using value_type = Value;
 
-    using parent::parent;
+    /// Creates an empty iterator pair.
+    /// Only available if the underlying Iterator type is also default constructible.
+    Range() : begin_(), end_() {}
 
-    template <typename... Args>
-    explicit Range(Args &&...args)
-        : parent(Iterator::begin(std::forward<Args>(args)...), Iterator::end(std::forward<Args>(args)...)) {}
+    Range(Iterator<Value, Type> begin, Iterator<Value, Type> end) : begin_(begin), end_(end) {}
+
+    implicit Range(const Range<Value, View::kMutable> &rhs)
+        requires(Type == View::kImmutable)
+        : Range(*(const Range<Value> *)(&rhs)) {}
 
     /// Returns a copy of this Range as a single iteration Once range.
-    pure Once<Iterator> once() const { return Once<Iterator>(this->begin(), this->end()); }
+    pure Once<Value, Type> once() const { return Once<Value, Type>(begin_, end_); }
+
+    pure bool empty() const { return begin_ == end_; }
+
+    pure Iterator<Value, Type> begin() const { return begin_; }
+    pure Iterator<Value, Type> end() const { return end_; }
+
+    pure bool operator==(const Range &rhs) const { return begin_ == rhs.begin_; }
+    pure bool operator!=(const Range &rhs) const { return begin_ != rhs.begin_; }
+
+    /// Returns true if all values in this range meet the given condition.
+    template <typename Cond>
+    pure bool all(const Cond &cond) const {
+        return std::all_of(begin(), end(), cond);
+    }
+
+    /// Returns true if at least one value in this range meet the given condition.
+    template <typename Cond>
+    pure bool exists(const Cond &cond) const {
+        return std::any_of(begin(), end(), cond);
+    }
+
+protected:
+    Iterator<Value, Type> begin_;
+    Iterator<Value, Type> end_;
 };
 
-template <typename Iterator>
-std::ostream &operator<<(std::ostream &os, const Range<Iterator> &range) {
+template <typename IterType, View Type = View::kImmutable, typename... Args>
+Range<typename IterType::value_type, Type> make_range(Args &&...args) {
+    using Value = typename IterType::value_type;
+    Iterator<Value, Type> i0 = IterType::template begin<Type>(std::forward<Args>(args)...);
+    Iterator<Value, Type> i1 = IterType::template end<Type>(std::forward<Args>(args)...);
+    return Range<Value, Type>(i0, i1);
+}
+
+template <typename Value>
+std::ostream &operator<<(std::ostream &os, const Range<Value> &range) {
     os << "{";
     auto iter = range.begin();
-    if (iter != range.end()) {
+    const auto end = range.end();
+    if (iter != end) {
         os << *iter;
         ++iter;
     }
-    for (; iter != range.end(); ++iter) {
+    for (; iter != end; ++iter) {
         os << ", " << *iter;
     }
     return os << "}";

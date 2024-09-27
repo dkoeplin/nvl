@@ -184,7 +184,7 @@ struct FuzzBoxDiff : nvl::testing::FuzzingTestFixture<List<Box<N>>, Box<N>, Box<
                                                       << "  Resulted in more remainders than expected.");
 
             // Confirm that all points in `a` are in the remainder boxes unless they are also in b
-            const auto remainders = nvl::Range<typename List<Box<N>>::const_iterator>(diff.begin(), diff.end());
+            const auto remainders = nvl::Range(diff.begin(), diff.end());
             for (const Pos<N> &pt : a) {
                 if (b.contains(pt)) {
                     for (const auto &d : diff) {

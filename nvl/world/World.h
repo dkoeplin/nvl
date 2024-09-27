@@ -28,8 +28,8 @@ public:
     pure static bool is_up(const U64 dim, const Dir dir) { return dim == 1 && dir == Dir::Neg; }
     pure static bool is_down(const U64 dim, const Dir dir) { return dim == 1 && dir == Dir::Pos; }
 
-    pure Range<window_iterator> entities(const Pos<N> &pos) { return entities_[pos]; }
-    pure Range<window_iterator> entities(const Box<N> &box) { return entities_[box]; }
+    pure Range<Actor> entities(const Pos<N> &pos) { return entities_[pos]; }
+    pure Range<Actor> entities(const Box<N> &box) { return entities_[box]; }
 
     template <typename Msg, typename... Args>
     void send(const Actor src, const Actor &dst, Args &&...args) {
@@ -37,9 +37,8 @@ public:
         messages_[dst].push_back(std::move(message));
     }
 
-    template <typename Msg, typename Iterator, typename... Args>
-        requires std::is_same_v<Actor, typename Iterator::value_type>
-    void send(const Actor src, const Range<Iterator> &dst, Args &&...args) {
+    template <typename Msg, typename... Args>
+    void send(const Actor src, const Range<Actor> &dst, Args &&...args) {
         const auto message = Message::get<Msg>(src, std::forward<Args>(args)...);
         for (const Actor &actor : dst) {
             messages_[actor].push_back(message);
@@ -88,8 +87,8 @@ protected:
         for (Ref<Entity<N>> entity : awake_) {
             tick_entity(died, idled, entity);
         }
-        awake_.erase(died.begin(), died.end());
-        awake_.erase(idled.begin(), idled.end());
+        // awake_.remove(died.unordered);
+        // awake_.remove(idled.unordered);
     }
 
     EntityTree entities_;
