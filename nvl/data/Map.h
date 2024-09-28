@@ -22,7 +22,7 @@ public:
     using parent::end;
     using parent::size;
 
-    struct entry_iterator final : AbstractIterator<Entry>, parent::const_iterator {
+    struct entry_iterator final : AbstractIteratorCRTP<entry_iterator, Entry>, parent::const_iterator {
         class_tag(Map::entry_iterator, AbstractIterator<Entry>);
         template <View Type = View::kImmutable>
         static Iterator<Entry, Type> begin(const Map &map) {
@@ -34,23 +34,19 @@ public:
         }
 
         explicit entry_iterator(typename parent::const_iterator iter) : parent::const_iterator(iter) {}
-        pure std::unique_ptr<AbstractIterator<Entry>> copy() const override {
-            return std::make_unique<entry_iterator>(*this);
-        }
 
         void increment() override { parent::const_iterator::operator++(); }
         const Entry *ptr() override { return &parent::const_iterator::operator*(); }
 
-        // const pair<nvl::Pos<2>, nvl::rtree_detail::Node<2, nvl::Ref<nvl::testing::LabeledBox>>::Entry> *
-        // const pair<const nvl::Pos<2>, nvl::rtree_detail::Node<2, nvl::Ref<nvl::testing::LabeledBox>>::Entry> *
-        pure bool equals(const AbstractIterator<Entry> &rhs) const override {
-            auto *b = dyn_cast<entry_iterator>(&rhs);
-            return b && *this == *b;
+        pure bool operator==(const entry_iterator &rhs) const override {
+            return *static_cast<const typename parent::const_iterator *>(this) == rhs;
         }
     };
 
-    struct viterator final : AbstractIterator<V> {
+    struct viterator final : AbstractIteratorCRTP<viterator, V>, parent::const_iterator {
         class_tag(Map::viterator, AbstractIterator<V>);
+        using value_type = V;
+
         template <View Type = View::kImmutable>
         static Iterator<V, Type> begin(const Map &map) {
             return make_iterator<viterator, Type>(map._begin());
@@ -60,19 +56,14 @@ public:
             return make_iterator<viterator, Type>(map._end());
         }
 
-        explicit viterator(typename parent::const_iterator iter) : iter_(iter) {}
-        pure std::unique_ptr<AbstractIterator<V>> copy() const override { return std::make_unique<viterator>(*this); }
+        explicit viterator(typename parent::const_iterator iter) : parent::const_iterator(iter) {}
 
-        void increment() override { ++iter_; }
-        const V *ptr() override { return &iter_->second; }
+        void increment() override { parent::const_iterator::operator++(); }
+        const V *ptr() override { return &parent::const_iterator::operator->()->second; }
 
-        pure bool equals(const AbstractIterator<V> &rhs) const override {
-            auto *b = dyn_cast<viterator>(&rhs);
-            return b && iter_ == b->iter_;
+        pure bool operator==(const viterator &rhs) const override {
+            return *static_cast<const typename parent::const_iterator *>(this) == rhs;
         }
-
-    private:
-        typename parent::const_iterator iter_;
     };
 
     Map() : parent() {}
@@ -125,7 +116,7 @@ public:
     }
 
     pure V *get(const K &key) const {
-        if (auto iter = find(key); iter != end()) {
+        if (auto iter = parent::find(key); parent::end() != iter) {
             // TODO: Why does this require casting?
             return const_cast<V *>(&iter->second);
         }

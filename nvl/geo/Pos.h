@@ -19,7 +19,7 @@ class Pos {
 public:
     using value_type = I64;
 
-    struct iterator final : AbstractIterator<I64> {
+    struct iterator final : AbstractIteratorCRTP<iterator, I64> {
         class_tag(Pos<N>::iterator, AbstractIterator<I64>);
 
         template <View Type>
@@ -32,16 +32,12 @@ public:
         }
 
         explicit iterator(const Pos &pos, const U64 index) : index_(index), pos_(pos) {}
-        pure std::unique_ptr<AbstractIterator<I64>> copy() const override { return std::make_unique<iterator>(*this); }
 
         void increment() override { ++index_; }
 
         pure const I64 *ptr() override { return &pos_.indices_[index_]; }
 
-        pure bool equals(const AbstractIterator &rhs) const override {
-            auto *b = dyn_cast<iterator>(&rhs);
-            return b && pos_ == b->pos_ && index_ == b->index_;
-        }
+        pure bool operator==(const iterator &rhs) const override { return pos_ == rhs.pos_ && index_ == rhs.index_; }
 
         U64 index_ = 0;
         const Pos &pos_;

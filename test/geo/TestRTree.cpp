@@ -205,11 +205,11 @@ TEST(TestRTree, components_pairs) {
 }
 
 TEST(TestRTree, fuzz_insertion) {
-    constexpr I64 kNumTests = 1E3;
+    constexpr I64 kNumTests = 1E6;
     RTree<2, Box<2>> tree;
 
     struct InsertFuzzer : nvl::testing::Fuzzer<Ref<Box<2>>, Box<2>> {
-        InsertFuzzer() : Fuzzer() {
+        InsertFuzzer() : Fuzzer(0xDEADBEEF) {
             num_tests = kNumTests;
             in[0] = Distribution::Uniform<I64>(-100, 100);
         }

@@ -26,7 +26,7 @@ public:
     /// Only available if the underlying Iterator type is also default constructible.
     Range() : begin_(), end_() {}
 
-    Range(Iterator<Value, Type> begin, Iterator<Value, Type> end) : begin_(begin), end_(end) {}
+    Range(const Iterator<Value, Type> &begin, const Iterator<Value, Type> &end) : begin_(begin), end_(end) {}
 
     implicit Range(const Range<Value, View::kMutable> &rhs)
         requires(Type == View::kImmutable)
@@ -37,7 +37,7 @@ public:
 
     pure bool empty() const { return begin_ == end_; }
 
-    pure Iterator<Value, Type> begin() const { return begin_; }
+    pure Iterator<Value, Type> begin() const { return begin_.copy(); }
     pure Iterator<Value, Type> end() const { return end_; }
 
     pure bool operator==(const Range &rhs) const { return begin_ == rhs.begin_; }

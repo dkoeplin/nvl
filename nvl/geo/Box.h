@@ -40,7 +40,7 @@ public:
     /// Returns a Box with only one point.
     static Box unit(const Pos<N> &pt) { return Box::presorted(pt, pt); }
 
-    struct pos_iterator final : AbstractIterator<Pos<N>> {
+    struct pos_iterator final : AbstractIteratorCRTP<pos_iterator, Pos<N>> {
         class_tag(Box<N>::pos_iterator, AbstractIterator<Pos<N>>);
 
         template <View Type = View::kImmutable>
@@ -63,15 +63,10 @@ public:
             }
         }
 
-        pure std::unique_ptr<AbstractIterator<Pos<N>>> copy() const override {
-            return std::make_unique<pos_iterator>(*this);
-        }
-
         const Pos<N> *ptr() override { return &pos_.value(); }
 
-        pure bool equals(const AbstractIterator<Pos<N>> &rhs) const override {
-            auto *b = dyn_cast<pos_iterator>(&rhs);
-            return b && pos_ == b->pos_ && box_ == b->box_ && step_ == b->step_;
+        pure bool operator==(const pos_iterator &rhs) const override {
+            return pos_ == rhs.pos_ && box_ == rhs.box_ && step_ == rhs.step_;
         }
 
         void increment() override {
@@ -97,7 +92,7 @@ public:
         Pos<N> step_;
     };
 
-    struct box_iterator final : AbstractIterator<Box<N>> {
+    struct box_iterator final : AbstractIteratorCRTP<box_iterator, Box<N>> {
         class_tag(Box<N>::box_iterator, AbstractIterator<Box<N>>);
 
         template <View Type = View::kImmutable>
@@ -120,17 +115,10 @@ public:
             }
         }
 
-        pure std::unique_ptr<AbstractIterator<Box<N>>> copy() const override {
-            return std::make_unique<box_iterator>(*this);
-        }
-
         const Box *ptr() override { return &current_.value(); }
 
-        pure bool equals(const AbstractIterator<Box<N>> &rhs) const override {
-            if (auto *b = dyn_cast<box_iterator>(&rhs)) {
-                return current_ == b->current_ && box_ == b->box_ && shape_ == b->shape_;
-            }
-            return false;
+        pure bool operator==(const box_iterator &rhs) const override {
+            return current_ == rhs.current_ && box_ == rhs.box_ && shape_ == rhs.shape_;
         }
 
         void increment() override {

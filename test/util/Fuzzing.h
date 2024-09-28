@@ -30,6 +30,9 @@ public:
     using Clock = std::chrono::steady_clock;
     using Tuple = std::tuple<Result, Args...>;
 
+    Fuzzer() = default;
+    explicit Fuzzer(const U64 seed) : random_(seed) {}
+
     Distribution &operator[](const U64 i) { return in[i]; }
 
     template <typename Func>

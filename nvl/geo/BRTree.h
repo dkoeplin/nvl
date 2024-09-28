@@ -73,7 +73,7 @@ public:
 
     /// Provides an iterator which returns a View of each Item when dereferenced.
     template <typename Entry, typename EntryRef>
-    struct view_iterator final : AbstractIterator<At<N, Entry>> {
+    struct view_iterator final : AbstractIteratorCRTP<view_iterator<Entry, EntryRef>, At<N, Entry>> {
         class_tag(view_iterator, AbstractIterator<Entry>);
 
         template <View Type = View::kImmutable>
@@ -86,9 +86,6 @@ public:
         }
 
         explicit view_iterator(Iterator<EntryRef> iter, const Pos<N> &offset) : iter_(iter), offset_(offset) {}
-        pure std::unique_ptr<AbstractIterator<At<N, Entry>>> copy() const override {
-            return std::make_unique<view_iterator>(*this);
-        }
 
         const At<N, Entry> *ptr() override { return &value(); }
 
@@ -97,10 +94,7 @@ public:
             value_ = None;
         }
 
-        pure bool equals(const AbstractIterator<At<N, Entry>> &rhs) const override {
-            auto *b = dyn_cast<view_iterator>(&rhs);
-            return b && iter_ == b->iter_;
-        }
+        pure bool operator==(const view_iterator &rhs) const override { return iter_ == rhs.iter_; }
 
     private:
         At<N, Entry> &value() {

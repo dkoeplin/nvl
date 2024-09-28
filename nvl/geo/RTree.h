@@ -16,6 +16,7 @@
 #include "nvl/io/IO.h"
 #include "nvl/macros/Abstract.h"
 #include "nvl/macros/Aliases.h"
+#include "nvl/macros/Hot.h"
 #include "nvl/macros/ReturnIf.h"
 #include "nvl/math/Bitwise.h"
 
@@ -127,12 +128,12 @@ public:
         kItems    // All existing items
     };
     template <typename Concrete, Traversal mode, typename Value>
-    abstract struct abstract_iterator : AbstractIterator<Value> {
+    abstract struct abstract_iterator : AbstractIteratorCRTP<Concrete, Value> {
         class_tag(abstract_iterator, AbstractIterator<Value>);
 
         template <View Type = View::kImmutable>
         static Iterator<Value, Type> begin(const RTree &tree, const Box<N> &box) {
-            std::unique_ptr<Concrete> iter = std::make_unique<Concrete>(&tree, box);
+            std::shared_ptr<Concrete> iter = std::make_shared<Concrete>(&tree, box);
             if (tree.root_ != nullptr) {
                 iter->worklist.emplace_back(tree.root_, box);
                 iter->increment();
@@ -146,16 +147,13 @@ public:
         }
 
         explicit abstract_iterator(const RTree *tree, const Box<N> &box) : tree(tree), box(box) {}
-        pure std::unique_ptr<AbstractIterator<Value>> copy() const override {
-            return std::make_unique<Concrete>(*static_cast<const Concrete *>(this));
-        }
 
         bool skip_item(Work &current) {
             ItemRef ref = current.item();
             return visited.has(ref) || !bbox(ref).overlaps(box);
         }
 
-        bool visit_next_pair(Work &current) {
+        HOT bool visit_next_pair(Work &current) {
             Node *node = current.node;
 
             if (!current.pair_range.has_next()) {
@@ -233,9 +231,8 @@ public:
             }
         }
 
-        pure bool equals(const AbstractIterator<Value> &rhs) const override {
-            auto *b = dyn_cast<abstract_iterator>(&rhs);
-            return b && (this->tree == b->tree && this->worklist.get_back() == b->worklist.get_back());
+        pure bool operator==(const Concrete &rhs) const override {
+            return tree == rhs.tree && worklist.get_back() == rhs.worklist.get_back();
         }
 
         // 3) Iterating across nodes
@@ -295,7 +292,7 @@ public:
         const ItemRef *ptr() override { return &this->worklist.back().item(); }
     };
 
-    struct item_iterator final : AbstractIterator<ItemRef> {
+    struct item_iterator final : AbstractIteratorCRTP<item_iterator, ItemRef> {
         class_tag(item_iterator, AbstractIterator<ItemRef>);
         using ItemMap = Map<U64, std::unique_ptr<Item>>;
 
@@ -310,10 +307,6 @@ public:
 
         explicit item_iterator(Iterator<std::unique_ptr<Item>> iter) : iter(iter) {}
 
-        pure std::unique_ptr<AbstractIterator<ItemRef>> copy() const override {
-            return std::make_unique<item_iterator>(*this);
-        }
-
         void increment() override {
             item = None;
             ++iter;
@@ -327,10 +320,7 @@ public:
             return &item.value();
         }
 
-        pure bool equals(const AbstractIterator<ItemRef> &rhs) const override {
-            auto *b = dyn_cast<item_iterator>(&rhs);
-            return b && iter == b->iter;
-        }
+        pure bool operator==(const item_iterator &rhs) const override { return iter == rhs.iter; }
 
     private:
         Maybe<ItemRef> item = None;

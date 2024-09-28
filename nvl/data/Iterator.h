@@ -24,12 +24,24 @@ struct AbstractIterator {
 
     virtual ~AbstractIterator() = default;
     virtual void increment() = 0;
-    pure virtual std::unique_ptr<AbstractIterator<Value>> copy() const = 0;
+    pure virtual std::shared_ptr<AbstractIterator<Value>> copy() const = 0;
 
     // HACK: These are returned as const pointers, but creation of a mutable Iterator will cast away the const.
     pure virtual const Value *ptr() = 0;
 
     pure virtual bool equals(const AbstractIterator &rhs) const = 0;
+};
+
+template <typename Concrete, typename Value>
+struct AbstractIteratorCRTP : AbstractIterator<Value> {
+    pure std::shared_ptr<AbstractIterator<Value>> copy() const final {
+        return std::make_shared<Concrete>(*static_cast<const Concrete *>(this));
+    }
+    pure bool equals(const AbstractIterator<Value> &rhs) const final {
+        auto *b = dyn_cast<Concrete>(&rhs);
+        return b && *this == *b;
+    }
+    pure virtual bool operator==(const Concrete &rhs) const = 0;
 };
 
 /**
@@ -45,18 +57,20 @@ struct Iterator {
     using iterator_category = std::input_iterator_tag;
 
     Iterator() = default;
-    Iterator(const Iterator &rhs) : Iterator(rhs.ptr_ ? std::move(rhs.ptr_->copy()) : nullptr) {}
+    Iterator(const Iterator &rhs) : Iterator(rhs.ptr_) {}
 
     implicit Iterator(const Iterator<Value, View::kMutable> &rhs)
         requires(Type == View::kImmutable)
         : Iterator(*(const Iterator<Value> *)(&rhs)) {}
 
-    explicit Iterator(std::unique_ptr<AbstractIterator<Value>> impl) : ptr_(std::move(impl)) {}
+    explicit Iterator(std::shared_ptr<AbstractIterator<Value>> impl) : ptr_(impl) {}
 
     Iterator &operator=(const Iterator &rhs) {
-        ptr_ = std::move(rhs.ptr_->copy());
+        ptr_ = rhs.ptr_;
         return *this;
     }
+
+    Iterator copy() const { return Iterator(ptr_->copy()); }
 
     /// Returns an immutable reference to the current value.
     pure const Value &operator*() const
@@ -92,7 +106,7 @@ struct Iterator {
 
     /// Increments this iterator and returns a copy of the iterator _before_ incrementing.
     Iterator operator++(int) {
-        Iterator prev = ptr_->copy();
+        Iterator prev = copy();
         ptr_->increment();
         return prev;
     }
@@ -122,7 +136,7 @@ struct Iterator {
     }
 
 protected:
-    std::unique_ptr<AbstractIterator<Value>> ptr_ = nullptr;
+    std::shared_ptr<AbstractIterator<Value>> ptr_ = nullptr;
 };
 
 template <typename Value>
@@ -131,9 +145,8 @@ using MutableIterator = Iterator<Value>;
 template <typename IterType, View Type = View::kImmutable, typename... Args>
 Iterator<typename IterType::value_type, Type> make_iterator(Args &&...args) {
     using Value = typename IterType::value_type;
-    std::unique_ptr<IterType> inst = std::make_unique<IterType>(std::forward<Args>(args)...);
-    Iterator<Value, Type> iter(std::move(inst));
-    return iter;
+    std::shared_ptr<AbstractIterator<Value>> ptr = std::make_shared<IterType>(std::forward<Args>(args)...);
+    return Iterator<Value, Type>(ptr);
 }
 
 } // namespace nvl
