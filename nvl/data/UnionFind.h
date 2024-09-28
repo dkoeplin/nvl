@@ -11,7 +11,7 @@
 namespace nvl {
 
 /**
- * @class EquivalentSets
+ * @class UnionFind
  * @brief Data structure which organizes items into "equivalent" groups.
  *
  * Items are added in pairs, where adding two items together marks them as being in the same group.
@@ -20,21 +20,21 @@ namespace nvl {
  * @tparam Hash The hash function used for items in each set.
  */
 template <typename Item, typename Hash = std::hash<Item>>
-class EquivalentSets {
+class UnionFind {
 public:
     using Group = Set<Item, Hash>;
 
     /// Inserts a single element into its own set.
-    EquivalentSets &add(const Item &a) {
+    UnionFind &add(const Item &a) {
         ++count_;
         ids_[a] = count_;
         groups_[count_].insert(a);
         return *this;
     }
 
-    /// Marks elements `a` and `b` as equivalent, inserting them into a new set or combines their existing sets
+    /// Marks elements `a` and `b` as equivalent, inserting them into a new set or combining their existing sets
     /// if either are already present.
-    EquivalentSets &add(const Item &a, const Item &b) {
+    UnionFind &add(const Item &a, const Item &b) {
         U64 &id_a = ids_.get_or_add(a, 0);
         U64 &id_b = ids_.get_or_add(b, 0);
         return_if(id_a == id_b && id_a > 0, *this);

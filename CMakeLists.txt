@@ -27,7 +27,6 @@ add_library(nvl SHARED
         nvl/actor/Actor.h
         nvl/actor/Part.h
         nvl/actor/Status.h
-        nvl/data/HasDereference.h
         nvl/data/Iterator.h
         nvl/data/List.h
         nvl/data/Map.h

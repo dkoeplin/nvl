@@ -1,17 +1,17 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "nvl/data/EquivalentSets.h"
+#include "nvl/data/UnionFind.h"
 
 namespace {
 
 using testing::UnorderedElementsAre;
 
-using nvl::EquivalentSets;
 using nvl::Set;
+using nvl::UnionFind;
 
-TEST(TestEquivalentSets, basic) {
-    EquivalentSets<U64> sets;
+TEST(TestUnionFind, basic) {
+    UnionFind<U64> sets;
     sets.add(0, 2);
     sets.add(4, 5);
     sets.add(0, 1);

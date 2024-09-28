@@ -1,1 +1,1 @@
-add_gtest(TestEquivalentSets.cpp)
+add_gtest(TestUnionFind.cpp)

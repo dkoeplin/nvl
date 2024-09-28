@@ -1,10 +1,31 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <util/Fuzzing.h>
 
 #include "nvl/geo/Box.h"
 #include "nvl/geo/Pos.h"
 #include "nvl/geo/RTree.h"
 #include "util/LabeledBox.h"
+
+namespace nvl {
+
+template <U64 N>
+struct nvl::RandomGen<Box<N>> {
+    template <typename I>
+    pure Box<N> uniform(Random &random, const I min, const I max) const {
+        const auto a = random.uniform<Pos<N>, I>(min, max);
+        const auto shape = random.uniform<Pos<N>, I>(0, 32);
+        return Box(a, a + shape);
+    }
+    template <typename I>
+    pure Box<N> normal(Random &random, const I mean, const I stddev) const {
+        const auto a = random.normal<Pos<N>, I>(mean, stddev);
+        const auto shape = random.uniform<Pos<N>, I>(0, 32);
+        return Box(a, a + shape);
+    }
+};
+
+} // namespace nvl
 
 namespace {
 
@@ -12,6 +33,7 @@ using testing::IsEmpty;
 using testing::UnorderedElementsAre;
 
 using nvl::Box;
+using nvl::Distribution;
 using nvl::List;
 using nvl::Map;
 using nvl::Pos;
@@ -180,6 +202,22 @@ TEST(TestRTree, components_pairs) {
     const Ref<LabeledBox> c = tree.emplace(3, Box<2>({35, 35}, {40, 40}));
     const Ref<LabeledBox> d = tree.emplace(4, Box<2>({38, 41}, {48, 100}));
     EXPECT_THAT(tree.components(), UnorderedElementsAre(Comp{a, b}, Comp{c, d}));
+}
+
+TEST(TestRTree, fuzz_insertion) {
+    constexpr I64 kNumTests = 1E3;
+    RTree<2, Box<2>> tree;
+
+    struct InsertFuzzer : nvl::testing::Fuzzer<Ref<Box<2>>, Box<2>> {
+        InsertFuzzer() : Fuzzer() {
+            num_tests = kNumTests;
+            in[0] = Distribution::Uniform<I64>(-100, 100);
+        }
+    } insert_fuzzer;
+
+    insert_fuzzer.fuzz([&tree](Ref<Box<2>> &result, const Box<2> &in) { result = tree.insert(in); });
+
+    EXPECT_EQ(tree.size(), kNumTests);
 }
 
 } // namespace

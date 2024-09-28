@@ -194,7 +194,7 @@ public:
     pure Range<At<N, Edge<N>>> edges() const { return make_range<edge_iterator>(this->get_edges().items(), loc); }
 
     struct Relative {
-        using Component = typename EquivalentSets<ItemRef, typename ItemTree::ItemRefHash>::Group;
+        using Component = typename UnionFind<ItemRef, typename ItemTree::ItemRefHash>::Group;
 
         explicit Relative(BRTree &tree) : tree(tree) {}
 

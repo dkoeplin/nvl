@@ -2,7 +2,6 @@
 
 #include <memory>
 
-#include "nvl/data/EquivalentSets.h"
 #include "nvl/data/List.h"
 #include "nvl/data/Map.h"
 #include "nvl/data/Once.h"
@@ -10,6 +9,7 @@
 #include "nvl/data/Range.h"
 #include "nvl/data/Ref.h"
 #include "nvl/data/Set.h"
+#include "nvl/data/UnionFind.h"
 #include "nvl/geo/Box.h"
 #include "nvl/geo/HasBBox.h"
 #include "nvl/geo/Pos.h"
@@ -114,7 +114,7 @@ public:
     using Work = detail::Work<N, ItemRef>;
     using Node = detail::Node<N, ItemRef>;
     using ItemRefHash = PointerHash<ItemRef>; // Hashing is done based on pointer, not value
-    using Component = typename EquivalentSets<ItemRef, ItemRefHash>::Group;
+    using Component = typename UnionFind<ItemRef, ItemRefHash>::Group;
 
     struct Point {
         Node *node;
@@ -410,7 +410,7 @@ public:
 
     /// Returns the connected components in this tree.
     List<Component> components() {
-        EquivalentSets<ItemRef, ItemRefHash> components;
+        UnionFind<ItemRef, ItemRefHash> components;
         for (const std::unique_ptr<Item> &a : items_.values()) {
             ItemRef a_ref(a.get());
             bool had_neighbors = false;
