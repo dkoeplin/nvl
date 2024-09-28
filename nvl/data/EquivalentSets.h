@@ -53,14 +53,14 @@ public:
 
     pure bool has(const Item &item) const { return ids_.contains(item); }
 
-    pure Range<Group> sets() const { return groups_.unordered.values(); }
+    pure Range<Group> sets() const { return groups_.values(); }
 
 private:
     void move_to_current_group(U64 dst, U64 &src, Group &group, const Item &item) {
         if (src != dst) {
             if (auto iter = groups_.find(src); iter != groups_.end()) {
                 const auto &set = iter->second;
-                group.insert(set.unordered.values());
+                group.insert(set.values());
                 groups_.erase(iter);
             } else {
                 group.insert(item);

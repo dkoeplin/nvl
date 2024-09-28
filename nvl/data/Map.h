@@ -20,8 +20,6 @@ public:
     using parent::clear;
     using parent::empty;
     using parent::end;
-    using parent::erase;
-    using parent::find;
     using parent::size;
 
     struct entry_iterator final : AbstractIterator<Entry> {
@@ -49,6 +47,9 @@ public:
             auto *b = dyn_cast<entry_iterator>(&rhs);
             return b && iter_ == b->iter_;
         }
+
+        pure const typename parent::const_iterator &raw_iterator() const { return iter_; }
+        pure typename parent::const_iterator &raw_iterator() { return iter_; }
 
     private:
         typename parent::const_iterator iter_;
@@ -108,8 +109,29 @@ public:
         return iter->second;
     }
 
+    Map &erase(Iterator<Entry> iter) {
+        if (auto *entry_iter = iter.template dyn_cast<entry_iterator>()) {
+            parent::erase(entry_iter->raw_iterator());
+        }
+        return *this;
+    }
+
+    Map &erase(const K &key) {
+        parent::erase(key);
+        return *this;
+    }
+
+    pure Iterator<Entry> find(const K &key) const {
+        typename parent::const_iterator iter = parent::find(key);
+        return make_iterator<entry_iterator>(iter);
+    }
+    pure Iterator<Entry, View::kMutable> find(const K &key) {
+        typename parent::const_iterator iter = parent::find(key);
+        return make_iterator<entry_iterator, View::kMutable>(iter);
+    }
+
     pure V *get(const K &key) const {
-        if (auto iter = parent::find(key); iter != end()) {
+        if (auto iter = find(key); iter != end()) {
             // TODO: Why does this require casting?
             return const_cast<V *>(&iter->second);
         }
@@ -122,14 +144,14 @@ public:
     }
 
     V &get_or_add(const K &key, V v) {
-        if (auto iter = parent::find(key); iter != end()) {
+        if (auto iter = find(key); iter != end()) {
             return iter->second;
         }
         return parent::emplace(key, v).first->second;
     }
 
     V &get_or_lazily_add(const K &key, const std::function<V()> &func) {
-        if (auto iter = parent::find(key); iter != end()) {
+        if (auto iter = find(key); iter != end()) {
             return iter->second;
         }
         return parent::emplace(key, func()).first->second;
@@ -142,26 +164,21 @@ public:
     pure bool operator==(const Map &other) const { return std::operator==(*this, other); }
     pure bool operator!=(const Map &other) const { return std::operator!=(*this, other); }
 
-    struct Unordered {
-        explicit Unordered(Map &map) : map(map) {}
-        pure Range<Entry, View::kMutable> entries() { return {begin(), end()}; }
-        pure Range<Entry> entries() const { return {begin(), end()}; }
+    pure Range<Entry, View::kMutable> entries() { return {begin(), end()}; }
+    pure Range<Entry> entries() const { return {begin(), end()}; }
 
-        pure Iterator<Entry, View::kMutable> begin() { return entry_iterator::template begin<View::kMutable>(map); }
-        pure Iterator<Entry, View::kMutable> end() { return entry_iterator::template end<View::kMutable>(map); }
-        pure Iterator<Entry> begin() const { return entry_iterator::template begin(map); }
-        pure Iterator<Entry> end() const { return entry_iterator::template end(map); }
+    pure Iterator<Entry, View::kMutable> begin() { return entry_iterator::template begin<View::kMutable>(*this); }
+    pure Iterator<Entry, View::kMutable> end() { return entry_iterator::template end<View::kMutable>(*this); }
+    pure Iterator<Entry> begin() const { return entry_iterator::template begin(*this); }
+    pure Iterator<Entry> end() const { return entry_iterator::template end(*this); }
 
-        pure Range<V, View::kMutable> values() { return {values_begin(), values_end()}; }
-        pure Range<V> values() const { return {values_begin(), values_end()}; }
+    pure Range<V, View::kMutable> values() { return {values_begin(), values_end()}; }
+    pure Range<V> values() const { return {values_begin(), values_end()}; }
 
-        pure Iterator<V, View::kMutable> values_begin() { return viterator::template begin<View::kMutable>(map); }
-        pure Iterator<V, View::kMutable> values_end() { return viterator::template end<View::kMutable>(map); }
-        pure Iterator<V> values_begin() const { return viterator::template begin(map); }
-        pure Iterator<V> values_end() const { return viterator::template end(map); }
-
-        Map &map;
-    } unordered = Unordered(*this);
+    pure Iterator<V, View::kMutable> values_begin() { return viterator::template begin<View::kMutable>(*this); }
+    pure Iterator<V, View::kMutable> values_end() { return viterator::template end<View::kMutable>(*this); }
+    pure Iterator<V> values_begin() const { return viterator::template begin(*this); }
+    pure Iterator<V> values_end() const { return viterator::template end(*this); }
 
 protected:
     pure typename parent::const_iterator _begin() const { return parent::begin(); }
@@ -171,14 +188,14 @@ protected:
 template <typename K, typename V, typename Hash, typename Equal, typename Allocator>
 std::ostream &operator<<(std::ostream &os, const Map<K, V, Hash, Equal, Allocator> &map) {
     os << "{";
-    auto range = map.unordered.entries().once();
-    if (!range.empty()) {
-        os << range->first << ": " << range->second;
-        ++range;
+    auto once = map.entries().once();
+    if (!once.empty()) {
+        os << once->first << ": " << once->second;
+        ++once;
     }
-    while (range.has_next()) {
-        os << ", " << range->first << ": " << range->second;
-        ++range;
+    while (once.has_next()) {
+        os << ", " << once->first << ": " << once->second;
+        ++once;
     }
     return os << "}";
 }

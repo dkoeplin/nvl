@@ -11,14 +11,8 @@ namespace nvl {
  *
  * Most uses of Once are destructive, as they cause the `begin` iterator to be modified.
  *
- * Requires that the Iterator type has at least the following:
- * class Iterator {
- *   using reference = ...; // (Optional) Return type from dereference (*) operator.
- *   using pointer = ...; // (Optional) Return type from the -> operator.
- *   Iterator(); // (Optional) Default constructor
- *   static Iterator Iterator::begin(args...);
- *   static Iterator Iterator::end(args...);
- * };
+ * @tparam Value The value type being iterated over.
+ * @tparam Type The type of view this range provides over the underlying elements (mutable or immutable).
  */
 template <typename Value, View Type = View::kImmutable>
 class Once final {
@@ -53,6 +47,16 @@ private:
     Iterator<Value, Type> end_;
 };
 
+/**
+ * Returns a new Once instance with `begin` and `end` iterators.
+ *
+ * Requires that the Iterator type has at least the following:
+ * class Iterator {
+ *   using value_type = ...;
+ *   static Iterator::begin(args...);
+ *   static Iterator::end(args...);
+ * };
+ */
 template <typename IterType, View Type = View::kImmutable, typename... Args>
 Once<typename IterType::value_type, Type> make_once(Args &&...args) {
     auto i0 = IterType::template begin<Type>(std::forward<Args>(args)...);

@@ -9,7 +9,7 @@
 
 namespace nvl {
 
-namespace brtree_detail {
+namespace detail {
 
 template <U64 N, typename Item, typename ItemRef = Ref<Item>, U64 kMaxEntries = 10, U64 kGridExpMin = 2,
           U64 kGridExpMax = 10>
@@ -51,7 +51,7 @@ private:
     mutable EdgeTree edges_;
 };
 
-} // namespace brtree_detail
+} // namespace detail
 
 /**
  * @class BRTree
@@ -65,8 +65,8 @@ private:
  */
 template <U64 N, typename Item, typename ItemRef = Ref<Item>, U64 kMaxEntries = 10, U64 kGridExpMin = 2,
           U64 kGridExpMax = 10>
-    requires traits::HasBBox<Item>
-class BRTree : brtree_detail::BRTreeEdges<N, Item, ItemRef, kMaxEntries, kGridExpMin, kGridExpMax> {
+    requires trait::HasBBox<Item>
+class BRTree : detail::BRTreeEdges<N, Item, ItemRef, kMaxEntries, kGridExpMin, kGridExpMax> {
 public:
     using ItemTree = RTree<N, Item, ItemRef, kMaxEntries, kGridExpMin, kGridExpMax>;
     using EdgeTree = RTree<N, Edge<N>, Ref<Edge<N>>, kMaxEntries, kGridExpMin, kGridExpMax>;
@@ -186,14 +186,14 @@ public:
     }
     pure Range<At<N, Item>> items() const { return make_range<item_iterator>(this->items_.items(), loc); }
 
+    /// Returns true if this item is contained within the tree.
+    pure bool has(const ItemRef &item) const { return this->items_.has(item); }
+
     /// Returns an unordered Range for iteration over all edges in this tree.
     /// Edges are returned as View<N, Edge<N>>, where the view is with respect to this tree's global offset.
     pure Range<At<N, Edge<N>>> edges() const { return make_range<edge_iterator>(this->get_edges().items(), loc); }
 
     struct Relative {
-        using window_iterator = typename ItemTree::window_iterator;
-        using item_iterator = typename ItemTree::item_iterator;
-        using edge_iterator = typename EdgeTree::item_iterator;
         using Component = typename EquivalentSets<ItemRef, typename ItemTree::ItemRefHash>::Group;
 
         explicit Relative(BRTree &tree) : tree(tree) {}
@@ -219,8 +219,7 @@ public:
     Pos<N> loc = Pos<N>::fill(0);
 
 private:
-    friend struct Debug;
-    friend struct Viewed;
+    friend struct Relative;
 };
 
 } // namespace nvl

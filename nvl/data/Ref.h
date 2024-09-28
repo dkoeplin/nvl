@@ -1,7 +1,6 @@
 #pragma once
 
 #include "nvl/data/HasEquality.h"
-#include "nvl/macros/Aliases.h"
 #include "nvl/macros/Expand.h"
 #include "nvl/macros/Implicit.h"
 #include "nvl/macros/Pure.h"
@@ -32,7 +31,7 @@ public:
 
     pure bool operator==(const Ref &rhs) const {
         return_if(ptr_ == rhs.ptr_, true);
-        if constexpr (HasEquality<Value>) {
+        if constexpr (trait::HasEquality<Value>) {
             return_if(*ptr_ == *rhs.ptr_, true);
         }
         return false;

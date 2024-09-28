@@ -22,7 +22,6 @@ abstract struct AbstractActor : Castable<Actor, AbstractActor>::BaseClass {
 struct Actor final : Castable<Actor, AbstractActor> {
     using Castable::Castable;
     using Castable::get;
-
     pure bool operator==(const Actor &rhs) const { return this == &rhs; }
     pure bool operator!=(const Actor &rhs) const { return this != &rhs; }
 };

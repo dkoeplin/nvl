@@ -121,7 +121,7 @@ TEST(TestRTree, keep_buckets_after_subdivide) {
     box[9] = Box<2>({599, 375}, {647, 415}) + Pos<2>(0, 41);
 
     RTree<2, LabeledBox, Ref<LabeledBox>, /*max_entries*/ 9> tree;
-    for (auto &[id, x] : box.unordered) {
+    for (auto &[id, x] : box) {
         tree.insert({id, x});
     }
 

@@ -106,6 +106,21 @@ struct Iterator {
         return !ptr_->equals(*rhs.ptr_);
     }
 
+    template <typename T>
+    pure const T *dyn_cast() const {
+        return nvl::dyn_cast<T>(ptr_.get());
+    }
+
+    template <typename T>
+    pure T *dyn_cast() {
+        return nvl::dyn_cast<T>(ptr_.get());
+    }
+
+    template <typename T>
+    pure bool isa() const {
+        return nvl::isa<T>(ptr_.get());
+    }
+
 protected:
     std::unique_ptr<AbstractIterator<Value>> ptr_ = nullptr;
 };

@@ -18,7 +18,7 @@ namespace nvl {
  * @tparam Value Value type being stored.
  */
 template <U64 N, typename Value>
-    requires traits::HasBBox<Value>
+    requires trait::HasBBox<Value>
 class At {
 public:
     explicit At(Ref<Value> value, const Pos<N> &offset) : value_(value.ptr()), offset_(offset) {}

@@ -14,6 +14,7 @@
 #include "nvl/geo/HasBBox.h"
 #include "nvl/geo/Pos.h"
 #include "nvl/io/IO.h"
+#include "nvl/macros/Abstract.h"
 #include "nvl/macros/Aliases.h"
 #include "nvl/macros/ReturnIf.h"
 #include "nvl/math/Bitwise.h"
@@ -106,7 +107,7 @@ struct PreorderWork {
  */
 template <U64 N, typename Item, typename ItemRef = Ref<Item>, U64 kMaxEntries = 10, U64 kGridExpMin = 2,
           U64 kGridExpMax = 10>
-    requires traits::HasBBox<Item>
+    requires trait::HasBBox<Item>
 class RTree {
 public:
     using PreorderWork = detail::PreorderWork<N, ItemRef>;
@@ -126,7 +127,7 @@ public:
         kItems    // All existing items
     };
     template <typename Concrete, Traversal mode, typename Value>
-    struct abstract_iterator : AbstractIterator<Value> {
+    abstract struct abstract_iterator : AbstractIterator<Value> {
         class_tag(abstract_iterator, AbstractIterator<Value>);
 
         template <View Type = View::kImmutable>
@@ -300,11 +301,11 @@ public:
 
         template <View Type = View::kImmutable>
         pure static Iterator<ItemRef, Type> begin(const ItemMap &map) {
-            return make_iterator<item_iterator, Type>(map.unordered.values_begin());
+            return make_iterator<item_iterator, Type>(map.values_begin());
         }
         template <View Type = View::kImmutable>
         pure static Iterator<ItemRef, Type> end(const ItemMap &map) {
-            return make_iterator<item_iterator, Type>(map.unordered.values_end());
+            return make_iterator<item_iterator, Type>(map.values_end());
         }
 
         explicit item_iterator(Iterator<std::unique_ptr<Item>> iter) : iter(iter) {}
@@ -404,10 +405,13 @@ public:
     pure Iterator<ItemRef> begin() const { return item_iterator::template begin(items_); }
     pure Iterator<ItemRef> end() const { return item_iterator::template end(items_); }
 
+    /// Returns true if this item is contained within the tree.
+    pure bool has(const ItemRef &item) const { return item_ids_.has(item); }
+
     /// Returns the connected components in this tree.
     List<Component> components() {
         EquivalentSets<ItemRef, ItemRefHash> components;
-        for (const std::unique_ptr<Item> &a : items_.unordered.values()) {
+        for (const std::unique_ptr<Item> &a : items_.values()) {
             ItemRef a_ref(a.get());
             bool had_neighbors = false;
             for (const Edge<N> &edge : a->bbox().edges()) {
@@ -553,7 +557,7 @@ private:
 
     void balance(Node *node) {
         return_if(node->grid <= grid_min); // Can't further balance
-        for (auto &[pos, _] : node->map.unordered) {
+        for (auto &[pos, _] : node->map) {
             balance_pos(node, pos);
         }
     }

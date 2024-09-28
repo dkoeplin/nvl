@@ -14,16 +14,11 @@ namespace nvl {
  *
  * Iterating over a Range causes the `begin` iterator to be copied to allow repeated iteration.
  *
- * Requires that the Iterator type has at least the following:
- * class Iterator {
- *   using value_type = ...;
- *   Iterator(); // Default constructor
- *   static Iterator Iterator::begin(args...);
- *   static Iterator Iterator::end(args...);
- * };
+ * @tparam Value The value type being iterated over.
+ * @tparam Type The type of view this range provides over the underlying elements (mutable or immutable).
  */
 template <typename Value, View Type = View::kImmutable>
-class Range {
+class Range final {
 public:
     using value_type = Value;
 
@@ -65,6 +60,16 @@ protected:
     Iterator<Value, Type> end_;
 };
 
+/**
+ * Returns a new Range instance with `begin` and `end` iterators.
+ *
+ * Requires that the Iterator type has at least the following:
+ * class Iterator {
+ *   using value_type = ...;
+ *   static Iterator::begin(args...);
+ *   static Iterator::end(args...);
+ * };
+ */
 template <typename IterType, View Type = View::kImmutable, typename... Args>
 Range<typename IterType::value_type, Type> make_range(Args &&...args) {
     using Value = typename IterType::value_type;

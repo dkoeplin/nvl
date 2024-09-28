@@ -1,6 +1,6 @@
 #pragma once
 
-namespace nvl {
+namespace nvl::trait {
 
 /**
  * @concept HasEquality
@@ -9,4 +9,4 @@ namespace nvl {
 template <typename T>
 concept HasEquality = requires(T a) { a.operator==(); };
 
-} // namespace nvl
+} // namespace nvl::trait

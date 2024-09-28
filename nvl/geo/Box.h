@@ -253,7 +253,7 @@ public:
     }
 
     template <typename Value>
-        requires traits::HasBBox<Value>
+        requires trait::HasBBox<Value>
     pure List<Box> diff(const Range<Value> &range) const {
         List<Box> result{*this};
         for (const auto &value : range) {
@@ -346,7 +346,7 @@ struct Edge {
     }
 
     template <typename Value>
-        requires traits::HasBBox<Value>
+        requires trait::HasBBox<Value>
     pure List<Edge> diff(Range<Value> range) const {
         List<Edge> result;
         for (const Box<N> &b : box.diff(range)) {

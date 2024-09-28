@@ -56,7 +56,7 @@ public:
     pure const Tree &tree() const { return parts_; }
 
 protected:
-    friend struct RelativeView;
+    friend struct Relative;
 
     using Component = typename Tree::ItemTree::Component;
     virtual Status broken(const List<Component> &components) = 0;
@@ -81,8 +81,8 @@ protected:
         world_->template send<Msg>(self(), dst, std::forward<Args>(args)...);
     }
 
-    Pos<N> velocity_ = Pos<N>::fill(0);
-    Pos<N> accel_ = Pos<N>::fill(0);
+    Pos<N> velocity_ = Pos<N>::zero;
+    Pos<N> accel_ = Pos<N>::zero;
     Tree parts_;
     Ref<World<N>> world_;
 };
@@ -178,7 +178,7 @@ Status Entity<N>::hit(Set<Actor> &neighbors, const Hit<N> &hit) {
     const List<Component> components = parts_.relative.components();
     const bool was_broken = components.size() != 1;
     const auto cause = was_broken ? Notify::kBroken : Notify::kChanged;
-    send<Notify>(neighbors.unordered.values(), cause);
+    send<Notify>(neighbors.values(), cause);
     return was_broken ? broken(components) : Status::kNone;
 }
 
@@ -193,7 +193,7 @@ Status Entity<N>::tick(const List<Message> &messages) {
         if (init_velocity != Pos<N>::zero) {
             // When starting to move, notify anything above
             const Set<Actor> neighbors = above();
-            send<Notify>(neighbors.unordered.values(), Notify::kMoved);
+            send<Notify>(neighbors.values(), Notify::kMoved);
         }
         // Move by velocity per tick
         parts_.loc += velocity_;

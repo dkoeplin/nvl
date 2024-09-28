@@ -10,9 +10,9 @@ namespace nvl {
  * @struct PointerHash
  * @brief Hashes dereference-able types by raw pointer.
  */
-template <typename Ref>
+template <typename Ptr>
 struct PointerHash {
-    pure U64 operator()(const Ref &a) const noexcept { return sip_hash(&(*a)); }
+    pure U64 operator()(const Ptr &a) const noexcept { return sip_hash(&*a); }
 };
 
 } // namespace nvl

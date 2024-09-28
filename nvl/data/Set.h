@@ -77,23 +77,18 @@ public:
 
     pure bool has(const Value &value) const { return parent::contains(value); }
 
-    struct Unordered {
-        explicit Unordered(Set &set) : set(set) {}
-        pure Iterator<Value, View::kMutable> begin() { return iterator::template begin<View::kMutable>(set); }
-        pure Iterator<Value, View::kMutable> end() { return iterator::template end<View::kMutable>(set); }
-        pure Iterator<Value> begin() const { return iterator::template begin(set); }
-        pure Iterator<Value> end() const { return iterator::template end(set); }
+    pure Iterator<Value, View::kMutable> begin() { return iterator::template begin<View::kMutable>(*this); }
+    pure Iterator<Value, View::kMutable> end() { return iterator::template end<View::kMutable>(*this); }
+    pure Iterator<Value> begin() const { return iterator::template begin(*this); }
+    pure Iterator<Value> end() const { return iterator::template end(*this); }
 
-        pure Range<Value, View::kMutable> values() { return {begin(), end()}; }
-        pure Range<Value> values() const { return {begin(), end()}; }
-
-        Set &set;
-    } unordered = Unordered(*this);
+    pure Range<Value, View::kMutable> values() { return {begin(), end()}; }
+    pure Range<Value> values() const { return {begin(), end()}; }
 
     pure bool operator==(const Set &rhs) const {
         return_if(size() != rhs.size(), false);
-        const Iterator<Value> rhs_end = rhs.unordered.end();
-        for (Iterator<Value> iter = unordered.begin(); iter != unordered.end(); ++iter) {
+        const Iterator<Value> rhs_end = rhs.end();
+        for (Iterator<Value> iter = begin(); iter != end(); ++iter) {
             auto rhs_iter = rhs.find(*iter);
             return_if(rhs_iter == rhs_end || *iter != *rhs_iter, false);
         }
@@ -108,7 +103,7 @@ protected:
 
 template <typename Value, typename Hash>
 std::ostream &operator<<(std::ostream &os, const Set<Value, Hash> &set) {
-    return os << set.unordered.values();
+    return os << set.values();
 }
 
 } // namespace nvl

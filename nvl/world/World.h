@@ -19,14 +19,18 @@ public:
     static constexpr U64 kGridExpMin = 2;
     static constexpr U64 kGridExpMax = 10;
     using EntityTree = RTree<N, Entity<N>, Actor, kMaxEntries, kGridExpMin, kGridExpMax>;
-    using window_iterator = typename EntityTree::window_iterator;
 
-    static constexpr I64 kGravity = 3; // px / tick^2: (10 m/s^2) * (1000 px/m) * (1 ms /1000 s)^2 * (50 ms / tick)^2
-    static constexpr I64 kMaxVelocity = 1500; // px / tick    (50 m/s) * (1 s / 1000 ms) * (30 ms / tick) * (1000 px/m)
+    // px / tick^2: (10 m/s^2) * (1000 px/m) * (1 ms /1000 s)^2 * (50 ms / tick)^2
+    static constexpr I64 kVerticalDim = 1;
+    static constexpr Pos<N> kGravity = Pos<N>::unit(kVerticalDim, 3);
+
+    // px / tick    (50 m/s) * (1 s / 1000 ms) * (30 ms / tick) * (1000 px/m)
+    static constexpr I64 kMaxVelocity = 1500;
+
     static constexpr I64 kMaxY = 10000;
 
-    pure static bool is_up(const U64 dim, const Dir dir) { return dim == 1 && dir == Dir::Neg; }
-    pure static bool is_down(const U64 dim, const Dir dir) { return dim == 1 && dir == Dir::Pos; }
+    pure static bool is_up(const U64 dim, const Dir dir) { return dim == kVerticalDim && dir == Dir::Neg; }
+    pure static bool is_down(const U64 dim, const Dir dir) { return dim == kVerticalDim && dir == Dir::Pos; }
 
     pure Range<Actor> entities(const Pos<N> &pos) { return entities_[pos]; }
     pure Range<Actor> entities(const Box<N> &box) { return entities_[box]; }
@@ -34,20 +38,28 @@ public:
     template <typename Msg, typename... Args>
     void send(const Actor src, const Actor &dst, Args &&...args) {
         const auto message = Message::get<Msg>(src, std::forward<Args>(args)...);
-        messages_[dst].push_back(std::move(message));
+        if (entities_.has(dst)) {
+            messages_[dst].push_back(std::move(message));
+        }
     }
 
     template <typename Msg, typename... Args>
     void send(const Actor src, const Range<Actor> &dst, Args &&...args) {
         const auto message = Message::get<Msg>(src, std::forward<Args>(args)...);
         for (const Actor &actor : dst) {
-            messages_[actor].push_back(message);
+            if (entities_.has(actor)) {
+                messages_[actor].push_back(message);
+            }
         }
     }
 
     template <typename T, typename... Args>
     Actor spawn(Args &&...args) {
-        return entities_.template emplace<T>(std::forward<Args>(args)...);
+        auto actor = entities_.template emplace<T>(std::forward<Args>(args)...);
+        if (auto *entity = actor.template dyn_cast<Entity<N>>()) {
+            awake_.insert(entity);
+        }
+        return actor;
     }
 
 protected:
@@ -87,8 +99,8 @@ protected:
         for (Ref<Entity<N>> entity : awake_) {
             tick_entity(died, idled, entity);
         }
-        awake_.remove(died.unordered);
-        awake_.remove(idled.unordered);
+        awake_.remove(died.values());
+        awake_.remove(idled.values());
     }
 
     EntityTree entities_;

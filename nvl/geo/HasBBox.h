@@ -1,6 +1,6 @@
 #pragma once
 
-namespace nvl::traits {
+namespace nvl::trait {
 
 /**
  * @concept HasBBox
@@ -9,4 +9,4 @@ namespace nvl::traits {
 template <typename T>
 concept HasBBox = requires(T a) { a.bbox(); };
 
-} // namespace nvl::traits
+} // namespace nvl::trait
