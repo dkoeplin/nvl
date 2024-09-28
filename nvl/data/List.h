@@ -14,7 +14,7 @@ public:
     using parent = std::vector<Value>;
     using value_type = typename parent::value_type;
 
-    struct iterator final : AbstractIterator<Value> {
+    struct iterator final : AbstractIterator<Value>, parent::const_iterator {
         class_tag(List::iterator, AbstractIterator<Value>);
         template <View Type = View::kImmutable>
         static Iterator<Value, Type> begin(const List &list) {
@@ -24,18 +24,16 @@ public:
         static Iterator<Value, Type> end(const List &list) {
             return make_iterator<iterator, Type>(list._end());
         }
-        explicit iterator(typename parent::const_iterator iter) : iter(iter) {}
+        explicit iterator(typename parent::const_iterator iter) : parent::const_iterator(iter) {}
         pure std::unique_ptr<AbstractIterator<Value>> copy() const override {
             return std::make_unique<iterator>(*this);
         }
-        void increment() override { ++iter; }
-        pure const Value *ptr() override { return &*iter; }
+        void increment() override { parent::const_iterator::operator++(); }
+        pure const Value *ptr() override { return &parent::const_iterator::operator*(); }
         pure bool equals(const AbstractIterator<Value> &rhs) const override {
             auto *b = dyn_cast<iterator>(&rhs);
-            return b && iter == b->iter;
+            return b && *this == *b;
         }
-
-        typename parent::const_iterator iter;
     };
 
     using parent::parent;

@@ -22,7 +22,7 @@ public:
     using parent::end;
     using parent::size;
 
-    struct entry_iterator final : AbstractIterator<Entry> {
+    struct entry_iterator final : AbstractIterator<Entry>, parent::const_iterator {
         class_tag(Map::entry_iterator, AbstractIterator<Entry>);
         template <View Type = View::kImmutable>
         static Iterator<Entry, Type> begin(const Map &map) {
@@ -33,26 +33,20 @@ public:
             return make_iterator<entry_iterator, Type>(map._end());
         }
 
-        explicit entry_iterator(typename parent::const_iterator iter) : iter_(iter) {}
+        explicit entry_iterator(typename parent::const_iterator iter) : parent::const_iterator(iter) {}
         pure std::unique_ptr<AbstractIterator<Entry>> copy() const override {
             return std::make_unique<entry_iterator>(*this);
         }
 
-        void increment() override { ++iter_; }
-        const Entry *ptr() override { return &*iter_; }
+        void increment() override { parent::const_iterator::operator++(); }
+        const Entry *ptr() override { return &parent::const_iterator::operator*(); }
 
         // const pair<nvl::Pos<2>, nvl::rtree_detail::Node<2, nvl::Ref<nvl::testing::LabeledBox>>::Entry> *
         // const pair<const nvl::Pos<2>, nvl::rtree_detail::Node<2, nvl::Ref<nvl::testing::LabeledBox>>::Entry> *
         pure bool equals(const AbstractIterator<Entry> &rhs) const override {
             auto *b = dyn_cast<entry_iterator>(&rhs);
-            return b && iter_ == b->iter_;
+            return b && *this == *b;
         }
-
-        pure const typename parent::const_iterator &raw_iterator() const { return iter_; }
-        pure typename parent::const_iterator &raw_iterator() { return iter_; }
-
-    private:
-        typename parent::const_iterator iter_;
     };
 
     struct viterator final : AbstractIterator<V> {
@@ -111,7 +105,7 @@ public:
 
     Map &erase(Iterator<Entry> iter) {
         if (auto *entry_iter = iter.template dyn_cast<entry_iterator>()) {
-            parent::erase(entry_iter->raw_iterator());
+            parent::erase(*entry_iter);
         }
         return *this;
     }
