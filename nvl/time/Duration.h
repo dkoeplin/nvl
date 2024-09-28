@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 #include "nvl/macros/Aliases.h"
 #include "nvl/time/TimeScale.h"
 
@@ -22,26 +24,9 @@ public:
     pure Duration operator+(const U64 rhs) const { return Duration(nanos_ + rhs); }
     pure Duration operator-(const U64 rhs) const { return Duration(nanos_ - rhs); }
 
-    pure std::string to_string() const {
-        TimeScale scale = TimeScale::kNanoseconds;
-        U64 time = nanos_;
-        U64 divisor = 1;
-        while (scale < TimeScale::kNScales - 1 && time > TimeScale::divisors[scale]) {
-            const U64 factor = TimeScale::divisors[scale];
-            scale = TimeScale(static_cast<TimeScale::Value>(scale.value + 1));
-            divisor *= factor;
-            time /= factor;
-        }
-        std::stringstream ss;
-        ss << (static_cast<F64>(nanos_) / static_cast<F64>(divisor)) << " " << scale;
-        return ss.str();
-    }
+    pure std::string to_string() const;
 
-    pure std::string raw() const {
-        std::stringstream ss;
-        ss << nanos_ << " ns";
-        return ss.str();
-    }
+    pure std::string raw() const;
 
 private:
     U64 nanos_;

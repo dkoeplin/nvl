@@ -28,7 +28,7 @@ struct TimeScale {
     implicit constexpr TimeScale(const Value value) : value(value) {}
     implicit operator Value() const { return value; }
 
-    pure expand std::string_view units() const { return value < 0 || value >= kNScales ? "unknown" : unit[value]; }
+    pure std::string_view units() const { return value < 0 || value >= kNScales ? "unknown" : unit[value]; }
 
     Value value = kHours;
 };

@@ -27,26 +27,31 @@ add_library(nvl SHARED
         nvl/actor/Actor.h
         nvl/actor/Part.h
         nvl/actor/Status.h
+        nvl/data/HasEquality.h
         nvl/data/Iterator.h
         nvl/data/List.h
         nvl/data/Map.h
         nvl/data/Maybe.h
         nvl/data/Once.h
+        nvl/data/PointerHash.h
         nvl/data/Range.h
         nvl/data/Ref.h
         nvl/data/Set.h
-        nvl/data/SipHash.h
         nvl/data/SipHash.cpp
+        nvl/data/SipHash.h
+        nvl/data/UnionFind.h
         nvl/draw/Color.h
         nvl/draw/Draw.h
         nvl/entity/Entity.h
-        nvl/geo/Dir.h
         nvl/geo/Box.h
         nvl/geo/BRTree.h
+        nvl/geo/Dir.h
         nvl/geo/HasBBox.h
         nvl/geo/Pos.h
         nvl/geo/RTree.h
         nvl/geo/View.h
+        nvl/io/IO.h
+        nvl/macros/Abstract.h
         nvl/macros/Aliases.h
         nvl/macros/Assert.h
         nvl/macros/Implicit.h
@@ -59,12 +64,16 @@ add_library(nvl SHARED
         nvl/math/Distribution.h
         nvl/math/Grid.h
         nvl/math/Random.h
+        nvl/message/Destroy.h
+        nvl/message/Hit.h
         nvl/message/Message.h
+        nvl/message/Notify.h
         nvl/reflect/Castable.h
         nvl/reflect/Casting.h
         nvl/reflect/ClassTag.cpp
         nvl/reflect/ClassTag.h
         nvl/reflect/PrimitiveTypes.h
+        nvl/time/Duration.cpp
         nvl/time/Duration.h
         nvl/time/TimeScale.h
         nvl/world/World.h
