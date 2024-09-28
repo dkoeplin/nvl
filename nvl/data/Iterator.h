@@ -59,16 +59,15 @@ struct Iterator {
     Iterator() = default;
     Iterator(const Iterator &rhs) : Iterator(rhs.ptr_) {}
 
+    /// Converts a mutable iterator to an immutable one.
+    /// Requires C-style casting because the two aren't actually related by inheritance.
     implicit Iterator(const Iterator<Value, View::kMutable> &rhs)
         requires(Type == View::kImmutable)
         : Iterator(*(const Iterator<Value> *)(&rhs)) {}
 
     explicit Iterator(std::shared_ptr<AbstractIterator<Value>> impl) : ptr_(impl) {}
 
-    Iterator &operator=(const Iterator &rhs) {
-        ptr_ = rhs.ptr_;
-        return *this;
-    }
+    Iterator &operator=(const Iterator &rhs) = default;
 
     Iterator copy() const { return Iterator(ptr_->copy()); }
 
