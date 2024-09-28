@@ -8,8 +8,9 @@ namespace nvl {
  * @struct Destroy
  * @brief Notification to destroy the receiver(s).
  */
-struct Destroy : AbstractMessage {
-    class_tag(Destroy);
+struct Destroy final : AbstractMessage {
+    class_tag(Destroy, AbstractMessage);
+    explicit Destroy(const Actor &src) : AbstractMessage(src) {}
 };
 
 } // namespace nvl

@@ -7,9 +7,31 @@
 #include "nvl/macros/Pure.h"
 
 namespace nvl {
+
 template <typename T>
 concept HasClassTag = requires(T inst) { T::_classtag; } && requires(T inst) { inst._get_classtag(); };
 
+/**
+ * @struct ClassTag
+ * @brief Tracks class inheritance to allow reflection and dynamic casting.
+ *
+ * ClassTags are annotated on subclasses to allow for dynamic casting from a parent pointer to a subclass pointer.
+ * The tag tracks the inheritance tree directly via an array of pointers to other ClassTags.
+ * ClassTags are always static fields of their respective class.
+ *
+ * Typical Usage:
+ * struct ParentClass {
+ *   class_tag(ParentClass);
+ *   virtual ~ParentClass() = default;
+ * };
+ *
+ * struct ChildClass : ParentClass {
+ *   class_tag(ChildClass, ParentClass);
+ * }
+ *
+ * ParentClass *instance;
+ * ChildClass *child = nvl::dyn_cast<ChildClass>(instance);
+ */
 struct ClassTag {
     static constexpr U64 kMaxParents = 16;
 

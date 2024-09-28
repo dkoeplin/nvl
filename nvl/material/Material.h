@@ -7,12 +7,14 @@
 #include "nvl/macros/Abstract.h"
 #include "nvl/macros/Aliases.h"
 #include "nvl/reflect/Castable.h"
+#include "nvl/reflect/ClassTag.h"
 
 namespace nvl {
 
 struct Material;
 
 abstract struct AbstractMaterial : Castable<Material, AbstractMaterial>::BaseClass {
+    class_tag(AbstractMaterial);
     std::string name;
     Color color;
     bool falls;

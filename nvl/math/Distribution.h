@@ -5,7 +5,6 @@
 #include "nvl/macros/Unreachable.h"
 #include "nvl/math/Random.h"
 #include "nvl/reflect/Castable.h"
-#include "nvl/reflect/Casting.h"
 #include "nvl/reflect/ClassTag.h"
 #include "nvl/reflect/PrimitiveTypes.h"
 
@@ -91,7 +90,7 @@ T Distribution::next(Random &random) const {
     } else if (const auto *custom = dyn_cast<CustomDistribution<T>>()) {
         return custom->func(random);
     }
-    UNREACHABLE();
+    UNREACHABLE;
 }
 
 } // namespace nvl

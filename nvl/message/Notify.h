@@ -8,8 +8,8 @@ namespace nvl {
  * @struct Notify
  * @brief General wake up / change notification.
  */
-struct Notify : AbstractMessage {
-    class_tag(Notify);
+struct Notify final : AbstractMessage {
+    class_tag(Notify, AbstractMessage);
     enum Cause {
         kBroken,  // Notify recipient(s) that nearby source was broken
         kChanged, // Notify recipient(s) that nearby source was changed

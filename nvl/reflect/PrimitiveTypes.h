@@ -2,7 +2,6 @@
 
 #include "nvl/macros/Aliases.h"
 #include "nvl/macros/Pure.h"
-#include "nvl/macros/Unreachable.h"
 #include "nvl/reflect/ClassTag.h"
 
 namespace nvl {
