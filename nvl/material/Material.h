@@ -15,14 +15,16 @@ struct Material;
 
 abstract struct AbstractMaterial : Castable<Material, AbstractMaterial>::BaseClass {
     class_tag(AbstractMaterial);
-    std::string name;
+
+    explicit AbstractMaterial(const Color color, const I64 durability, const bool falls = true)
+        : color(color), durability(durability), falls(falls) {}
+
     Color color;
-    bool falls;
-    bool liquid;
     I64 durability;
+    bool falls = true;
 };
 
-struct Material final : Castable<Material, AbstractMaterial> {
+struct Material final : Castable<Material, AbstractMaterial, std::shared_ptr<AbstractMaterial>> {
     using Castable::Castable;
     using Castable::get;
 };

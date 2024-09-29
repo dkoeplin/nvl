@@ -26,11 +26,16 @@ public:
     implicit Castable(nullptr_t) : ptr_(nullptr) {}
     virtual ~Castable() = default;
 
+    explicit operator bool() const { return ptr() != nullptr; }
+
+    pure bool operator==(nullptr_t) const { return ptr() == nullptr; }
+    pure bool operator!=(nullptr_t) const { return ptr() != nullptr; }
+
     T &operator*() { return *ptr_; }
     const T &operator*() const { return *ptr_; }
 
-    T *operator->() { return ptr_; }
-    const T *operator->() const { return ptr_; }
+    T *operator->() { return ptr(); }
+    const T *operator->() const { return ptr(); }
 
     template <typename B>
     pure expand const B *dyn_cast() const {

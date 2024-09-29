@@ -192,7 +192,7 @@ struct FuzzBoxDiff : nvl::testing::FuzzingTestFixture<List<Box<N>>, Box<N>, Box<
         using nvl::Distribution;
         using nvl::Random;
 
-        this->num_tests = 1E3;
+        this->num_tests = 1E5;
         this->in[0] = Distribution::Uniform<I64>(1, 15);
         this->in[1] = Distribution::Uniform<I64>(1, 15);
 

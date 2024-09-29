@@ -2,6 +2,7 @@
 
 #include "nvl/actor/Status.h"
 #include "nvl/data/List.h"
+#include "nvl/data/SipHash.h"
 #include "nvl/macros/Abstract.h"
 #include "nvl/macros/Aliases.h"
 #include "nvl/macros/Pure.h"
@@ -9,8 +10,8 @@
 
 namespace nvl {
 
-class Draw;
 struct Actor;
+class Draw;
 struct Message;
 
 abstract struct AbstractActor : Castable<Actor, AbstractActor>::BaseClass {
@@ -30,5 +31,5 @@ struct Actor final : Castable<Actor, AbstractActor> {
 
 template <>
 struct std::hash<nvl::Actor> {
-    pure U64 operator()(const nvl::Actor &actor) const noexcept;
+    pure U64 operator()(const nvl::Actor &actor) const noexcept { return sip_hash(actor.ptr()); }
 };

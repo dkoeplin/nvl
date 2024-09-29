@@ -52,11 +52,11 @@ public:
         return result;
     }
 
-    /// Returns a Pos of rank `N` where all elements are zero except the one at `i`, which is 1.
-    static Pos unit(const U64 i) {
+    /// Returns a Pos of rank `N` where all elements are zero except the one at `i`, which is `x`.
+    static constexpr Pos unit(const U64 i, const I64 x = 1) {
         ASSERT(i < N, "Index " << i << " is out of bounds [" << 0 << ", " << N << ")");
         Pos result = fill(0);
-        result[i] = 1;
+        result[i] = x;
         return result;
     }
 

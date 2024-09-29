@@ -24,6 +24,8 @@ public:
     static constexpr U64 kGridExpMax = 10;
     using Tree = BRTree<N, Part<N>, Ref<Part<N>>, kMaxEntries, kGridExpMin, kGridExpMax>;
 
+    explicit Entity(Range<Ref<Part<N>>> parts = {}) : parts_(parts) {}
+
     pure virtual Pos<N> loc() const { return parts_.loc; }
     pure virtual Box<N> bbox() const { return parts_.bbox(); }
 
@@ -37,14 +39,15 @@ public:
         pure Range<Ref<Part<N>>> parts() const { return entity.parts_.relative.items(); }
         pure Range<Ref<Part<N>>> parts(const Box<N> &box) const { return entity.parts_.relative[box]; }
         pure Range<Ref<Part<N>>> parts(const Pos<N> &pos) const { return entity.parts_.relative[pos]; }
+        pure Range<Ref<Edge<N>>> edges() const { return entity.parts_.relative.edges(); }
         Entity &entity;
     } relative = Relative(*this);
 
-    pure virtual bool falls() {
-        return relative.parts().all([](const Ref<Part<N>> part) { return part->material()->falls; });
+    pure virtual bool falls() const {
+        return relative.parts().all([](const Ref<Part<N>> part) { return part->material->falls; });
     }
 
-    void draw(Draw &draw, const int64_t highlight) override {
+    void draw(Draw &draw, const I64 highlight) override {
         Draw::Offset offset(draw, loc());
         for (Ref<Part<N>> part : parts_.relative.items()) {
             part->draw(draw, highlight);
@@ -55,21 +58,25 @@ public:
 
     pure const Tree &tree() const { return parts_; }
 
+    void bind(World<N> *world) { world_ = world; }
+
 protected:
     friend struct Relative;
 
     using Component = typename Tree::ItemTree::Component;
     virtual Status broken(const List<Component> &components) = 0;
 
-    Set<Actor> above();
-    Set<Actor> below();
+    pure Set<Actor> above() const;
+    pure Set<Actor> below() const;
 
-    Pos<N> next_velocity();
+    pure bool has_below() const;
 
-    Status receive(Set<Actor> &neighbors, const Message &message);
+    pure Pos<N> next_velocity() const;
+
+    Status receive(const Message &message);
     Status receive(const List<Message> &messages);
 
-    Status hit(Set<Actor> &neighbors, const Hit<N> &hit);
+    Status hit(const Hit<N> &hit);
 
     template <typename Msg, typename... Args>
     void send(const Actor dst, Args &&...args) {
@@ -81,14 +88,22 @@ protected:
         world_->template send<Msg>(self(), dst, std::forward<Args>(args)...);
     }
 
+    template <typename Type, typename... Args>
+    void spawn(Args &&...args) {
+        world_->template spawn_by<Type>(self(), std::forward<Args>(args)...);
+    }
+
+    /// State
+    Tree parts_;
     Pos<N> velocity_ = Pos<N>::zero;
     Pos<N> accel_ = Pos<N>::zero;
-    Tree parts_;
-    Ref<World<N>> world_;
+
+    /// Binds
+    World<N> *world_;
 };
 
 template <U64 N>
-Set<Actor> Entity<N>::above() {
+Set<Actor> Entity<N>::above() const {
     Set<Actor> above;
     for (const At<N, Edge<N>> &edge : parts_.edges()) {
         if (World<N>::is_up(edge->dim, edge->dir)) {
@@ -99,7 +114,7 @@ Set<Actor> Entity<N>::above() {
 }
 
 template <U64 N>
-Set<Actor> Entity<N>::below() {
+Set<Actor> Entity<N>::below() const {
     Set<Actor> below;
     for (const At<N, Edge<N>> &edge : parts_.edges()) {
         if (World<N>::is_down(edge->dim, edge->dir)) {
@@ -110,20 +125,34 @@ Set<Actor> Entity<N>::below() {
 }
 
 template <U64 N>
-Pos<N> Entity<N>::next_velocity() {
+bool Entity<N>::has_below() const {
+    for (const At<N, Edge<N>> &edge : parts_.edges()) {
+        const Box<N> box = edge.bbox();
+        if (World<N>::is_down(edge->dim, edge->dir)) {
+            for (const Actor &actor : world_->entities(box)) {
+                const Entity<N> &entity = *actor.dyn_cast<Entity<N>>();
+                return_if(entity.parts(box).empty(), true);
+            }
+        }
+    }
+    return false;
+}
+
+template <U64 N>
+Pos<N> Entity<N>::next_velocity() const {
     Pos<N> velocity;
     for (U64 i = 0; i < N; ++i) {
         const I64 v = velocity_[i];
         const I64 a = accel_[i];
         I64 v_next = std::clamp(v + a, -World<N>::kMaxVelocity, World<N>::kMaxVelocity);
         if (v != 0 || a != 0) {
-            for (const Ref<Part<N>> part : parts()) {
-                const Box<N> box = part->bbox();
+            for (const auto &part : parts()) {
+                const Box<N> box = part.bbox();
                 const U64 x = (v >= 0) ? box.min[i] : box.max[i];
                 const Box<N> trj = box.with(i, x, x + v_next);
                 for (Actor actor : world_->entities(trj)) {
                     if (auto *entity = actor.dyn_cast<Entity<N>>()) {
-                        for (const Part<N> other : entity->parts()) {
+                        for (const auto &other : entity->parts()) {
                             const I64 bound = (v >= 0) ? other.bbox().min[i] - 1 : other.bbox().max[i] + 1;
                             v_next = (v >= 0) ? std::min(v_next, bound) : std::max(v_next, bound);
                         }
@@ -137,9 +166,9 @@ Pos<N> Entity<N>::next_velocity() {
 }
 
 template <U64 N>
-Status Entity<N>::receive(Set<Actor> &neighbors, const Message &message) {
-    if (auto *h = message.dyn_cast<Hit<N>>()) {
-        return hit(neighbors, *h);
+Status Entity<N>::receive(const Message &message) {
+    if (const auto *h = message.dyn_cast<Hit<N>>()) {
+        return hit(*h);
     } else if (message.isa<Destroy>()) {
         return Status::kDied;
     }
@@ -151,23 +180,24 @@ Status Entity<N>::receive(const List<Message> &messages) {
     Status status = Status::kNone;
     Set<Actor> neighbors;
     for (const auto &message : messages) {
-        status = std::max(status, receive(neighbors, message));
+        status = std::max(status, receive(message));
         return_if(status == Status::kDied, status); // Early exit on death
     }
     return status;
 }
 
 template <U64 N>
-Status Entity<N>::hit(Set<Actor> &neighbors, const Hit<N> &hit) {
+Status Entity<N>::hit(const Hit<N> &hit) {
     const Box<N> local_box = hit.box - parts_.loc;
     const List<Ref<Part<N>>> hit_parts(relative.parts(local_box));
     return_if(hit_parts.empty(), Status::kNone);
 
+    Set<Actor> neighbors;
     for (const Ref<Part<N>> &part : hit_parts) {
         const Box<N> area = part->bbox().widened(1);
         neighbors.insert(world_->entities(area));
-        if (part->health() > hit.strength) {
-            parts_.emplace(part->bbox().intersect(local_box).value(), part->material(), part->health() - hit.strength);
+        if (part->health > hit.strength) {
+            parts_.emplace(part->bbox().intersect(local_box).value(), part->material, part->health - hit.strength);
         }
         for (auto diff : part->diff(local_box)) {
             parts_.insert(diff);
@@ -187,7 +217,12 @@ Status Entity<N>::tick(const List<Message> &messages) {
     Status status = receive(messages);
     return_if(status == Status::kDied, status);
 
+    if (!has_below()) {
+        accel_ += World<N>::kGravity;
+    }
+
     const Pos<N> init_velocity = velocity_;
+    velocity_ = next_velocity();
 
     if (velocity_ != Pos<N>::zero) {
         if (init_velocity != Pos<N>::zero) {

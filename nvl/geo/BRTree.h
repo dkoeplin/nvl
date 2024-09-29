@@ -19,6 +19,12 @@ protected:
     using EdgeTree = RTree<N, Edge<N>, Ref<Edge<N>>, kMaxEntries, kGridExpMin, kGridExpMax>;
     static Box<N> bbox(const ItemRef &item) { return static_cast<const Item *>(item.ptr())->bbox(); }
 
+    BRTreeEdges() = default;
+    BRTreeEdges(std::initializer_list<Item> items) : items_(items), changed_(true) {}
+    BRTreeEdges(std::initializer_list<ItemRef> items) : items_(items), changed_(true) {}
+    explicit BRTreeEdges(Range<Item> items) : items_(items), changed_(true) {}
+    explicit BRTreeEdges(Range<ItemRef> items) : items_(items), changed_(true) {}
+
     void mark_changed() { changed_ = true; }
 
     EdgeTree &get_edges() const {
@@ -68,6 +74,7 @@ template <U64 N, typename Item, typename ItemRef = Ref<Item>, U64 kMaxEntries = 
     requires trait::HasBBox<Item>
 class BRTree : detail::BRTreeEdges<N, Item, ItemRef, kMaxEntries, kGridExpMin, kGridExpMax> {
 public:
+    using Parent = detail::BRTreeEdges<N, Item, ItemRef, kMaxEntries, kGridExpMin, kGridExpMax>;
     using ItemTree = RTree<N, Item, ItemRef, kMaxEntries, kGridExpMin, kGridExpMax>;
     using EdgeTree = RTree<N, Edge<N>, Ref<Edge<N>>, kMaxEntries, kGridExpMin, kGridExpMax>;
 
@@ -111,6 +118,10 @@ public:
     };
 
     BRTree() = default;
+    BRTree(std::initializer_list<Item> items) : Parent(items) {}
+    BRTree(std::initializer_list<ItemRef> items) : Parent(items) {}
+    explicit BRTree(Range<Item> items) : Parent(items) {}
+    explicit BRTree(Range<ItemRef> items) : Parent(items) {}
 
     BRTree &insert(const Item &item) {
         this->items_.insert(item);

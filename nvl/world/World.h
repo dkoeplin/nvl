@@ -5,6 +5,8 @@
 #include "nvl/data/Set.h"
 #include "nvl/geo/Box.h"
 #include "nvl/geo/RTree.h"
+#include "nvl/math/Random.h"
+#include "nvl/message/Created.h"
 #include "nvl/message/Message.h"
 
 namespace nvl {
@@ -32,6 +34,8 @@ public:
     pure static bool is_up(const U64 dim, const Dir dir) { return dim == kVerticalDim && dir == Dir::Neg; }
     pure static bool is_down(const U64 dim, const Dir dir) { return dim == kVerticalDim && dir == Dir::Pos; }
 
+    World() = default;
+
     pure Range<Actor> entities(const Pos<N> &pos) { return entities_[pos]; }
     pure Range<Actor> entities(const Box<N> &box) { return entities_[box]; }
 
@@ -55,12 +59,23 @@ public:
 
     template <typename T, typename... Args>
     Actor spawn(Args &&...args) {
-        auto actor = entities_.template emplace<T>(std::forward<Args>(args)...);
-        if (auto *entity = actor.template dyn_cast<Entity<N>>()) {
+        return spawn_by<T>(nullptr, std::forward<Args>(args)...);
+    }
+
+    template <typename T, typename... Args>
+    Actor spawn_by(const Actor src, Args &&...args) {
+        Actor actor = entities_.template emplace<T>(std::forward<Args>(args)...);
+        if (Entity<N> *entity = actor.template dyn_cast<Entity<N>>()) {
             awake_.insert(entity);
+            entity->bind(this);
+        }
+        if (src != nullptr) {
+            send<Created>(src, actor);
         }
         return actor;
     }
+
+    mutable Random random;
 
 protected:
     using EntityHash = PointerHash<Ref<Entity<N>>>;
@@ -88,7 +103,7 @@ protected:
 
     void tick() {
         // Wake any entities with pending messages
-        for (auto [actor, _] : messages_) {
+        for (auto &[actor, _] : messages_) {
             if (auto *entity = actor.template dyn_cast<Entity<N>>()) {
                 awake_.emplace(entity);
             }

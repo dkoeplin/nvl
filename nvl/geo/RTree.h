@@ -335,8 +335,14 @@ public:
 
     explicit RTree() : root_(next_node(None, grid_max, {})) {}
 
-    explicit RTree(std::initializer_list<Item> items) : RTree() {
+    RTree(std::initializer_list<Item> items) : RTree() {
         for (const auto &item : items) {
+            insert(item);
+        }
+    }
+
+    RTree(std::initializer_list<ItemRef> items) : RTree() {
+        for (const ItemRef &item : items) {
             insert(item);
         }
     }
@@ -344,10 +350,17 @@ public:
     /// Inserts a copy of the item into the tree.
     /// Returns a reference to the copy held by the tree.
     ItemRef insert(const Item &item) { return insert_over(item, item.bbox()); }
+    ItemRef insert(const ItemRef &item) { return insert_over(item, item.bbox()); }
 
     /// Inserts a copy of each item into the tree.
     RTree &insert(const Range<Item> &items) {
         for (const Item &item : items)
+            insert_over(item, item.bbox());
+        return *this;
+    }
+
+    RTree &insert(const Range<ItemRef> &items) {
+        for (const ItemRef &item : items)
             insert_over(item, item.bbox());
         return *this;
     }
