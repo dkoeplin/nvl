@@ -68,7 +68,6 @@ protected:
     virtual Status broken(const List<Component> &components) = 0;
 
     pure Set<Actor> above() const;
-    pure Set<Actor> below() const;
 
     pure bool has_below() const;
 
@@ -108,28 +107,25 @@ Set<Actor> Entity<N>::above() const {
     Set<Actor> above;
     for (const At<N, Edge<N>> &edge : parts_.edges()) {
         if (World<N>::is_up(edge->dim, edge->dir)) {
-            above.insert(world_->entities(edge.bbox()));
+            const Box<N> box = edge.bbox();
+            for (const Actor &actor : world_->entities(box)) {
+                if (auto *entity = actor.dyn_cast<Entity<N>>(); entity && entity != this) {
+                    auto overlapping = entity->parts(box);
+                    if (!overlapping.empty()) {
+                        above.insert(actor);
+                    }
+                }
+            }
         }
     }
     return above;
 }
 
 template <U64 N>
-Set<Actor> Entity<N>::below() const {
-    Set<Actor> below;
-    for (const At<N, Edge<N>> &edge : parts_.edges()) {
-        if (World<N>::is_down(edge->dim, edge->dir)) {
-            below.insert(world_->entities(edge.bbox()));
-        }
-    }
-    return below;
-}
-
-template <U64 N>
 bool Entity<N>::has_below() const {
     for (const At<N, Edge<N>> &edge : parts_.edges()) {
-        const Box<N> box = edge.bbox();
         if (World<N>::is_down(edge->dim, edge->dir)) {
+            const Box<N> box = edge.bbox();
             for (const Actor &actor : world_->entities(box)) {
                 const Entity<N> &entity = *actor.dyn_cast<Entity<N>>();
                 return_if(entity.parts(box).empty(), true);
@@ -152,8 +148,8 @@ Pos<N> Entity<N>::next_velocity() const {
                 const U64 x = (v >= 0) ? box.min[i] : box.max[i];
                 const Box<N> trj = box.with(i, x, x + v_next);
                 for (Actor actor : world_->entities(trj)) {
-                    if (auto *entity = actor.dyn_cast<Entity<N>>()) {
-                        for (const auto &other : entity->parts()) {
+                    if (auto *entity = actor.dyn_cast<Entity<N>>(); entity && entity != this) {
+                        for (const auto &other : entity->parts(trj)) {
                             const I64 bound = (v >= 0) ? other.bbox().min[i] - 1 : other.bbox().max[i] + 1;
                             v_next = (v >= 0) ? std::min(v_next, bound) : std::max(v_next, bound);
                         }
