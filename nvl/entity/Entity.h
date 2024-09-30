@@ -24,10 +24,13 @@ public:
     static constexpr U64 kGridExpMax = 10;
     using Tree = BRTree<N, Part<N>, Ref<Part<N>>, kMaxEntries, kGridExpMin, kGridExpMax>;
 
-    explicit Entity(Range<Ref<Part<N>>> parts = {}) : parts_(parts) {}
+    explicit Entity(Pos<N> loc, Range<Ref<Part<N>>> parts = {}) : parts_(loc, parts) {}
 
-    pure virtual Pos<N> loc() const { return parts_.loc; }
-    pure virtual Box<N> bbox() const { return parts_.bbox(); }
+    pure Pos<N> loc() const { return parts_.loc; }
+    pure Box<N> bbox() const { return parts_.bbox(); }
+    pure const Tree &tree() const { return parts_; }
+    pure const Pos<N> &velocity() const { return velocity_; }
+    pure const Pos<N> &accel() const { return accel_; }
 
     pure Range<At<N, Edge<N>>> edges() const { return parts_.edges(); }
     pure Range<At<N, Part<N>>> parts() const { return parts_.items(); }
@@ -55,8 +58,6 @@ public:
     }
 
     Status tick(const List<Message> &messages) override;
-
-    pure const Tree &tree() const { return parts_; }
 
     void bind(World<N> *world) { world_ = world; }
 
@@ -99,7 +100,7 @@ protected:
     Pos<N> accel_ = Pos<N>::zero;
 
     /// Binds
-    World<N> *world_;
+    World<N> *world_ = nullptr;
 };
 
 template <U64 N>

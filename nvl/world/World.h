@@ -59,7 +59,12 @@ public:
 
     template <typename T, typename... Args>
     Actor spawn(Args &&...args) {
-        return spawn_by<T>(nullptr, std::forward<Args>(args)...);
+        Actor actor = entities_.template emplace<T>(std::forward<Args>(args)...);
+        if (Entity<N> *entity = actor.template dyn_cast<Entity<N>>()) {
+            awake_.emplace(entity);
+            entity->bind(this);
+        }
+        return actor;
     }
 
     template <typename T, typename... Args>
@@ -75,52 +80,57 @@ public:
         return actor;
     }
 
+    void tick();
+
     mutable Random random;
 
 protected:
     using EntityHash = PointerHash<Ref<Entity<N>>>;
-    using EntitySet = Set<Ref<Entity<N>>, EntityHash>;
 
-    void tick_entity(Set<Actor> &died, Set<Actor> &idled, Ref<Entity<N>> entity) {
-        static const List<Message> kNoMessages = {};
-
-        const Actor actor = entity->self();
-        const Box<N> prev_bbox = entity->bbox();
-        const auto messages_iter = messages_.find(actor);
-        const List<Message> &messages = messages_iter == messages_.end() ? kNoMessages : messages_iter->second;
-        const Status status = entity->tick(messages);
-        if (status == Status::kDied) {
-            died.insert(actor);
-        } else if (status == Status::kIdle) {
-            idled.insert(actor);
-        } else if (status == Status::kMove) {
-            entities_.move(actor, prev_bbox);
-        }
-        if (messages_iter != messages_.end()) {
-            messages_.erase(messages_iter);
-        }
-    }
-
-    void tick() {
-        // Wake any entities with pending messages
-        for (auto &[actor, _] : messages_) {
-            if (auto *entity = actor.template dyn_cast<Entity<N>>()) {
-                awake_.emplace(entity);
-            }
-        }
-
-        Set<Actor> died;
-        Set<Actor> idled;
-        for (Ref<Entity<N>> entity : awake_) {
-            tick_entity(died, idled, entity);
-        }
-        awake_.remove(died.values());
-        awake_.remove(idled.values());
-    }
+    void tick_entity(Set<Actor> &died, Set<Actor> &idled, Ref<Entity<N>> entity);
 
     EntityTree entities_;
     Set<Ref<Entity<N>>, EntityHash> awake_;
     Map<Actor, List<Message>> messages_;
 };
+
+template <U64 N>
+void World<N>::tick() {
+    // Wake any entities with pending messages
+    for (auto &[actor, _] : messages_) {
+        if (auto *entity = actor.template dyn_cast<Entity<N>>()) {
+            awake_.emplace(entity);
+        }
+    }
+
+    Set<Actor> died;
+    Set<Actor> idled;
+    for (Ref<Entity<N>> entity : awake_) {
+        tick_entity(died, idled, entity);
+    }
+    awake_.remove(died.values());
+    awake_.remove(idled.values());
+}
+
+template <U64 N>
+void World<N>::tick_entity(Set<Actor> &died, Set<Actor> &idled, Ref<Entity<N>> entity) {
+    static const List<Message> kNoMessages = {};
+
+    const Actor actor = entity->self();
+    const Box<N> prev_bbox = entity->bbox();
+    const auto messages_iter = messages_.find(actor);
+    const List<Message> &messages = messages_iter == messages_.end() ? kNoMessages : messages_iter->second;
+    const Status status = entity->tick(messages);
+    if (status == Status::kDied) {
+        died.insert(actor);
+    } else if (status == Status::kIdle) {
+        idled.insert(actor);
+    } else if (status == Status::kMove) {
+        entities_.move(actor, prev_bbox);
+    }
+    if (messages_iter != messages_.end()) {
+        messages_.erase(messages_iter);
+    }
+}
 
 } // namespace nvl

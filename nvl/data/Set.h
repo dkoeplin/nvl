@@ -57,7 +57,7 @@ public:
         return *this;
     }
 
-    Set &remove(const Range<Value> &range) {
+    Set &remove(Range<Value> range) {
         for (auto &value : range) {
             parent::erase(value);
         }
