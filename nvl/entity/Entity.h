@@ -141,7 +141,7 @@ Pos<N> Entity<N>::next_velocity() const {
     for (U64 i = 0; i < N; ++i) {
         const I64 v = velocity_[i];
         const I64 a = accel_[i];
-        I64 v_next = std::clamp(v + a, -World<N>::kMaxVelocity, World<N>::kMaxVelocity);
+        I64 v_next = std::clamp(v + a, -world_->kMaxVelocity, world_->kMaxVelocity);
         if (v != 0 || a != 0) {
             for (const auto &part : parts()) {
                 const Box<N> box = part.bbox();
@@ -211,11 +211,14 @@ Status Entity<N>::hit(const Hit<N> &hit) {
 
 template <U64 N>
 Status Entity<N>::tick(const List<Message> &messages) {
+    // Early exit if we aren't attached to a world
+    return_if(world_ == nullptr, Status::kNone);
+
     Status status = receive(messages);
     return_if(status == Status::kDied, status);
 
     if (!has_below()) {
-        accel_ += World<N>::kGravity;
+        accel_ += world_->kGravity;
     }
 
     const Pos<N> init_velocity = velocity_;

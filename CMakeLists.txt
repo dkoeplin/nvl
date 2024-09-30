@@ -25,6 +25,7 @@ include(GoogleTest)
 add_library(nvl SHARED
         nvl/actor/Actor.h
         nvl/actor/Part.h
+        nvl/actor/Status.cpp
         nvl/actor/Status.h
         nvl/data/HasEquality.h
         nvl/data/Iterator.h

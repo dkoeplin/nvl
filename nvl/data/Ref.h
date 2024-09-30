@@ -1,6 +1,7 @@
 #pragma once
 
 #include "nvl/data/HasEquality.h"
+#include "nvl/data/HasPrint.h"
 #include "nvl/macros/Expand.h"
 #include "nvl/macros/Implicit.h"
 #include "nvl/macros/Pure.h"
@@ -44,7 +45,11 @@ private:
 
 template <typename Value>
 expand std::ostream &operator<<(std::ostream &os, const Ref<Value> &ref) {
-    return os << ref.raw();
+    if constexpr (trait::HasPrint<Value>) {
+        return os << ref.raw();
+    } else {
+        return os << ref.ptr();
+    }
 }
 
 } // namespace nvl

@@ -375,8 +375,14 @@ public:
         return emplace_over<T>(std::forward<Args>(args)...);
     }
 
-    /// Removes the matching item from the tree.
-    RTree &remove(const ItemRef &item) { return remove_over(item, item->bbox(), true); }
+    /// Removes the matching item from the tree, if it exists.
+    RTree &remove(const ItemRef &item) { return remove_over(item, bbox(item), true); }
+
+    RTree &remove(Range<ItemRef> items) {
+        for (const ItemRef &item : items)
+            remove_over(item, bbox(item), true);
+        return *this;
+    }
 
     /// Registers the matching item as having moved from the previous volume `prev` to its current volume.
     /// Does nothing if no matching item exists in the tree.

@@ -7,6 +7,7 @@
 #include "nvl/geo/RTree.h"
 #include "nvl/math/Random.h"
 #include "nvl/message/Created.h"
+#include "nvl/message/Destroy.h"
 #include "nvl/message/Message.h"
 
 namespace nvl {
@@ -15,29 +16,43 @@ template <U64 N>
 class Entity;
 
 template <U64 N>
-class World {
+class World : public AbstractActor {
 public:
+    class_tag(World<N>, AbstractActor);
+
+    struct Params {
+        U64 terminal_velocity = 53; // meters/sec (default is about 120mph)
+        U64 gravity_accel = 10;     // meters/sec^2
+        I64 maximum_y = 1e3;        // meters -- down is positive
+    };
+
     static constexpr U64 kMaxEntries = 10;
     static constexpr U64 kGridExpMin = 2;
     static constexpr U64 kGridExpMax = 10;
     using EntityTree = RTree<N, Entity<N>, Actor, kMaxEntries, kGridExpMin, kGridExpMax>;
 
-    // px / tick^2: (10 m/s^2) * (1000 px/m) * (1 ms /1000 s)^2 * (50 ms / tick)^2
-    static constexpr I64 kVerticalDim = 1;
-    static constexpr Pos<N> kGravity = Pos<N>::unit(kVerticalDim, 3);
+    static constexpr U64 kPixelsPerMeter = 1000; // px / m
+    static constexpr U64 kMillisPerTick = 30;    // ms / tick
+    static constexpr U64 kVerticalDim = 1;
 
-    // px / tick    (50 m/s) * (1 s / 1000 ms) * (30 ms / tick) * (1000 px/m)
-    static constexpr I64 kMaxVelocity = 1500;
-
-    static constexpr I64 kMaxY = 10000;
+    const U64 kGravityAccel; // px / tick^2
+    const I64 kMaxVelocity;  // px / tick
+    const Pos<N> kGravity;
+    const I64 kMaxY; // px
 
     pure static bool is_up(const U64 dim, const Dir dir) { return dim == kVerticalDim && dir == Dir::Neg; }
     pure static bool is_down(const U64 dim, const Dir dir) { return dim == kVerticalDim && dir == Dir::Pos; }
 
-    World() = default;
+    explicit World(Params params)
+        : kGravityAccel(params.gravity_accel * kPixelsPerMeter * kMillisPerTick * kMillisPerTick / 1e6),
+          kMaxVelocity(params.terminal_velocity * kMillisPerTick * kPixelsPerMeter / 1e3),
+          kGravity(Pos<N>::unit(kVerticalDim, kGravityAccel)), kMaxY(params.maximum_y * kPixelsPerMeter) {}
 
     pure Range<Actor> entities(const Pos<N> &pos) { return entities_[pos]; }
     pure Range<Actor> entities(const Box<N> &box) { return entities_[box]; }
+
+    pure U64 num_active() const { return awake_.size(); }
+    pure U64 num_alive() const { return entities_.size(); }
 
     template <typename Msg, typename... Args>
     void send(const Actor src, const Actor &dst, Args &&...args) {
@@ -80,40 +95,44 @@ public:
         return actor;
     }
 
-    void tick();
+    Status tick(const List<Message> &messages) override;
+    void draw(Draw &, const I64) override {}
 
     mutable Random random;
 
 protected:
     using EntityHash = PointerHash<Ref<Entity<N>>>;
 
-    void tick_entity(Set<Actor> &died, Set<Actor> &idled, Ref<Entity<N>> entity);
+    void tick_entity(Set<Actor> &idled, Ref<Entity<N>> entity);
 
     EntityTree entities_;
     Set<Actor> awake_;
+    Set<Actor> died_;
     Map<Actor, List<Message>> messages_;
 };
 
 template <U64 N>
-void World<N>::tick() {
+Status World<N>::tick(const List<Message> &) {
     // Wake any entities with pending messages
     for (auto &[actor, _] : messages_) {
         awake_.emplace(actor);
     }
 
-    Set<Actor> died;
     Set<Actor> idled;
     for (Actor actor : awake_) {
         if (auto *entity = actor.dyn_cast<Entity<N>>()) {
-            tick_entity(died, idled, Ref(entity));
+            tick_entity(idled, Ref(entity));
         }
     }
-    awake_.remove(died.values());
+    awake_.remove(died_.values());
     awake_.remove(idled.values());
+    entities_.remove(died_.values());
+    died_.clear();
+    return Status::kNone;
 }
 
 template <U64 N>
-void World<N>::tick_entity(Set<Actor> &died, Set<Actor> &idled, Ref<Entity<N>> entity) {
+void World<N>::tick_entity(Set<Actor> &idled, Ref<Entity<N>> entity) {
     static const List<Message> kNoMessages = {};
 
     const Actor actor = entity->self();
@@ -122,7 +141,7 @@ void World<N>::tick_entity(Set<Actor> &died, Set<Actor> &idled, Ref<Entity<N>> e
     const List<Message> &messages = messages_iter == messages_.end() ? kNoMessages : messages_iter->second;
     const Status status = entity->tick(messages);
     if (status == Status::kDied) {
-        died.insert(actor);
+        died_.insert(actor);
     } else if (status == Status::kIdle) {
         idled.insert(actor);
     } else if (status == Status::kMove) {
@@ -130,6 +149,11 @@ void World<N>::tick_entity(Set<Actor> &died, Set<Actor> &idled, Ref<Entity<N>> e
     }
     if (messages_iter != messages_.end()) {
         messages_.erase(messages_iter);
+    }
+
+    // Check if the entity is now above the maximum Y limits (down is positive)
+    if (status != Status::kDied && entity->bbox().min[kVerticalDim] > kMaxY) {
+        send<Destroy>(nullptr, actor, Destroy::kOutOfBounds);
     }
 }
 

@@ -36,6 +36,7 @@ public:
 
     Set(const Set &rhs) : parent(rhs) {}
 
+    using parent::clear;
     using parent::emplace;
     using parent::empty;
     using parent::insert;
