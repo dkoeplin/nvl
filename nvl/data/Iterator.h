@@ -52,7 +52,7 @@ template <typename Value, View Type = View::kImmutable>
 struct Iterator {
     using value_type = Value;
     using reference = std::conditional_t<Type == View::kImmutable, const Value &, Value &>;
-    using pointer = std::conditional_t<Type == View::kImmutable, const Value *, Value &>;
+    using pointer = std::conditional_t<Type == View::kImmutable, const Value *, Value *>;
     using difference_type = std::ptrdiff_t;
     using iterator_category = std::input_iterator_tag;
 
@@ -72,30 +72,10 @@ struct Iterator {
     Iterator copy() const { return ptr_ ? Iterator(ptr_->copy()) : Iterator(); }
 
     /// Returns an immutable reference to the current value.
-    pure const Value &operator*() const
-        requires(Type == View::kImmutable)
-    {
-        return *ptr_->ptr();
-    }
-    /// Returns an immutable pointer to the current value.
-    pure const Value *operator->() const
-        requires(Type == View::kImmutable)
-    {
-        return ptr_->ptr();
-    }
+    pure reference operator*() const { return *const_cast<pointer>(ptr_->ptr()); }
 
-    /// Returns a mutable reference to the current value.
-    pure Value &operator*() const
-        requires(Type == View::kMutable)
-    {
-        return *const_cast<Value *>(ptr_->ptr());
-    }
-    /// Returns a mutable pointer to the current value.
-    pure Value *operator->() const
-        requires(Type == View::kMutable)
-    {
-        return const_cast<Value *>(ptr_->ptr());
-    }
+    /// Returns an immutable pointer to the current value.
+    pure pointer operator->() const { return const_cast<pointer>(ptr_->ptr()); }
 
     /// Increments this iterator and returns the value of the iterator _after_ incrementing.
     Iterator &operator++() {
@@ -139,13 +119,20 @@ protected:
 };
 
 template <typename Value>
-using MutableIterator = Iterator<Value>;
+using MIterator = Iterator<Value, View::kMutable>;
 
 template <typename IterType, View Type = View::kImmutable, typename... Args>
 Iterator<typename IterType::value_type, Type> make_iterator(Args &&...args) {
     using Value = typename IterType::value_type;
     std::shared_ptr<AbstractIterator<Value>> ptr = std::make_shared<IterType>(std::forward<Args>(args)...);
     return Iterator<Value, Type>(ptr);
+}
+
+template <typename IterType, typename... Args>
+MIterator<typename IterType::value_type> make_miterator(Args &&...args) {
+    using Value = typename IterType::value_type;
+    std::shared_ptr<AbstractIterator<Value>> ptr = std::make_shared<IterType>(std::forward<Args>(args)...);
+    return Iterator<Value, View::kMutable>(ptr);
 }
 
 } // namespace nvl

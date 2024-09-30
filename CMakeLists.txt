@@ -48,7 +48,7 @@ add_library(nvl SHARED
         nvl/geo/HasBBox.h
         nvl/geo/Pos.h
         nvl/geo/RTree.h
-        nvl/geo/View.h
+        nvl/geo/At.h
         nvl/io/IO.h
         nvl/macros/Abstract.h
         nvl/macros/Aliases.h

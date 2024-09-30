@@ -178,6 +178,11 @@ TEST(TestBox, diff) {
                                                         Box<2>({2, 1}, {2, 1}), // dim 1, neg
                                                         Box<2>({2, 3}, {2, 3})) // dim 1, pos
     );
+
+    constexpr Box<2> box_c({1, 3}, {9, 14});
+    constexpr Box<2> box_d({2, 7}, {6, 11});
+    EXPECT_THAT(box_c.diff(box_d), UnorderedElementsAre(Box<2>({7, 3}, {9, 14}), Box<2>({1, 3}, {1, 14}),
+                                                        Box<2>({2, 12}, {6, 14}), Box<2>({2, 3}, {6, 6})));
 }
 
 TEST(TestBox, to_string) {
@@ -214,7 +219,6 @@ struct FuzzBoxDiff : nvl::testing::FuzzingTestFixture<List<Box<N>>, Box<N>, Box<
                                                              << "  Remainder " << b << " contains " << pt
                                                              << " also in b");
                     }
-
                 } else {
                     ASSERT(remainders.exists([&](const Box<N> &rem) { return rem.contains(pt); }),
                            "[DIFF] a: " << a << " b: " << b << "\n"

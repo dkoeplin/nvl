@@ -1,10 +1,10 @@
 #pragma once
 
 #include "nvl/data/Iterator.h"
+#include "nvl/geo/At.h"
 #include "nvl/geo/Box.h"
 #include "nvl/geo/HasBBox.h"
 #include "nvl/geo/RTree.h"
-#include "nvl/geo/View.h"
 #include "nvl/macros/Aliases.h"
 
 namespace nvl {
@@ -175,20 +175,18 @@ public:
 
     /// Returns an unordered Range for iteration over all values in this tree in the given volume.
     /// Items are returned as View<N, Item>, where the view is with respect to this tree's global offset.
-    pure Range<At<N, Item>, View::kMutable> operator[](const Pos<N> &pos) { return operator[](Box<N>::unit(pos)); }
-    pure Range<At<N, Item>, View::kMutable> operator[](const Box<N> &box) {
-        return make_range<window_iterator, View::kMutable>(this->items_[box - loc], loc);
+    pure MRange<At<N, Item>> operator[](const Pos<N> &pos) { return operator[](Box<N>::unit(pos)); }
+    pure MRange<At<N, Item>> operator[](const Box<N> &box) {
+        return make_mrange<window_iterator>(this->items_[box - loc], loc);
     }
     pure Range<At<N, Item>> operator[](const Pos<N> &pos) const { return operator[](Box<N>::unit(pos)); }
     pure Range<At<N, Item>> operator[](const Box<N> &box) const {
-        return make_range<window_iterator, View::kMutable>(this->items_[box - loc], loc);
+        return make_mrange<window_iterator>(this->items_[box - loc], loc);
     }
 
     /// Returns an unordered Range for iteration over all values in this tree.
     /// Items are returned as View<N, Item>, where the view is with respect to this tree's global offset.
-    pure Range<At<N, Item>, View::kMutable> items() {
-        return make_range<item_iterator, View::kMutable>(this->items_.items(), loc);
-    }
+    pure MRange<At<N, Item>> items() { return make_mrange<item_iterator>(this->items_.items(), loc); }
     pure Range<At<N, Item>> items() const { return make_range<item_iterator>(this->items_.items(), loc); }
 
     /// Returns true if this item is contained within the tree.
@@ -207,12 +205,13 @@ public:
         pure List<Component> components() { return tree.items_.components(); }
 
         /// Returns an iterable range over all items in this tree in the given area relative to the tree's offset.
-        pure Range<ItemRef, View::kMutable> operator[](const Pos<N> &pos) { return tree.items_[pos]; }
-        pure Range<ItemRef, View::kMutable> operator[](const Box<N> &box) { return tree.items_[box]; }
+        pure MRange<ItemRef> operator[](const Pos<N> &pos) { return tree.items_[pos]; }
+        pure MRange<ItemRef> operator[](const Box<N> &box) { return tree.items_[box]; }
         pure Range<ItemRef> operator[](const Pos<N> &pos) const { return tree.items_[pos]; }
         pure Range<ItemRef> operator[](const Box<N> &box) const { return tree.items_[box]; }
 
         /// Provides a view to the items contained in this tree relative to the tree's offset.
+        pure MRange<ItemRef> items() { return tree.items_.items(); }
         pure Range<ItemRef> items() const { return tree.items_.items(); }
 
         /// Provides a view to the edges contained in this tree relative to the tree's offset.

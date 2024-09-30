@@ -50,12 +50,12 @@ public:
     using parent::push_back;
     using parent::size;
 
-    pure Iterator<Value, View::kMutable> begin() { return iterator::template begin<View::kMutable>(*this); }
-    pure Iterator<Value, View::kMutable> end() { return iterator::template end<View::kMutable>(*this); }
+    pure MIterator<Value> begin() { return iterator::template begin<View::kMutable>(*this); }
+    pure MIterator<Value> end() { return iterator::template end<View::kMutable>(*this); }
     pure Iterator<Value> begin() const { return iterator::template begin<View::kImmutable>(*this); }
     pure Iterator<Value> end() const { return iterator::template end<View::kImmutable>(*this); }
 
-    pure Range<Value, View::kMutable> range() { return {begin(), end()}; }
+    pure MRange<Value> range() { return {begin(), end()}; }
     pure Range<Value> range() const { return {begin(), end()}; }
 
     pure const Value *get_back() const { return empty() ? nullptr : &back(); }

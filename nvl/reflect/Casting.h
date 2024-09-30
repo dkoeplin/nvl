@@ -9,7 +9,7 @@ namespace nvl {
 template <typename B, typename A>
     requires HasClassTag<A> && HasClassTag<B>
 pure expand constexpr bool isa(A *a) {
-    return ClassTag::get(a) <= ClassTag::get<B>();
+    return a != nullptr && ClassTag::get(a) <= ClassTag::get<B>();
 }
 
 template <typename B, typename A>

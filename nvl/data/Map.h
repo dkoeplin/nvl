@@ -110,9 +110,9 @@ public:
         typename parent::const_iterator iter = parent::find(key);
         return make_iterator<entry_iterator>(iter);
     }
-    pure Iterator<Entry, View::kMutable> find(const K &key) {
+    pure MIterator<Entry> find(const K &key) {
         typename parent::const_iterator iter = parent::find(key);
-        return make_iterator<entry_iterator, View::kMutable>(iter);
+        return make_miterator<entry_iterator>(iter);
     }
 
     pure V *get(const K &key) const {
@@ -149,19 +149,19 @@ public:
     pure bool operator==(const Map &other) const { return std::operator==(*this, other); }
     pure bool operator!=(const Map &other) const { return std::operator!=(*this, other); }
 
-    pure Range<Entry, View::kMutable> entries() { return {begin(), end()}; }
+    pure MRange<Entry> entries() { return {begin(), end()}; }
     pure Range<Entry> entries() const { return {begin(), end()}; }
 
-    pure Iterator<Entry, View::kMutable> begin() { return entry_iterator::template begin<View::kMutable>(*this); }
-    pure Iterator<Entry, View::kMutable> end() { return entry_iterator::template end<View::kMutable>(*this); }
+    pure MIterator<Entry> begin() { return entry_iterator::template begin<View::kMutable>(*this); }
+    pure MIterator<Entry> end() { return entry_iterator::template end<View::kMutable>(*this); }
     pure Iterator<Entry> begin() const { return entry_iterator::template begin(*this); }
     pure Iterator<Entry> end() const { return entry_iterator::template end(*this); }
 
-    pure Range<V, View::kMutable> values() { return {values_begin(), values_end()}; }
+    pure MRange<V> values() { return {values_begin(), values_end()}; }
     pure Range<V> values() const { return {values_begin(), values_end()}; }
 
-    pure Iterator<V, View::kMutable> values_begin() { return viterator::template begin<View::kMutable>(*this); }
-    pure Iterator<V, View::kMutable> values_end() { return viterator::template end<View::kMutable>(*this); }
+    pure MIterator<V> values_begin() { return viterator::template begin<View::kMutable>(*this); }
+    pure MIterator<V> values_end() { return viterator::template end<View::kMutable>(*this); }
     pure Iterator<V> values_begin() const { return viterator::template begin(*this); }
     pure Iterator<V> values_end() const { return viterator::template end(*this); }
 

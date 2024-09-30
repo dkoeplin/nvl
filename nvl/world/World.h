@@ -90,7 +90,7 @@ protected:
     void tick_entity(Set<Actor> &died, Set<Actor> &idled, Ref<Entity<N>> entity);
 
     EntityTree entities_;
-    Set<Ref<Entity<N>>, EntityHash> awake_;
+    Set<Actor> awake_;
     Map<Actor, List<Message>> messages_;
 };
 
@@ -98,15 +98,15 @@ template <U64 N>
 void World<N>::tick() {
     // Wake any entities with pending messages
     for (auto &[actor, _] : messages_) {
-        if (auto *entity = actor.template dyn_cast<Entity<N>>()) {
-            awake_.emplace(entity);
-        }
+        awake_.emplace(actor);
     }
 
     Set<Actor> died;
     Set<Actor> idled;
-    for (Ref<Entity<N>> entity : awake_) {
-        tick_entity(died, idled, entity);
+    for (Actor actor : awake_) {
+        if (auto *entity = actor.dyn_cast<Entity<N>>()) {
+            tick_entity(died, idled, Ref(entity));
+        }
     }
     awake_.remove(died.values());
     awake_.remove(idled.values());

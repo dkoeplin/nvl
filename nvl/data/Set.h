@@ -71,12 +71,12 @@ public:
 
     pure bool has(const Value &value) const { return parent::contains(value); }
 
-    pure Iterator<Value, View::kMutable> begin() { return iterator::template begin<View::kMutable>(*this); }
-    pure Iterator<Value, View::kMutable> end() { return iterator::template end<View::kMutable>(*this); }
+    pure MIterator<Value> begin() { return iterator::template begin<View::kMutable>(*this); }
+    pure MIterator<Value> end() { return iterator::template end<View::kMutable>(*this); }
     pure Iterator<Value> begin() const { return iterator::template begin(*this); }
     pure Iterator<Value> end() const { return iterator::template end(*this); }
 
-    pure Range<Value, View::kMutable> values() { return {begin(), end()}; }
+    pure MRange<Value> values() { return {begin(), end()}; }
     pure Range<Value> values() const { return {begin(), end()}; }
 
     pure bool operator==(const Set &rhs) const {

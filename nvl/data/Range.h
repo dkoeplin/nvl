@@ -26,14 +26,14 @@ public:
     /// Only available if the underlying Iterator type is also default constructible.
     Range() : begin_(), end_() {}
 
-    Range(const Iterator<Value, Type> &begin, const Iterator<Value, Type> &end) : begin_(begin), end_(end) {}
+    Range(Iterator<Value, Type> begin, Iterator<Value, Type> end) : begin_(begin), end_(end) {}
 
     implicit Range(const Range<Value, View::kMutable> &rhs)
         requires(Type == View::kImmutable)
         : Range(*(const Range<Value> *)(&rhs)) {}
 
     /// Returns a copy of this Range as a single iteration Once range.
-    pure Once<Value, Type> once() const { return Once<Value, Type>(begin_, end_); }
+    pure Once<Value, Type> once() const { return Once<Value, Type>(begin_.copy(), end_); }
 
     pure bool empty() const { return begin_ == end_; }
 
@@ -60,6 +60,9 @@ protected:
     Iterator<Value, Type> end_;
 };
 
+template <typename Value>
+using MRange = Range<Value, View::kMutable>;
+
 /**
  * Returns a new Range instance with `begin` and `end` iterators.
  *
@@ -68,7 +71,7 @@ protected:
  *   using value_type = ...;
  *   static Iterator::begin(args...);
  *   static Iterator::end(args...);
- * };
+ * }
  */
 template <typename IterType, View Type = View::kImmutable, typename... Args>
 Range<typename IterType::value_type, Type> make_range(Args &&...args) {
@@ -76,6 +79,14 @@ Range<typename IterType::value_type, Type> make_range(Args &&...args) {
     Iterator<Value, Type> i0 = IterType::template begin<Type>(std::forward<Args>(args)...);
     Iterator<Value, Type> i1 = IterType::template end<Type>(std::forward<Args>(args)...);
     return Range<Value, Type>(i0, i1);
+}
+
+template <typename IterType, typename... Args>
+MRange<typename IterType::value_type> make_mrange(Args &&...args) {
+    using Value = typename IterType::value_type;
+    Iterator<Value, View::kMutable> i0 = IterType::template begin<View::kMutable>(std::forward<Args>(args)...);
+    Iterator<Value, View::kMutable> i1 = IterType::template end<View::kMutable>(std::forward<Args>(args)...);
+    return Range<Value, View::kMutable>(i0, i1);
 }
 
 template <typename Value>

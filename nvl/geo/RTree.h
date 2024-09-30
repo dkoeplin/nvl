@@ -380,7 +380,7 @@ public:
 
     /// Registers the matching item as having moved from the previous volume `prev` to its current volume.
     /// Does nothing if no matching item exists in the tree.
-    RTree &move(const ItemRef &item, const Box<N> &prev) { return move(item->bbox(), prev); }
+    RTree &move(const ItemRef &item, const Box<N> &prev) { return move(item, bbox(item), prev); }
 
     /// Returns a mutable range over all _possible_ points in the given volume, including those without Nodes.
     Range<Point, View::kMutable> points_in(const Box<N> &box) {
@@ -393,20 +393,18 @@ public:
     }
 
     /// Returns an iterable range over all unique stored items in the given volume.
-    pure Range<ItemRef, View::kMutable> operator[](const Pos<N> &pos) { return operator[](Box<N>::unit(pos)); }
-    pure Range<ItemRef, View::kMutable> operator[](const Box<N> &box) {
-        return make_range<window_iterator, View::kMutable>(*this, box);
-    }
+    pure MRange<ItemRef> operator[](const Pos<N> &pos) { return operator[](Box<N>::unit(pos)); }
+    pure MRange<ItemRef> operator[](const Box<N> &box) { return make_mrange<window_iterator>(*this, box); }
 
     pure Range<ItemRef> operator[](const Pos<N> &pos) const { return operator[](Box<N>::unit(pos)); }
     pure Range<ItemRef> operator[](const Box<N> &box) const { return make_range<window_iterator>(*this, box); }
 
     /// Returns a Range for unordered iteration over all items in this tree.
-    pure Range<ItemRef, View::kMutable> items() { return {begin(), end()}; }
+    pure MRange<ItemRef> items() { return {begin(), end()}; }
     pure Range<ItemRef> items() const { return {begin(), end()}; }
 
-    pure Iterator<ItemRef, View::kMutable> begin() { return item_iterator::template begin<View::kMutable>(items_); }
-    pure Iterator<ItemRef, View::kMutable> end() { return item_iterator::template end<View::kMutable>(items_); }
+    pure MIterator<ItemRef> begin() { return item_iterator::template begin<View::kMutable>(items_); }
+    pure MIterator<ItemRef> end() { return item_iterator::template end<View::kMutable>(items_); }
 
     pure Iterator<ItemRef> begin() const { return item_iterator::template begin(items_); }
     pure Iterator<ItemRef> end() const { return item_iterator::template end(items_); }
@@ -604,16 +602,24 @@ private:
     }
 
     RTree &move(const ItemRef &item, const Box<N> &new_box, const Box<N> &prev_box) {
+        bbox_ = bbox_ ? bounding_box(*bbox_, new_box) : new_box;
         if (auto pair = get_item(item)) {
-            auto [id, ref] = *pair;
+            auto [_, ref] = *pair;
             for (const auto &removed : prev_box.diff(new_box)) {
-                remove_over(removed, id, false);
+                remove_over(item, removed, false);
             }
             for (const auto &added : new_box.diff(prev_box)) {
-                insert_over(ref.raw(), added, id, false);
+                populate_over(item, added);
             }
         }
         return *this;
+    }
+
+    void populate_over(const ItemRef &ref, const Box<N> &box) {
+        for (auto [node, pos] : points_in(box)) {
+            node->map[pos].list.emplace_back(ref);
+            balance(node, pos);
+        }
     }
 
     ItemRef insert_over(const Item &item, const Box<N> &box) {
@@ -622,10 +628,7 @@ private:
         auto &unique = items_[id] = std::make_unique<Item>(item); // Copy constructor
         ItemRef ref(*unique.get());
         item_ids_[ref] = id;
-        for (auto [node, pos] : points_in(box)) {
-            node->map[pos].list.emplace_back(ref);
-            balance(node, pos);
-        }
+        populate_over(ref, box);
         return ref;
     }
 
@@ -636,10 +639,7 @@ private:
         bbox_ = bbox_ ? bounding_box(*bbox_, unique->bbox()) : unique->bbox();
         ItemRef ref(unique.get());
         item_ids_[ref] = id;
-        for (auto [node, pos] : points_in(unique->bbox())) {
-            node->map[pos].list.emplace_back(ref);
-            balance(node, pos);
-        }
+        populate_over(ref, unique->bbox());
         return ref;
     }
 

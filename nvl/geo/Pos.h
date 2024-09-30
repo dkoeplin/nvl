@@ -91,8 +91,8 @@ public:
         return indices_[0];
     }
 
-    pure Iterator<I64, View::kMutable> begin() { return iterator::template begin<View::kMutable>(*this); }
-    pure Iterator<I64, View::kMutable> end() { return iterator::template end<View::kMutable>(*this); }
+    pure MIterator<I64> begin() { return iterator::template begin<View::kMutable>(*this); }
+    pure MIterator<I64> end() { return iterator::template end<View::kMutable>(*this); }
     pure Iterator<I64> begin() const { return iterator::template begin<View::kImmutable>(*this); }
     pure Iterator<I64> end() const { return iterator::template end<View::kImmutable>(*this); }
 
