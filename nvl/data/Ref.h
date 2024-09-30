@@ -1,7 +1,7 @@
 #pragma once
 
 #include "nvl/data/HasEquality.h"
-#include "nvl/data/HasPrint.h"
+#include "nvl/io/HasPrint.h"
 #include "nvl/macros/Expand.h"
 #include "nvl/macros/Implicit.h"
 #include "nvl/macros/Pure.h"
