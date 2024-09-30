@@ -19,7 +19,7 @@ public:
 
     explicit Block(Range<Ref<Part<N>>> parts) : Entity<N>(parts) {
         if (!this->relative.parts().empty()) {
-            material_ = this->relative.parts().begin()->raw().material();
+            material_ = this->relative.parts().begin()->raw().material;
         }
     }
 
@@ -28,9 +28,9 @@ public:
         for (const Ref<Part<N>> &part : this->relative.parts()) {
             part->draw(draw, highlight);
         }
-        for (const Ref<Edge<N>> &edge : this->relative.edges()) {
-            edge->draw(draw, highlight);
-        }
+        // for (const Ref<Edge<N>> &edge : this->relative.edges()) {
+        // TODO: Rectangles
+        // }
     }
 
     pure bool falls() const override { return material_->falls; }

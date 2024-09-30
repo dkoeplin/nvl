@@ -347,6 +347,9 @@ public:
         }
     }
 
+    explicit RTree(Range<Item> items) : RTree() { insert(items); }
+    explicit RTree(Range<ItemRef> items) : RTree() { insert(items); }
+
     /// Inserts a copy of the item into the tree.
     /// Returns a reference to the copy held by the tree.
     ItemRef insert(const Item &item) { return insert_over(item, item.bbox()); }
@@ -361,7 +364,7 @@ public:
 
     RTree &insert(const Range<ItemRef> &items) {
         for (const ItemRef &item : items)
-            insert_over(item, item.bbox());
+            insert_over(item.raw(), item->bbox());
         return *this;
     }
 

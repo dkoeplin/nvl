@@ -66,7 +66,7 @@ public:
     Actor spawn_by(const Actor src, Args &&...args) {
         Actor actor = entities_.template emplace<T>(std::forward<Args>(args)...);
         if (Entity<N> *entity = actor.template dyn_cast<Entity<N>>()) {
-            awake_.insert(entity);
+            awake_.emplace(entity);
             entity->bind(this);
         }
         if (src != nullptr) {

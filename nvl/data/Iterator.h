@@ -69,7 +69,7 @@ struct Iterator {
 
     Iterator &operator=(const Iterator &rhs) = default;
 
-    Iterator copy() const { return Iterator(ptr_->copy()); }
+    Iterator copy() const { return ptr_ ? Iterator(ptr_->copy()) : Iterator(); }
 
     /// Returns an immutable reference to the current value.
     pure const Value &operator*() const

@@ -17,7 +17,7 @@ public:
 
     explicit Random(const U64 seed) : seed_(seed), engine_(seed) {}
 
-    template <typename I>
+    /*template <typename I>
         requires std::is_integral_v<I>
     expand I uniform(const I min, const I max) {
         return std::uniform_int_distribution<I>(min, max)(engine_);
@@ -27,7 +27,7 @@ public:
 
     expand double normal(const double mean, const double stddev) {
         return std::normal_distribution(mean, stddev)(engine_);
-    }
+    }*/
 
     template <typename V, typename I, typename Gen = RandomGen<V>>
     expand V uniform(I min, I max);
