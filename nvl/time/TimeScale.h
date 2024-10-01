@@ -21,7 +21,7 @@ struct TimeScale {
     /// All units for time scales.
     static constexpr std::string_view unit[kNScales]{"ns", "us", "ms", "sec", "min", "hr", "days"};
 
-    /// Defines the conversion factor from the current time scale to the next.
+    /// Defines the conversion factor from the current timescale to the next.
     static constexpr U64 divisors[kNScales]{1000, 1000, 1000, 60, 60, 24, 1};
 
     constexpr TimeScale() = default;

@@ -21,6 +21,7 @@ public:
     class_tag(World<N>, AbstractActor);
 
     struct Params {
+        Params() {}
         U64 terminal_velocity = 53; // meters/sec (default is about 120mph)
         U64 gravity_accel = 10;     // meters/sec^2
         I64 maximum_y = 1e3;        // meters -- down is positive
@@ -43,7 +44,7 @@ public:
     pure static bool is_up(const U64 dim, const Dir dir) { return dim == kVerticalDim && dir == Dir::Neg; }
     pure static bool is_down(const U64 dim, const Dir dir) { return dim == kVerticalDim && dir == Dir::Pos; }
 
-    explicit World(Params params)
+    explicit World(Params params = Params())
         : kGravityAccel(params.gravity_accel * kPixelsPerMeter * kMillisPerTick * kMillisPerTick / 1e6),
           kMaxVelocity(params.terminal_velocity * kMillisPerTick * kPixelsPerMeter / 1e3),
           kGravity(Pos<N>::unit(kVerticalDim, kGravityAccel)), kMaxY(params.maximum_y * kPixelsPerMeter) {}
@@ -95,6 +96,7 @@ public:
         return actor;
     }
 
+    Status tick() { return tick({}); }
     Status tick(const List<Message> &messages) override;
     void draw(Draw &, const I64) override {}
 

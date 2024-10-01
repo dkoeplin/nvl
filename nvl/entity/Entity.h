@@ -145,13 +145,13 @@ Pos<N> Entity<N>::next_velocity() const {
         if (v != 0 || a != 0) {
             for (const auto &part : parts()) {
                 const Box<N> box = part.bbox();
-                const U64 x = (v >= 0) ? box.min[i] : box.max[i];
+                const I64 x = (v >= 0) ? box.min[i] : box.max[i];
                 const Box<N> trj = box.with(i, x, x + v_next);
                 for (Actor actor : world_->entities(trj)) {
                     if (auto *entity = actor.dyn_cast<Entity<N>>(); entity && entity != this) {
                         for (const auto &other : entity->parts(trj)) {
                             const I64 bound = (v >= 0) ? other.bbox().min[i] - 1 : other.bbox().max[i] + 1;
-                            v_next = (v >= 0) ? std::min(v_next, bound) : std::max(v_next, bound);
+                            v_next = (v >= 0) ? std::min(v_next, bound - x) : std::max(v_next, bound - x);
                         }
                     }
                 }
@@ -217,7 +217,7 @@ Status Entity<N>::tick(const List<Message> &messages) {
     Status status = receive(messages);
     return_if(status == Status::kDied, status);
 
-    if (!has_below()) {
+    if (falls() && !has_below()) {
         accel_ += world_->kGravity;
     }
 

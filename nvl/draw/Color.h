@@ -9,6 +9,7 @@ namespace nvl {
 
 struct Color {
     constexpr Color() = default;
+    explicit constexpr Color(const U64 hex) : value(hex) {}
     explicit constexpr Color(const U64 r, const U64 g, const U64 b) : Color(r, g, b, 0xFF) {}
     explicit constexpr Color(const U64 r, const U64 g, const U64 b, const U64 a) {
         value = ((a << 24) & 0xFF) | ((r << 16) & 0xFF) | ((g << 8) & 0xFF) | ((b << 0) & 0xFF);
