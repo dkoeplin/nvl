@@ -74,6 +74,15 @@ public:
         }
     }
 
+    Actor reify(Actor actor) {
+        Actor result = entities_.insert(actor);
+        if (Entity<N> *entity = result.template dyn_cast<Entity<N>>()) {
+            awake_.emplace(entity);
+            entity->bind(this);
+        }
+        return result;
+    }
+
     template <typename T, typename... Args>
     Actor spawn(Args &&...args) {
         Actor actor = entities_.template emplace<T>(std::forward<Args>(args)...);

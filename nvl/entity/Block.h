@@ -38,6 +38,8 @@ public:
 
     pure bool falls() const override { return material_->falls; }
 
+    pure Material material() const { return material_; }
+
 protected:
     using Component = typename Entity<N>::Component;
     Status broken(const List<Component> &components) override {

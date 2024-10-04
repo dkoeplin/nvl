@@ -8,74 +8,65 @@
 
 namespace nvl {
 
-namespace {
-
 constexpr size_t kPacketSize = sizeof(U64);
 static_assert((kPacketSize & (kPacketSize - 1)) == 0, "Size must be 2^i.");
 
-// Implementation adapted from:
-// https://github.com/google/highwayhash/blob/master/highwayhash/sip_hash.h
-// https://github.com/google/highwayhash/blob/master/highwayhash/state_helpers.h
-template <int kUpdateIters, int kFinalizeIters>
-class SipHash {
-public:
-    explicit SipHash(const U64 key[2]) {
-        v0 = 0x736f6d6570736575ull ^ key[0];
-        v1 = 0x646f72616e646f6dull ^ key[1];
-        v2 = 0x6c7967656e657261ull ^ key[0];
-        v3 = 0x7465646279746573ull ^ key[1];
+template <int U, int F>
+SipHash<U, F>::SipHash(const U64 key[2]) {
+    v0 = 0x736f6d6570736575ull ^ key[0];
+    v1 = 0x646f72616e646f6dull ^ key[1];
+    v2 = 0x6c7967656e657261ull ^ key[0];
+    v3 = 0x7465646279746573ull ^ key[1];
+}
+
+template <int U, int F>
+void SipHash<U, F>::update(const char *bytes) {
+    U64 packet;
+    std::memcpy(&packet, bytes, sizeof(packet));
+
+    v3 ^= packet;
+
+    compress(U);
+
+    v0 ^= packet;
+}
+
+template <int U, int F>
+U64 SipHash<U, F>::finalize() {
+    // Mix in bits to avoid leaking the key if all packets were zero.
+    v2 ^= 0xFF;
+
+    compress(F);
+
+    return (v0 ^ v1) ^ (v2 ^ v3);
+}
+
+template <int U, int F>
+void SipHash<U, F>::compress(U64 rounds) {
+    for (size_t i = 0; i < rounds; ++i) {
+        // ARX network: add, rotate, exclusive-or.
+        v0 += v1;
+        v2 += v3;
+        v1 = rotate_left<13>(v1);
+        v3 = rotate_left<16>(v3);
+        v1 ^= v0;
+        v3 ^= v2;
+
+        v0 = rotate_left<32>(v0);
+
+        v2 += v1;
+        v0 += v3;
+        v1 = rotate_left<17>(v1);
+        v3 = rotate_left<21>(v3);
+        v1 ^= v2;
+        v3 ^= v0;
+
+        v2 = rotate_left<32>(v2);
     }
+}
 
-    expand void update(const char *bytes) {
-        U64 packet;
-        std::memcpy(&packet, bytes, sizeof(packet));
-
-        v3 ^= packet;
-
-        compress<kUpdateIters>();
-
-        v0 ^= packet;
-    }
-
-    expand U64 finalize() {
-        // Mix in bits to avoid leaking the key if all packets were zero.
-        v2 ^= 0xFF;
-
-        compress<kFinalizeIters>();
-
-        return (v0 ^ v1) ^ (v2 ^ v3);
-    }
-
-private:
-    template <size_t rounds>
-    expand void compress() {
-        for (size_t i = 0; i < rounds; ++i) {
-            // ARX network: add, rotate, exclusive-or.
-            v0 += v1;
-            v2 += v3;
-            v1 = rotate_left<13>(v1);
-            v3 = rotate_left<16>(v3);
-            v1 ^= v0;
-            v3 ^= v2;
-
-            v0 = rotate_left<32>(v0);
-
-            v2 += v1;
-            v0 += v3;
-            v1 = rotate_left<17>(v1);
-            v3 = rotate_left<21>(v3);
-            v1 ^= v2;
-            v3 ^= v0;
-
-            v2 = rotate_left<32>(v2);
-        }
-    }
-
-    U64 v0;
-    U64 v1;
-    U64 v2;
-    U64 v3;
-};
+template struct SipHash<2, 4>;
+template struct SipHash<1, 3>;
 
 using SipHash24 = SipHash<2, 4>;
 using SipHash13 = SipHash<1, 3>;
@@ -119,8 +110,8 @@ void padded_update(const U64 size, const char *remaining_bytes, const U64 remain
 }
 
 // Updates hash state for every whole packet, and once more for the final padded packet.
-template <class State>
-void update_state(const char *bytes, const U64 size, State *state) {
+template <int U, int F>
+void update_state(const char *bytes, const U64 size, SipHash<U, F> *state) {
     // Feed entire packets.
     const U64 remainder = size & (kPacketSize - 1);
     const U64 truncated_size = size - remainder;
@@ -145,8 +136,6 @@ pure expand U64 compute_hash(const U64 key[2], const char *bytes, const U64 size
     update_state(bytes, size, &state);
     return state.finalize();
 }
-
-} // namespace
 
 // "key" is a secret 128-bit key unknown to attackers.
 // "bytes" is the data to hash; ceil(size / 8) * 8 bytes are read.
