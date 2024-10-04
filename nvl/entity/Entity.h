@@ -50,13 +50,6 @@ public:
         return relative.parts().all([](const Ref<Part<N>> part) { return part->material->falls; });
     }
 
-    void draw(Draw &draw, const I64 highlight) override {
-        Draw::Offset offset(draw, loc());
-        for (Ref<Part<N>> part : parts_.relative.items()) {
-            part->draw(draw, highlight);
-        }
-    }
-
     Status tick(const List<Message> &messages) override;
 
     void bind(World<N> *world) { world_ = world; }

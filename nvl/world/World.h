@@ -9,6 +9,7 @@
 #include "nvl/message/Created.h"
 #include "nvl/message/Destroy.h"
 #include "nvl/message/Message.h"
+#include "nvl/tool/Tool.h"
 
 namespace nvl {
 
@@ -98,7 +99,7 @@ public:
 
     Status tick() { return tick({}); }
     Status tick(const List<Message> &messages) override;
-    void draw(Draw &, const I64) override {}
+    void draw(Window &, const U64) const override {}
 
     mutable Random random;
 

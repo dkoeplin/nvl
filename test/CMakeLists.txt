@@ -8,6 +8,8 @@ add_custom_target(all-gtests COMMAND ${CMAKE_CTEST_COMMAND} USES_TERMINAL)
 # Hack placeholder to give Clion a target executable to run when executing the above custom target.
 add_executable(test-end ${CMAKE_CURRENT_SOURCE_DIR}/util/Test.cpp)
 
+find_package(GoogleTest REQUIRED)
+
 function(add_gtest test_file)
     get_filename_component(test_name "${test_file}" NAME_WE)
     add_executable(${test_name} ${test_file})

@@ -1,6 +1,5 @@
 #pragma once
 
-#include "nvl/draw/Draw.h"
 #include "nvl/geo/Box.h"
 #include "nvl/macros/Aliases.h"
 #include "nvl/macros/Pure.h"
@@ -23,10 +22,6 @@ public:
             result.emplace_back(rest, material, health);
         }
         return result;
-    }
-
-    void draw(Draw &, const I64) const {
-        // TODO: Stub
     }
 
     Box<N> box;

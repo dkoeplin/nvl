@@ -49,7 +49,6 @@ TEST(TestWorld, fall_out_of_bounds) {
 
 TEST(TestWorld, idle_when_not_moving) {
     World<2> world;
-
     {
         constexpr Box<2> box({0, 0}, {10, 2});
         const auto material = Material::get<Bulwark>();

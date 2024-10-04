@@ -11,13 +11,13 @@
 namespace nvl {
 
 struct Actor;
-class Draw;
+class Window;
 struct Message;
 
 abstract struct AbstractActor : Castable<Actor, AbstractActor>::BaseClass {
     class_tag(AbstractActor);
     virtual Status tick(const List<Message> &messages) = 0;
-    virtual void draw(Draw &draw, I64 highlight) = 0;
+    virtual void draw(Window &window, U64 highlight) const = 0;
 };
 
 struct Actor final : Castable<Actor, AbstractActor> {

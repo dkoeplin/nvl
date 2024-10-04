@@ -2,6 +2,7 @@
 
 #include <utility>
 
+#include "nvl/draw/Window.h"
 #include "nvl/entity/Entity.h"
 #include "nvl/macros/Aliases.h"
 #include "nvl/reflect/ClassTag.h"
@@ -23,14 +24,16 @@ public:
         }
     }
 
-    void draw(Draw &draw, const I64 highlight) override {
-        Draw::Offset offset(draw, this->loc());
+    void draw(Window &window, const U64 highlight) const override {
+        const auto color = material_->color.highlight(highlight);
+        Window::Offset offset(window, this->loc());
         for (const Ref<Part<N>> &part : this->relative.parts()) {
-            part->draw(draw, highlight);
+            window.fill_rectangle(color, part->box);
         }
-        // for (const Ref<Edge<N>> &edge : this->relative.edges()) {
-        // TODO: Rectangles
-        // }
+        const auto edge_color = color.highlight(Color::kDarker);
+        for (const Ref<Edge<N>> &edge : this->relative.edges()) {
+            window.line_rectangle(edge_color, edge->bbox());
+        }
     }
 
     pure bool falls() const override { return material_->falls; }

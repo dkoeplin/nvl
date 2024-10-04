@@ -4,27 +4,54 @@
 #include "nvl/macros/Aliases.h"
 #include "nvl/macros/Pure.h"
 #include "nvl/math/Random.h"
+#include "raylib.h"
 
 namespace nvl {
 
 struct Color {
+    static constexpr U64 kLighter = 1462;
+    static constexpr U64 kNormal = 1024;
+    static constexpr U64 kDarker = 763;
+
+    static const Color kBlack;
+    static const Color kRed;
+    static const Color kGreen;
+    static const Color kBlue;
+    static const Color kWhite;
+
     constexpr Color() = default;
-    explicit constexpr Color(const U64 hex) : value(hex) {}
+    constexpr static Color Color24b(const U64 hex) { return Color((hex >> 16) & 0xFF, (hex >> 8) & 0xFF, hex & 0xFF); }
     explicit constexpr Color(const U64 r, const U64 g, const U64 b) : Color(r, g, b, 0xFF) {}
-    explicit constexpr Color(const U64 r, const U64 g, const U64 b, const U64 a) {
-        value = ((a << 24) & 0xFF) | ((r << 16) & 0xFF) | ((g << 8) & 0xFF) | ((b << 0) & 0xFF);
+    explicit constexpr Color(const U64 r, const U64 g, const U64 b, const U64 a) : color32(r, g, b, a) {}
+
+    implicit Color(const ::Color color) : color32(color) {}
+    implicit operator const ::Color() const { return color32; }
+
+    pure constexpr U64 r() const { return color32.r; }
+    pure constexpr U64 g() const { return color32.g; }
+    pure constexpr U64 b() const { return color32.b; }
+    pure constexpr U64 a() const { return color32.a; }
+
+    /// Returns a "highlighted" version of this color that scales the R, G, and B channels by (highlight / 1024).
+    pure constexpr Color highlight(const U64 highlight) const {
+        return Color(std::min((r() * highlight) >> 10, U64(0xFF)), std::min((g() * highlight) >> 10, U64(0xFF)),
+                     std::min((b() * highlight) >> 10, a()), U64(0xFF));
     }
 
-    pure constexpr U64 a() const { return (value >> 24) & 0xFF; }
-    pure constexpr U64 r() const { return (value >> 16) & 0xFF; }
-    pure constexpr U64 g() const { return (value >> 8) & 0xFF; }
-    pure constexpr U64 b() const { return (value >> 0) & 0xFF; }
+    pure constexpr bool operator==(const Color &rhs) const {
+        return color32.r == rhs.color32.r && color32.g == rhs.color32.g && color32.b == rhs.color32.b &&
+               color32.a == rhs.color32.a;
+    }
+    pure constexpr bool operator!=(const Color &rhs) const { return !(*this == rhs); }
 
-    pure constexpr bool operator==(const Color &rhs) const { return value == rhs.value; }
-    pure constexpr bool operator!=(const Color &rhs) const { return value != rhs.value; }
-
-    U64 value = 0;
+    ::Color color32;
 };
+
+constexpr Color Color::kBlack = Color(0, 0, 0);
+constexpr Color Color::kRed = Color(0xFF, 0, 0);
+constexpr Color Color::kGreen = Color(0, 0xFF, 0);
+constexpr Color Color::kBlue = Color(0, 0, 0xFF);
+constexpr Color Color::kWhite = Color(0xFF, 0xFF, 0xFF);
 
 template <>
 struct nvl::RandomGen<Color> {
@@ -48,5 +75,5 @@ struct nvl::RandomGen<Color> {
 
 template <>
 struct std::hash<nvl::Color> {
-    pure U64 operator()(const nvl::Color &color) const noexcept { return nvl::sip_hash(color.value); }
+    pure U64 operator()(const nvl::Color &color) const noexcept { return nvl::sip_hash(color.color32); }
 };

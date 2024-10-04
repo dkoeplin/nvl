@@ -9,17 +9,17 @@ namespace {
 using nvl::AbstractActor;
 using nvl::Actor;
 using nvl::Box;
-using nvl::Draw;
 using nvl::List;
 using nvl::Message;
 using nvl::Status;
+using nvl::Window;
 
 struct SimpleActor final : AbstractActor {
     class_tag(SimpleActor, AbstractActor);
     explicit SimpleActor(const Box<2> &box) : box_(box) {}
 
     Status tick(const List<Message> &) override { return Status::kNone; }
-    void draw(Draw &, I64) override {}
+    void draw(Window &, U64) const override {}
 
     Box<2> box_;
 };
