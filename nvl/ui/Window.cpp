@@ -1,7 +1,8 @@
-#include "nvl/draw/Window.h"
+#include "nvl/ui/Window.h"
 
 #include "nvl/draw/Color.h"
 #include "nvl/geo/Box.h"
+#include "nvl/ui/InputEvent.h"
 #include "raylib.h"
 
 namespace nvl {
@@ -43,9 +44,48 @@ Window::Window(const std::string_view title, const Pos<2> shape) {
 Window::~Window() { CloseWindow(); }
 
 void Window::draw() {
+    BeginDrawing();
     ClearBackground(RAYWHITE);
-    DrawText("TEXT!", 190, 200, 20, BLACK);
+    for (auto &child : children_) {
+        child->draw_all();
+    }
     DrawFPS(10, 10);
+    EndDrawing();
+}
+
+void Window::tick() {
+    List<InputEvent> events;
+    while (auto key = GetKeyPressed()) {
+        pressed_keys_.emplace(static_cast<Key::Value>(key));
+        events.push_back(InputEvent::get<KeyDown>(key));
+    }
+    for (auto button : Mouse::kButtons) {
+        if (IsMouseButtonPressed(button)) {
+            pressed_mouse_.emplace(button);
+            events.push_back(InputEvent::get<MouseDown>(button));
+        }
+        if (IsMouseButtonReleased(button)) {
+            pressed_mouse_.remove(button);
+            events.push_back(InputEvent::get<MouseUp>(button));
+        }
+    }
+    List<Key> released;
+    for (auto key : pressed_keys_) {
+        if (IsKeyReleased(key)) {
+            released.push_back(key);
+            events.push_back(InputEvent::get<KeyUp>(key));
+        }
+    }
+    pressed_keys_.remove(released.range());
+
+    prev_mouse_ = curr_mouse_;
+    curr_mouse_ = {GetMouseX(), GetMouseY()};
+    if (prev_mouse_ != curr_mouse_) {
+        events.push_back(InputEvent::get<MouseMove>(pressed_mouse_));
+    }
+    for (auto iter = children_.begin(); !events.empty() && iter != children_.end(); ++iter) {
+        events = (*iter)->tick_all(events);
+    }
 }
 
 void Window::line_rectangle(const Color &color, const Box<2> &box) {
@@ -59,5 +99,7 @@ void Window::fill_rectangle(const Color &color, const Box<2> &box) {
 }
 
 bool Window::should_close() const { return WindowShouldClose(); }
+I64 Window::height() const { return GetScreenHeight(); }
+I64 Window::width() const { return GetScreenWidth(); }
 
 } // namespace nvl

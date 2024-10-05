@@ -34,8 +34,6 @@ add_library(nvl SHARED
         nvl/data/SipHash.h
         nvl/data/UnionFind.h
         nvl/draw/Color.h
-        nvl/draw/Window.cpp
-        nvl/draw/Window.h
         nvl/entity/Entity.h
         nvl/geo/At.h
         nvl/geo/Box.h
@@ -73,8 +71,11 @@ add_library(nvl SHARED
         nvl/time/Duration.cpp
         nvl/time/Duration.h
         nvl/time/TimeScale.h
-        nvl/ui/UserInterface.cpp
-        nvl/ui/UserInterface.h
+        nvl/ui/InputEvent.h
+        nvl/ui/Screen.cpp
+        nvl/ui/Screen.h
+        nvl/ui/Window.cpp
+        nvl/ui/Window.h
         nvl/world/World.h
 )
 

@@ -24,13 +24,13 @@ public:
         }
     }
 
-    void draw(Window &window, const U64 highlight) const override {
-        const auto color = material_->color.highlight(highlight);
+    void draw(Window &window, const Color::Options &options) const override {
+        const auto color = material_->color.highlight(options);
         Window::Offset offset(window, this->loc());
         for (const Ref<Part<N>> &part : this->relative.parts()) {
             window.fill_rectangle(color, part->box);
         }
-        const auto edge_color = color.highlight(Color::kDarker);
+        const auto edge_color = color.highlight({.scale = Color::kDarker});
         for (const Ref<Edge<N>> &edge : this->relative.edges()) {
             window.line_rectangle(edge_color, edge->bbox());
         }

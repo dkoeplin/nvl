@@ -1,11 +1,10 @@
 #pragma once
 
-#include "nvl/geo/Pos.h"
 #include "nvl/macros/Abstract.h"
 #include "nvl/macros/Aliases.h"
 #include "nvl/macros/Pure.h"
 #include "nvl/reflect/Castable.h"
-#include "nvl/ui/UserInterface.h"
+#include "nvl/ui/Screen.h"
 
 namespace nvl {
 
@@ -16,11 +15,11 @@ template <U64 N>
 class World;
 
 template <U64 N>
-abstract class AbstractTool : public UserInterface,
+abstract class AbstractTool : public AbstractScreen,
                               public Castable<Tool<N>, AbstractTool<N>, std::shared_ptr<Tool<N>>>::BaseClass {
 public:
-    class_tag(AbstractTool);
-    explicit AbstractTool(World<N> *world) : world_(world) {}
+    class_tag(AbstractTool, AbstractScreen);
+    explicit AbstractTool(Window *window, World<N> *world) : AbstractScreen(window), world_(world) {}
 
 protected:
     World<N> *world_;

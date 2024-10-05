@@ -12,6 +12,10 @@ struct Color {
     static constexpr U64 kLighter = 1462;
     static constexpr U64 kNormal = 1024;
     static constexpr U64 kDarker = 763;
+    struct Options {
+        U64 scale = kNormal; // Scales all color channels by (scale/1024)
+        U64 alpha = kNormal; // Scales the alpha channel by (alpha/1024)
+    };
 
     static const Color kBlack;
     static const Color kRed;
@@ -33,9 +37,12 @@ struct Color {
     pure constexpr U64 a() const { return color32.a; }
 
     /// Returns a "highlighted" version of this color that scales the R, G, and B channels by (highlight / 1024).
-    pure constexpr Color highlight(const U64 highlight) const {
-        return Color(std::min((r() * highlight) >> 10, U64(0xFF)), std::min((g() * highlight) >> 10, U64(0xFF)),
-                     std::min((b() * highlight) >> 10, a()), U64(0xFF));
+    pure constexpr Color highlight(const Options options) const {
+        const U64 r = std::min((this->r() * options.scale) >> 10, U64(0xFF));
+        const U64 g = std::min((this->g() * options.scale) >> 10, U64(0xFF));
+        const U64 b = std::min((this->b() * options.scale) >> 10, U64(0xFF));
+        const U64 a = std::min((this->a() * options.alpha) >> 10, U64(0xFF));
+        return Color(r, g, b, a);
     }
 
     pure constexpr bool operator==(const Color &rhs) const {

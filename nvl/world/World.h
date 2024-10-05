@@ -9,7 +9,7 @@
 #include "nvl/message/Created.h"
 #include "nvl/message/Destroy.h"
 #include "nvl/message/Message.h"
-#include "nvl/tool/Tool.h"
+#include "nvl/ui/Screen.h"
 
 namespace nvl {
 
@@ -17,9 +17,9 @@ template <U64 N>
 class Entity;
 
 template <U64 N>
-class World : public AbstractActor {
+class World : public AbstractScreen {
 public:
-    class_tag(World<N>, AbstractActor);
+    class_tag(World<N>, AbstractScreen);
 
     struct Params {
         Params() {}
@@ -45,10 +45,13 @@ public:
     pure static bool is_up(const U64 dim, const Dir dir) { return dim == kVerticalDim && dir == Dir::Neg; }
     pure static bool is_down(const U64 dim, const Dir dir) { return dim == kVerticalDim && dir == Dir::Pos; }
 
-    explicit World(Params params = Params())
-        : kGravityAccel(params.gravity_accel * kPixelsPerMeter * kMillisPerTick * kMillisPerTick / 1e6),
+    explicit World(Window *window, Params params = Params())
+        : AbstractScreen(window),
+          kGravityAccel(params.gravity_accel * kPixelsPerMeter * kMillisPerTick * kMillisPerTick / 1e6),
           kMaxVelocity(params.terminal_velocity * kMillisPerTick * kPixelsPerMeter / 1e3),
           kGravity(Pos<N>::unit(kVerticalDim, kGravityAccel)), kMaxY(params.maximum_y * kPixelsPerMeter) {}
+
+    pure Pos<N> mouse_to_world(const Pos<2> &mouse_coord) const { return Pos<N>::zero; }
 
     pure Range<Actor> entities(const Pos<N> &pos) { return entities_[pos]; }
     pure Range<Actor> entities(const Box<N> &box) { return entities_[box]; }
@@ -106,9 +109,8 @@ public:
         return actor;
     }
 
-    Status tick() { return tick({}); }
-    Status tick(const List<Message> &messages) override;
-    void draw(Window &, const U64) const override {}
+    void tick() override;
+    void draw() override;
 
     mutable Random random;
 
@@ -124,7 +126,7 @@ protected:
 };
 
 template <U64 N>
-Status World<N>::tick(const List<Message> &) {
+void World<N>::tick() {
     // Wake any entities with pending messages
     for (auto &[actor, _] : messages_) {
         awake_.emplace(actor);
@@ -140,8 +142,10 @@ Status World<N>::tick(const List<Message> &) {
     awake_.remove(idled.values());
     entities_.remove(died_.values());
     died_.clear();
-    return Status::kNone;
 }
+
+template <U64 N>
+void World<N>::draw() {}
 
 template <U64 N>
 void World<N>::tick_entity(Set<Actor> &idled, Ref<Entity<N>> entity) {

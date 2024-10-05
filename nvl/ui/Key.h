@@ -117,10 +117,12 @@ struct Key {
         KP_Enter = 335,    // Key: Keypad Enter
         KP_Equal = 336,    // Key: Keypad =
         // Android key buttons
-        Back = 4,       // Key: Android back button
-        Menu = 82,      // Key: Android menu button
-        VolumeUp = 24,  // Key: Android volume up button
-        VolumeDown = 25 // Key: Android volume down button
+        Back = 4,        // Key: Android back button
+        Menu = 82,       // Key: Android menu button
+        VolumeUp = 24,   // Key: Android volume up button
+        VolumeDown = 25, // Key: Android volume down button
+
+        Any = 1024
     };
     implicit Key(const Value value) : value(value) {}
     implicit operator Value() const { return value; }

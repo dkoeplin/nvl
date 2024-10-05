@@ -14,7 +14,8 @@ struct Mouse {
         Extra = 4,    // Mouse button extra (advanced mouse device)
         Forward = 5,  // Mouse button forward (advanced mouse device)
         Backward = 6, // Mouse button back (advanced mouse device)
-        kNumButtons = 7
+        kNumButtons = 7,
+        Any = 8
     };
     static constexpr Value kButtons[kNumButtons] = {Left, Right, Middle, Side, Extra, Forward, Backward};
 

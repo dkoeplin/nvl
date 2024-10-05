@@ -1,35 +1,16 @@
-#include "nvl/draw/Window.h"
 #include "nvl/entity/Entity.h"
-#include "nvl/tool/BlockCreator.h"
-#include "nvl/ui/UserInterface.h"
+#include "nvl/tool/ToolBelt.h"
+#include "nvl/ui/Window.h"
 #include "nvl/world/World.h"
 #include "raylib.h"
 
-namespace nvl {
-
-class Interface : UserInterface {
-public:
-    Interface() : UserInterface() {
-        tools_ = {
-            Tool<2>::get<BlockCreator<2>>(),
-        };
-    }
-
-private:
-    pure Tool<2> tool() const { return tools_[current_]; }
-    List<Tool<2>> tools_;
-    U64 current_ = 0;
-};
-} // namespace nvl
-
 int main() {
     nvl::Window window("App", {1000, 1000});
-    nvl::World<2> world;
-    nvl::Interface interface;
+    window.open<nvl::World<2>>();
+    window.open<nvl::ToolBelt<2>>();
+
     while (!window.should_close()) {
-        BeginDrawing();
+        window.tick();
         window.draw();
-        world.draw(window, nvl::Color::kNormal);
-        EndDrawing();
     }
 }
