@@ -9,23 +9,16 @@
 namespace nvl {
 
 template <U64 N>
-struct Tool;
-
-template <U64 N>
 class World;
 
 template <U64 N>
-abstract class AbstractTool : public AbstractScreen,
-                              public Castable<Tool<N>, AbstractTool<N>, std::shared_ptr<Tool<N>>>::BaseClass {
+abstract class Tool : public AbstractScreen {
 public:
-    class_tag(AbstractTool, AbstractScreen);
-    explicit AbstractTool(Window *window, World<N> *world) : AbstractScreen(window), world_(world) {}
+    class_tag(Tool, AbstractScreen);
+    explicit Tool(Window *window, World<N> *world) : AbstractScreen(window), world_(world) {}
 
 protected:
     World<N> *world_;
 };
-
-template <U64 N>
-struct Tool final : Castable<Tool<N>, AbstractTool<N>, std::shared_ptr<Tool<N>>> {};
 
 } // namespace nvl

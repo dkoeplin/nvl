@@ -1,12 +1,10 @@
 #pragma once
 
 #include "nvl/actor/Actor.h"
-#include "nvl/data/Maybe.h"
 #include "nvl/draw/Color.h"
 #include "nvl/entity/Block.h"
 #include "nvl/geo/Box.h"
 #include "nvl/geo/Pos.h"
-#include "nvl/macros/Aliases.h"
 #include "nvl/material/Material.h"
 #include "nvl/material/TestMaterial.h"
 #include "nvl/tool/Tool.h"
@@ -14,42 +12,43 @@
 
 namespace nvl {
 
-class BlockCreator final : public AbstractTool<2> {
+class BlockCreator final : public Tool<2> {
 public:
-    class_tag(BlockCreator, AbstractTool<2>);
-    explicit BlockCreator(Window *window, World<2> *world) : AbstractTool(window, world) {
-        on_mouse_down[Mouse::Left] = [&] {
-            auto color = world_->random.uniform<Color>(0, 255);
-            auto material = Material::get<TestMaterial>(color);
-            pending_ = Actor::get<Block<2>>(window->mouse_coord(), Box<2>::unit(Pos<2>::zero), material);
+    class_tag(BlockCreator, Tool<2>);
+    explicit BlockCreator(Window *window, World<2> *world) : Tool(window, world) {
+        on_mouse_down[Mouse::Left] = [this] {
+            const auto color = world_->random.uniform<Color>(0, 255);
+            const auto material = Material::get<TestMaterial>(color);
+            init_ = world_->mouse_to_world(window_->mouse_coord());
+            pending_ = Actor::get<Block<2>>(Box(init_, init_), material);
         };
-        on_mouse_move[{Mouse::Left}] = [&] {
-            if (pending_.has_value()) {
-                const Block<2> &block = *pending_->dyn_cast<Block<2>>();
-                const Pos<2> init = block.loc();
-                if (world_->entities({init, window->mouse_coord()}).empty()) {
-                    const Material material = block.material();
-                    pending_ = Actor::get<Block<2>>(init, Box(Pos<2>::zero, window->mouse_coord() - init), material);
+        on_mouse_move[{Mouse::Left}] = [this] {
+            if (const auto *block = pending_.dyn_cast<Block<2>>()) {
+                const Pos<2> pt = world_->mouse_to_world(window_->mouse_coord());
+                const Box box(init_, pt);
+                if (world_->entities(box).empty()) {
+                    pending_ = Actor::get<Block<2>>(box, block->material());
                 }
             }
         };
-        on_mouse_up[Mouse::Left] = [&] {
-            if (pending_.has_value()) {
-                world_->reify(*pending_);
+        on_mouse_up[Mouse::Left] = [this] {
+            if (pending_) {
+                world_->reify(pending_);
+                pending_ = nullptr;
             }
-            pending_ = None;
         };
     }
 
     void tick() override {}
     void draw() override {
-        if (pending_.has_value()) {
-            (*pending_)->draw(*window_, {.alpha = Color::kLighter});
+        if (pending_) {
+            pending_->draw(*window_, {.alpha = Color::kLighter});
         }
     }
 
 private:
-    Maybe<Actor> pending_;
+    Actor pending_;
+    Pos<2> init_ = Pos<2>::zero;
 };
 
 } // namespace nvl

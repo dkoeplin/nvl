@@ -7,11 +7,11 @@
 
 namespace nvl {
 
-class BlockBreaker final : AbstractTool<2> {
+class BlockBreaker final : Tool<2> {
 public:
-    class_tag(BlockBreaker, AbstractTool<2>);
-    explicit BlockBreaker(Window *window, World<2> *world) : AbstractTool(window, world) {
-        on_mouse_down[Mouse::Left] = on_mouse_move[{Mouse::Left}] = [&] {
+    class_tag(BlockBreaker, Tool<2>);
+    explicit BlockBreaker(Window *window, World<2> *world) : Tool(window, world) {
+        on_mouse_down[Mouse::Left] = on_mouse_move[{Mouse::Left}] = [this] {
             const Pos<2> pt = world_->mouse_to_world(window_->mouse_coord());
             const Box<2> box(pt - 20, pt + 20);
             const Range<Actor> entities = world_->entities(box);

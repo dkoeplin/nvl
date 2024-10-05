@@ -118,10 +118,10 @@ public:
     };
 
     BRTree() = default;
-    BRTree(Pos<N> loc, std::initializer_list<Item> items) : Parent(items), loc(loc) {}
-    BRTree(Pos<N> loc, std::initializer_list<ItemRef> items) : Parent(items), loc(loc) {}
-    explicit BRTree(Pos<N> loc, Range<Item> items) : Parent(items), loc(loc) {}
-    explicit BRTree(Pos<N> loc, Range<ItemRef> items) : Parent(items), loc(loc) {}
+    BRTree(std::initializer_list<Item> items) : Parent(items) {}
+    BRTree(std::initializer_list<ItemRef> items) : Parent(items) {}
+    explicit BRTree(Range<Item> items) : Parent(items) {}
+    explicit BRTree(Range<ItemRef> items) : Parent(items) {}
 
     BRTree &insert(const Item &item) {
         this->items_.insert(item);
@@ -220,7 +220,7 @@ public:
         BRTree &tree;
     } relative = Relative(*this);
 
-    Pos<N> loc = Pos<N>::fill(0);
+    Pos<N> loc = Pos<N>::zero;
 
 private:
     friend struct Relative;

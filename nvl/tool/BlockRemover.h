@@ -1,7 +1,6 @@
 #pragma once
 
 #include "nvl/actor/Actor.h"
-#include "nvl/data/Maybe.h"
 #include "nvl/message/Destroy.h"
 #include "nvl/tool/Tool.h"
 #include "nvl/ui/Window.h"
@@ -9,33 +8,33 @@
 
 namespace nvl {
 
-class BlockRemover final : public AbstractTool<2> {
+class BlockRemover final : public Tool<2> {
 public:
-    class_tag(BlockRemover, AbstractTool<2>);
-    explicit BlockRemover(Window *window, World<2> *world) : AbstractTool(window, world) {
+    class_tag(BlockRemover, Tool<2>);
+    explicit BlockRemover(Window *window, World<2> *world) : Tool(window, world) {
         // Same action for dragging and moving
-        on_mouse_move[{Mouse::Any}] = on_mouse_move[{}] = [&] {
-            const Pos<2> pos = world_->mouse_to_world(window_->mouse_coord());
-            Range<Actor> entities = world_->entities(pos);
-            hovered_ = entities.empty() ? None : Some(*entities.begin());
+        on_mouse_move[{Mouse::Any}] = on_mouse_move[{}] = [this] {
+            const Pos<2> pt = world_->mouse_to_world(window_->mouse_coord());
+            const Range<Actor> entities = world_->entities(pt);
+            hovered_ = entities.empty() ? nullptr : *entities.begin();
         };
-        on_mouse_up[Mouse::Left] = [&] {
-            if (hovered_.has_value()) {
-                world->send<Destroy>(nullptr, *hovered_);
-                hovered_ = None;
+        on_mouse_up[Mouse::Left] = [this] {
+            if (hovered_) {
+                world_->send<Destroy>(nullptr, hovered_);
+                hovered_ = nullptr;
             }
         };
     }
 
     void tick() override {}
     void draw() override {
-        if (hovered_.has_value()) {
-            (*hovered_)->draw(*window_, {.scale = Color::kLighter});
+        if (hovered_) {
+            hovered_->draw(*window_, {.scale = Color::kLighter});
         }
     }
 
 private:
-    Maybe<Actor> hovered_ = None;
+    Actor hovered_ = nullptr;
 };
 
 } // namespace nvl

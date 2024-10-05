@@ -58,6 +58,12 @@ public:
     void line_rectangle(const Color &color, const Box<2> &box);
     void fill_rectangle(const Color &color, const Box<2> &box);
 
+    /// Draws the given text with the top-left of the text at `pos`.
+    void text(const Color &color, const Pos<2> &pos, U64 font_size, std::string_view text);
+
+    /// Draws the given text with the center of the text at `pos`.
+    void centered_text(const Color &color, const Pos<2> &pos, U64 font_size, std::string_view text);
+
     pure bool should_close() const;
 
     /// Returns the window height in window coordinates.
