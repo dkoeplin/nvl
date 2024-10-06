@@ -65,14 +65,6 @@ void SipHash<U, F>::compress(U64 rounds) {
     }
 }
 
-template struct SipHash<2, 4>;
-template struct SipHash<1, 3>;
-
-using SipHash24 = SipHash<2, 4>;
-using SipHash13 = SipHash<1, 3>;
-
-constexpr U64 kDefaultKey[2] = {0xDEADBEEF, 0xF00DF17E};
-
 // Copies the remaining bytes to a zero-padded buffer, sets the upper byte to
 // size % 256 (always possible because this should only be called if the
 // total size is not a multiple of the packet size) and updates hash state.
@@ -86,8 +78,8 @@ constexpr U64 kDefaultKey[2] = {0xDEADBEEF, 0xF00DF17E};
 //
 // Primary template; the specialization for AVX-2 is faster. Intended as an
 // implementation detail, do not call directly.
-template <class State>
-void padded_update(const U64 size, const char *remaining_bytes, const U64 remaining_size, State *state) {
+template <int U, int F>
+void padded_update(const U64 size, const char *remaining_bytes, const U64 remaining_size, SipHash<U, F> *state) {
     char final_packet[kPacketSize] = {0};
 
     // This layout matches the AVX-2 specialization in highway_tree_hash.h.
@@ -130,24 +122,34 @@ void update_state(const char *bytes, const U64 size, SipHash<U, F> *state) {
 // This function avoids duplicating Update/Finalize in every call site.
 // Callers wanting to combine multiple hashes should repeatedly update_state()
 // and only call State::Finalize once.
-template <class State>
+template <int U, int F>
 pure expand U64 compute_hash(const U64 key[2], const char *bytes, const U64 size) {
-    State state(key);
+    SipHash<U, F> state(key);
     update_state(bytes, size, &state);
     return state.finalize();
 }
+
+template struct SipHash<2, 4>;
+template struct SipHash<1, 3>;
+template void update_state<2, 4>(const char *bytes, U64 size, SipHash<2, 4> *state);
+template void update_state<1, 3>(const char *bytes, U64 size, SipHash<1, 3> *state);
+
+using SipHash24 = SipHash<2, 4>;
+using SipHash13 = SipHash<1, 3>;
+
+constexpr U64 kDefaultKey[2] = {0xDEADBEEF, 0xF00DF17E};
 
 // "key" is a secret 128-bit key unknown to attackers.
 // "bytes" is the data to hash; ceil(size / 8) * 8 bytes are read.
 // Returns a 64-bit hash of the given data bytes, which are swapped on
 // big-endian CPUs so the return value is the same as on little-endian CPUs.
 pure expand U64 sip_hash24(const U64 key[2], const char *bytes, const U64 size) {
-    return compute_hash<SipHash24>(key, bytes, size);
+    return compute_hash<2, 4>(key, bytes, size);
 }
 
 // Round-reduced SipHash version (1 update and 3 finalization rounds).
 pure expand U64 sip_hash13(const U64 key[2], const char *bytes, const U64 size) {
-    return compute_hash<SipHash13>(key, bytes, size);
+    return compute_hash<1, 3>(key, bytes, size);
 }
 
 U64 sip_hash24(const char *bytes, const U64 size) { return sip_hash24(kDefaultKey, bytes, size); }

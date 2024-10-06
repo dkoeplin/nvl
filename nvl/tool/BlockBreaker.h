@@ -7,7 +7,7 @@
 
 namespace nvl {
 
-class BlockBreaker final : Tool<2> {
+class BlockBreaker final : public Tool<2> {
 public:
     class_tag(BlockBreaker, Tool<2>);
     explicit BlockBreaker(Window *window, World<2> *world) : Tool(window, world) {

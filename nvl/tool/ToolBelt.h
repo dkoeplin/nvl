@@ -14,7 +14,7 @@ template <U64 N>
 class World;
 
 template <U64 N>
-class ToolBelt final : AbstractScreen {
+class ToolBelt final : public AbstractScreen {
 public:
     class_tag(ToolBelt, AbstractScreen);
     explicit ToolBelt(Window *window, World<N> *world) : AbstractScreen(window), world_(world) {
@@ -24,11 +24,11 @@ public:
             Screen::get<BlockRemover>(window, world)  // Remover
         };
 
-        children_.push_back(tools_[0]);
+        children_.push_back(tools_[0].shared_ptr());
 
         on_key_down[Key::B] = [this] {
             index_ = (index_ + 1) % tools_.size();
-            children_[0] = tools_[index_];
+            children_[0] = tools_[index_].shared_ptr();
             cooldown_ = 100;
         };
     }
@@ -51,6 +51,6 @@ private:
     List<Screen> tools_;
     U64 index_ = 0;
     U64 cooldown_ = 0;
-}; // namespace nvl
+};
 
 } // namespace nvl

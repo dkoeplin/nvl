@@ -79,8 +79,8 @@ public:
 
     /// Inserts a copy of this entity into the world.
     /// Returns a reference to the resulting copy.
-    Actor reify(const Entity<N> &entity) {
-        Actor result = entities_.insert(entity);
+    Actor reify(std::unique_ptr<Entity<N>> entity) {
+        Actor result = entities_.take(std::move(entity));
         Entity<N> *copy = result.template dyn_cast<Entity<N>>();
         awake_.emplace(copy);
         copy->bind(this);

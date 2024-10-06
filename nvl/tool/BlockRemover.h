@@ -20,7 +20,7 @@ public:
         };
         on_mouse_up[Mouse::Left] = [this] {
             if (hovered_) {
-                world_->send<Destroy>(nullptr, hovered_);
+                world_->send<Destroy>(nullptr, hovered_, Destroy::Cause::kRemoved);
                 hovered_ = nullptr;
             }
         };

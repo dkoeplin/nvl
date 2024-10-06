@@ -11,7 +11,7 @@ namespace nvl {
 struct Destroy final : AbstractMessage {
     class_tag(Destroy, AbstractMessage);
 
-    enum Cause { kOutOfBounds };
+    enum Cause { kOutOfBounds, kRemoved };
 
     explicit Destroy(const Actor &src, Cause cause) : AbstractMessage(src), cause(cause) {}
 

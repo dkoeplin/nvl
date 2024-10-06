@@ -9,6 +9,7 @@ namespace {
 using nvl::AbstractActor;
 using nvl::Actor;
 using nvl::Box;
+using nvl::Color;
 using nvl::List;
 using nvl::Message;
 using nvl::Status;
@@ -19,14 +20,14 @@ struct SimpleActor final : AbstractActor {
     explicit SimpleActor(const Box<2> &box) : box_(box) {}
 
     Status tick(const List<Message> &) override { return Status::kNone; }
-    void draw(Window &, U64) const override {}
+    void draw(Window &, const Color::Options &) const override {}
 
     Box<2> box_;
 };
 
 TEST(TestActor, construct) {
-    auto actor = Actor::get<SimpleActor>(Box<2>({0, 0}, {32, 32}));
-    auto status = actor->tick({});
+    auto actor = SimpleActor(Box<2>({0, 0}, {32, 32}));
+    auto status = actor.tick({});
     EXPECT_EQ(status, nvl::Status::kNone);
 }
 

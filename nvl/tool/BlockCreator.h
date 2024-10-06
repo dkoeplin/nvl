@@ -33,7 +33,7 @@ public:
         };
         on_mouse_up[Mouse::Left] = [this] {
             if (pending_) {
-                world_->reify(*pending_);
+                world_->reify(std::move(pending_));
                 pending_ = nullptr;
             }
         };

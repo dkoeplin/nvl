@@ -40,6 +40,10 @@ protected:
     Window *window_;
 };
 
-struct Screen final : Castable<Screen, AbstractScreen, std::shared_ptr<AbstractScreen>> {};
+struct Screen final : Castable<Screen, AbstractScreen, std::shared_ptr<AbstractScreen>> {
+    using Castable::Castable;
+    using Castable::get;
+    pure std::shared_ptr<AbstractScreen> shared_ptr() const { return ptr_; }
+};
 
 } // namespace nvl

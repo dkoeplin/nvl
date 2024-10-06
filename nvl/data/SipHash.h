@@ -12,7 +12,7 @@ namespace nvl {
 // Implementation adapted from:
 // https://github.com/google/highwayhash/blob/master/highwayhash/sip_hash.h
 // https://github.com/google/highwayhash/blob/master/highwayhash/state_helpers.h
-template <int kUpdateIters, int kFinalizeIters>
+template <int U, int F>
 struct SipHash {
     explicit SipHash(const U64 key[2]);
     void update(const char *bytes);
@@ -27,7 +27,7 @@ private:
 };
 
 template <int U, int F>
-void update_state(const char *bytes, const U64 size, SipHash<U, F> *state);
+void update_state(const char *bytes, U64 size, SipHash<U, F> *state);
 
 // U64 sip_hash24(const U64 key[2], const char *bytes, U64 size);
 // U64 sip_hash13(const U64 key[2], const char *bytes, U64 size);

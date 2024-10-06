@@ -368,6 +368,8 @@ public:
         return *this;
     }
 
+    ItemRef take(std::unique_ptr<Item> item) { return take_over(std::move(item), item->bbox()); }
+
     /// Constructs a new item and adds it to this tree.
     /// Returns a reference to the new item held by the tree.
     template <typename T = Item, typename... Args>
@@ -632,6 +634,16 @@ private:
         bbox_ = bbox_ ? bounding_box(*bbox_, box) : box;
         const U64 id = ++item_id_;
         auto &unique = items_[id] = std::make_unique<Item>(item); // Copy constructor
+        ItemRef ref(unique.get());
+        item_ids_[ref] = id;
+        populate_over(ref, box);
+        return ref;
+    }
+
+    ItemRef take_over(std::unique_ptr<Item> item, const Box<N> &box) {
+        bbox_ = bbox_ ? bounding_box(*bbox_, box) : box;
+        const U64 id = ++item_id_;
+        auto &unique = items_[id] = std::move(item);
         ItemRef ref(unique.get());
         item_ids_[ref] = id;
         populate_over(ref, box);

@@ -42,8 +42,9 @@ public:
     void tick();
 
     template <typename T, typename... Args>
-    void open(Args &&...args) {
+    T *open(Args &&...args) {
         children_.push_back(Screen::get<T>(this, std::forward<Args>(args)...));
+        return children_.back().dyn_cast<T>();
     }
 
     /// Returns the current mouse position in window coordinates.

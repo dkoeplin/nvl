@@ -6,8 +6,8 @@
 
 int main() {
     nvl::Window window("App", {1000, 1000});
-    window.open<nvl::World<2>>();
-    window.open<nvl::ToolBelt<2>>();
+    auto *world = window.open<nvl::World<2>>();
+    window.open<nvl::ToolBelt<2>>(world);
 
     while (!window.should_close()) {
         window.tick();

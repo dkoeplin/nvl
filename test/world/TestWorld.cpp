@@ -21,7 +21,7 @@ using nvl::World;
 TEST(TestWorld, fall_out_of_bounds) {
     World<2>::Params params;
     params.maximum_y = 1;
-    World<2> world(params);
+    World<2> world(nullptr, params);
     constexpr Box<2> box({0, 0}, {4, 4});
     const auto color = world.random.uniform<Color>(0, 255);
     const auto material = Material::get<TestMaterial>(color);
@@ -48,7 +48,7 @@ TEST(TestWorld, fall_out_of_bounds) {
 }
 
 TEST(TestWorld, idle_when_not_moving) {
-    World<2> world;
+    World<2> world(nullptr);
     {
         constexpr Box<2> box({0, 0}, {10, 2});
         const auto material = Material::get<Bulwark>();
