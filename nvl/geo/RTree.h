@@ -368,7 +368,10 @@ public:
         return *this;
     }
 
-    ItemRef take(std::unique_ptr<Item> item) { return take_over(std::move(item), item->bbox()); }
+    ItemRef take(std::unique_ptr<Item> item) {
+        const Box<N> box = item->bbox();
+        return take_over(std::move(item), box);
+    }
 
     /// Constructs a new item and adds it to this tree.
     /// Returns a reference to the new item held by the tree.
