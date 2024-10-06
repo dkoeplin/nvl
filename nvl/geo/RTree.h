@@ -353,7 +353,7 @@ public:
     /// Inserts a copy of the item into the tree.
     /// Returns a reference to the copy held by the tree.
     ItemRef insert(const Item &item) { return insert_over(item, item.bbox()); }
-    ItemRef insert(const ItemRef &item) { return insert_over(item, item.bbox()); }
+    ItemRef insert(const ItemRef &item) { return insert_over(*item, bbox(item)); }
 
     /// Inserts a copy of each item into the tree.
     RTree &insert(const Range<Item> &items) {
@@ -632,7 +632,7 @@ private:
         bbox_ = bbox_ ? bounding_box(*bbox_, box) : box;
         const U64 id = ++item_id_;
         auto &unique = items_[id] = std::make_unique<Item>(item); // Copy constructor
-        ItemRef ref(*unique.get());
+        ItemRef ref(unique.get());
         item_ids_[ref] = id;
         populate_over(ref, box);
         return ref;

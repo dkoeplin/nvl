@@ -1,6 +1,7 @@
 #pragma once
 
 #include "nvl/macros/Aliases.h"
+#include "nvl/reflect/ClassTag.h"
 #include "nvl/tool/BlockBreaker.h"
 #include "nvl/tool/BlockCreator.h"
 #include "nvl/tool/BlockRemover.h"
@@ -35,7 +36,15 @@ public:
         if (cooldown_ > 0)
             --cooldown_;
     }
-    void draw() override {}
+    void draw() override {
+        if (cooldown_ > 0) {
+            const U64 alpha = std::min<U64>(255, cooldown_ * 10);
+            const Color color(20, 20, 20, alpha);
+            const std::string_view name = ClassTag::get(*children_[0]).name;
+            const Pos<2> pos(window_->width() / 2, window_->height() - 20);
+            window_->text(color, pos, 10, name);
+        }
+    }
 
 private:
     World<N> *world_;

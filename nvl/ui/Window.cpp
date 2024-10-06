@@ -98,12 +98,18 @@ void Window::fill_rectangle(const Color &color, const Box<2> &box) {
     DrawRectangle(box.min[0], box.min[1], shape[0], shape[1], color.color32);
 }
 
-void Window::text(const Color &color, const Pos<2> &pos, U64 font_size, std::string_view text) {
+void Window::text(const Color &color, const Pos<2> &pos, I64 font_size, std::string_view text) {
     DrawText(text.data(), pos[0], pos[1], font_size, color);
 }
 
-void Window::centered_text(const Color &color, const Pos<2> &pos, U64 font_size, std::string_view text) {
-    font_size = std::max(font_size, ); // raylib enforces a min font size of 10
+void Window::centered_text(const Color &color, const Pos<2> &pos, I64 font_size, std::string_view text) {
+    static constexpr I64 kMinFontSize = 10;
+    font_size = std::max(font_size, kMinFontSize);
+    const I64 width = MeasureText(text.data(), font_size);
+    const I64 height = font_size;
+    const I64 x = pos[0] - width / 2;
+    const I64 y = pos[1] - height / 2;
+    this->text(color, {x, y}, font_size, text);
 }
 
 bool Window::should_close() const { return WindowShouldClose(); }

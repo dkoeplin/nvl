@@ -24,7 +24,7 @@ public:
     static constexpr U64 kGridExpMax = 10;
     using Tree = BRTree<N, Part<N>, Ref<Part<N>>, kMaxEntries, kGridExpMin, kGridExpMax>;
 
-    explicit Entity(Range<Ref<Part<N>>> parts = {}) : parts_(parts) {}
+    explicit Entity(Pos<2> loc, Range<Ref<Part<N>>> parts = {}) : parts_(loc, parts) {}
 
     pure Pos<N> loc() const { return parts_.loc; }
     pure Box<N> bbox() const { return parts_.bbox(); }

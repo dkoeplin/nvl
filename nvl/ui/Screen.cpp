@@ -40,7 +40,7 @@ List<InputEvent> AbstractScreen::tick_all(const List<InputEvent> &events) {
 
 void AbstractScreen::draw_all() {
     draw();
-    for (auto &child : children_) {
+    for (const auto &child : children_) {
         child->draw_all();
     }
 }

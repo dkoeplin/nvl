@@ -36,7 +36,7 @@ protected:
     Map<Mouse, std::function<void()>> on_mouse_down;
     Map<Set<Mouse>, std::function<void()>, ButtonsHash> on_mouse_move;
 
-    List<Screen> children_;
+    List<std::shared_ptr<AbstractScreen>> children_;
     Window *window_;
 };
 

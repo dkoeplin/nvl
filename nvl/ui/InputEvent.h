@@ -17,29 +17,32 @@ abstract struct AbstractInputEvent
     class_tag(AbstractInputEvent);
 };
 
-struct InputEvent final : Castable<InputEvent, AbstractInputEvent, std::shared_ptr<AbstractInputEvent>> {};
+struct InputEvent final : Castable<InputEvent, AbstractInputEvent, std::shared_ptr<AbstractInputEvent>> {
+    using Castable::Castable;
+    using Castable::get;
+};
 
 struct KeyUp final : AbstractInputEvent {
     class_tag(KeyUp, AbstractInputEvent);
-    explicit KeyUp(Key key) : key(key) {}
+    explicit KeyUp(const Key key) : key(key) {}
     Key key;
 };
 
 struct KeyDown final : AbstractInputEvent {
     class_tag(KeyDown, AbstractInputEvent);
-    explicit KeyDown(Key key) : key(key) {}
+    explicit KeyDown(const Key key) : key(key) {}
     Key key;
 };
 
 struct MouseUp final : AbstractInputEvent {
     class_tag(MouseUp, AbstractInputEvent);
-    explicit MouseUp(Mouse button) : button(button) {}
+    explicit MouseUp(const Mouse button) : button(button) {}
     Mouse button;
 };
 
 struct MouseDown final : AbstractInputEvent {
     class_tag(MouseDown, AbstractInputEvent);
-    explicit MouseDown(Mouse button) : button(button) {}
+    explicit MouseDown(const Mouse button) : button(button) {}
     Mouse button;
 };
 

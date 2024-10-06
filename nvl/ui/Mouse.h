@@ -19,6 +19,7 @@ struct Mouse {
     };
     static constexpr Value kButtons[kNumButtons] = {Left, Right, Middle, Side, Extra, Forward, Backward};
 
+    implicit Mouse(const int value) : value(static_cast<Value>(value)) {}
     implicit Mouse(const Value value) : value(value) {}
     implicit operator Value() const { return value; }
 

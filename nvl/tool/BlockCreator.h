@@ -20,20 +20,20 @@ public:
             const auto color = world_->random.uniform<Color>(0, 255);
             const auto material = Material::get<TestMaterial>(color);
             init_ = world_->mouse_to_world(window_->mouse_coord());
-            pending_ = Actor::get<Block<2>>(Box(init_, init_), material);
+            pending_ = std::make_unique<Block<2>>(Pos<2>::zero, Box(init_, init_), material);
         };
         on_mouse_move[{Mouse::Left}] = [this] {
-            if (const auto *block = pending_.dyn_cast<Block<2>>()) {
+            if (pending_) {
                 const Pos<2> pt = world_->mouse_to_world(window_->mouse_coord());
                 const Box box(init_, pt);
                 if (world_->entities(box).empty()) {
-                    pending_ = Actor::get<Block<2>>(box, block->material());
+                    pending_ = std::make_unique<Block<2>>(Pos<2>::zero, box, pending_->material());
                 }
             }
         };
         on_mouse_up[Mouse::Left] = [this] {
             if (pending_) {
-                world_->reify(pending_);
+                world_->reify(*pending_);
                 pending_ = nullptr;
             }
         };
@@ -47,7 +47,7 @@ public:
     }
 
 private:
-    Actor pending_;
+    std::unique_ptr<Block<2>> pending_ = nullptr;
     Pos<2> init_ = Pos<2>::zero;
 };
 

@@ -124,6 +124,7 @@ struct Key {
 
         Any = 1024
     };
+    implicit Key(const int value) : value(static_cast<Value>(value)) {}
     implicit Key(const Value value) : value(value) {}
     implicit operator Value() const { return value; }
 

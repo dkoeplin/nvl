@@ -2,10 +2,10 @@
 
 #include <utility>
 
-#include "nvl/draw/Window.h"
 #include "nvl/entity/Entity.h"
 #include "nvl/macros/Aliases.h"
 #include "nvl/reflect/ClassTag.h"
+#include "nvl/ui/Window.h"
 
 namespace nvl {
 
@@ -14,11 +14,11 @@ class Block : public Entity<N> {
 public:
     class_tag(Block<N>, Entity<N>);
 
-    explicit Block(const Box<N> &box, Material material) : Entity<N>(), material_(std::move(material)) {
+    explicit Block(Pos<2> loc, const Box<N> &box, Material material) : Entity<N>(loc), material_(std::move(material)) {
         this->parts_.emplace(box, material_);
     }
 
-    explicit Block(Range<Ref<Part<N>>> parts) : Entity<N>(parts) {
+    explicit Block(Pos<2> loc, Range<Ref<Part<N>>> parts) : Entity<N>(loc, parts) {
         if (!this->relative.parts().empty()) {
             material_ = this->relative.parts().begin()->raw().material;
         }

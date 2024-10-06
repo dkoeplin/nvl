@@ -123,6 +123,11 @@ public:
     explicit BRTree(Range<Item> items) : Parent(items) {}
     explicit BRTree(Range<ItemRef> items) : Parent(items) {}
 
+    BRTree(Pos<2> loc, std::initializer_list<Item> items) : Parent(items), loc(loc) {}
+    BRTree(Pos<2> loc, std::initializer_list<ItemRef> items) : Parent(items), loc(loc) {}
+    explicit BRTree(Pos<2> loc, Range<Item> items) : Parent(items), loc(loc) {}
+    explicit BRTree(Pos<2> loc, Range<ItemRef> items) : Parent(items), loc(loc) {}
+
     BRTree &insert(const Item &item) {
         this->items_.insert(item);
         this->mark_changed();

@@ -51,7 +51,7 @@ public:
           kMaxVelocity(params.terminal_velocity * kMillisPerTick * kPixelsPerMeter / 1e3),
           kGravity(Pos<N>::unit(kVerticalDim, kGravityAccel)), kMaxY(params.maximum_y * kPixelsPerMeter) {}
 
-    pure Pos<N> mouse_to_world(const Pos<2> &mouse_coord) const { return Pos<N>::zero; }
+    pure Pos<N> mouse_to_world(const Pos<2> &) const { return Pos<N>::zero; }
 
     pure Range<Actor> entities(const Pos<N> &pos) { return entities_[pos]; }
     pure Range<Actor> entities(const Box<N> &box) { return entities_[box]; }
@@ -77,12 +77,13 @@ public:
         }
     }
 
-    Actor reify(Actor actor) {
-        Actor result = entities_.insert(actor);
-        if (Entity<N> *entity = result.template dyn_cast<Entity<N>>()) {
-            awake_.emplace(entity);
-            entity->bind(this);
-        }
+    /// Inserts a copy of this entity into the world.
+    /// Returns a reference to the resulting copy.
+    Actor reify(const Entity<N> &entity) {
+        Actor result = entities_.insert(entity);
+        Entity<N> *copy = result.template dyn_cast<Entity<N>>();
+        awake_.emplace(copy);
+        copy->bind(this);
         return result;
     }
 
