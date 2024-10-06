@@ -51,12 +51,16 @@ public:
           kMaxVelocity(params.terminal_velocity * kMillisPerTick * kPixelsPerMeter / 1e3),
           kGravity(Pos<N>::unit(kVerticalDim, kGravityAccel)), kMaxY(params.maximum_y * kPixelsPerMeter) {}
 
-    pure Pos<N> mouse_to_world(const Pos<2> &) const { return Pos<N>::zero; }
+    /// Converts the given coordinates from window coordinates to world coordinates.
+    pure Pos<N> window_to_world(const Pos<2> &) const {
+        static_assert(N == 2, "window_to_world implementation only works for 2D world right now");
+        return Pos<N>::zero;
+    }
 
     pure Range<Actor> entities(const Pos<N> &pos) { return entities_[pos]; }
     pure Range<Actor> entities(const Box<N> &box) { return entities_[box]; }
 
-    pure U64 num_active() const { return awake_.size(); }
+    pure U64 num_awake() const { return awake_.size(); }
     pure U64 num_alive() const { return entities_.size(); }
 
     template <typename Msg, typename... Args>
@@ -146,7 +150,9 @@ void World<N>::tick() {
 }
 
 template <U64 N>
-void World<N>::draw() {}
+void World<N>::draw() {
+    // TODO: STUB
+}
 
 template <U64 N>
 void World<N>::tick_entity(Set<Actor> &idled, Ref<Entity<N>> entity) {

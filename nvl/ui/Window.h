@@ -15,9 +15,6 @@ namespace nvl {
 
 struct Color;
 
-template <U64 N>
-class Box;
-
 class Window {
 public:
     enum class MouseMode {
@@ -36,10 +33,10 @@ public:
     };
 
     explicit Window(std::string_view title, Pos<2> shape);
-    ~Window();
+    virtual ~Window() = default;
 
-    void draw();
-    void tick();
+    virtual void draw() = 0;
+    virtual void tick() = 0;
 
     template <typename T, typename... Args>
     T *open(Args &&...args) {
@@ -56,22 +53,24 @@ public:
     pure bool is_pressed(const Key key) const { return pressed_keys_.has(key); }
     pure bool is_pressed(const Mouse mouse) const { return pressed_mouse_.has(mouse); }
 
-    void line_rectangle(const Color &color, const Box<2> &box);
-    void fill_rectangle(const Color &color, const Box<2> &box);
+    virtual void line_rectangle(const Color &color, const Box<2> &box) = 0;
+    virtual void fill_rectangle(const Color &color, const Box<2> &box) = 0;
 
     /// Draws the given text with the top-left of the text at `pos`.
-    void text(const Color &color, const Pos<2> &pos, I64 font_size, std::string_view text);
+    virtual void text(const Color &color, const Pos<2> &pos, I64 font_size, std::string_view text) = 0;
 
     /// Draws the given text with the center of the text at `pos`.
-    void centered_text(const Color &color, const Pos<2> &pos, I64 font_size, std::string_view text);
+    virtual void centered_text(const Color &color, const Pos<2> &pos, I64 font_size, std::string_view text) = 0;
 
-    pure bool should_close() const;
+    virtual void set_view_offset(const Maybe<Pos<2>> &offset) = 0;
+
+    pure virtual bool should_close() const = 0;
 
     /// Returns the window height in window coordinates.
-    pure I64 height() const;
+    pure virtual I64 height() const = 0;
 
     /// Returns the window width in window coordinates.
-    pure I64 width() const;
+    pure virtual I64 width() const = 0;
 
     /// Returns the window view range in window coordinates.
     pure Box<2> bbox() const { return {{0, 0}, {width(), height()}}; }
@@ -79,7 +78,7 @@ public:
     /// Returns the center of the window in window coordinates.
     pure Pos<2> center() const { return Pos<2>(width(), height()) / 2; }
 
-private:
+protected:
     friend class Offset;
 
     Maybe<Pos<2>> offset_ = None;

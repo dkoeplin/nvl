@@ -19,12 +19,12 @@ public:
         on_mouse_down[Mouse::Left] = [this] {
             const auto color = world_->random.uniform<Color>(0, 255);
             const auto material = Material::get<TestMaterial>(color);
-            init_ = world_->mouse_to_world(window_->mouse_coord());
+            init_ = world_->window_to_world(window_->mouse_coord());
             pending_ = std::make_unique<Block<2>>(Pos<2>::zero, Box(init_, init_), material);
         };
         on_mouse_move[{Mouse::Left}] = [this] {
             if (pending_) {
-                const Pos<2> pt = world_->mouse_to_world(window_->mouse_coord());
+                const Pos<2> pt = world_->window_to_world(window_->mouse_coord());
                 const Box box(init_, pt);
                 if (world_->entities(box).empty()) {
                     pending_ = std::make_unique<Block<2>>(Pos<2>::zero, box, pending_->material());

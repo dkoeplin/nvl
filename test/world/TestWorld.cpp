@@ -43,7 +43,7 @@ TEST(TestWorld, fall_out_of_bounds) {
         world.tick();
     }
     // Check that it is now dead and removed
-    EXPECT_EQ(world.num_active(), 0);
+    EXPECT_EQ(world.num_awake(), 0);
     EXPECT_EQ(world.num_alive(), 0);
 }
 
@@ -57,7 +57,7 @@ TEST(TestWorld, idle_when_not_moving) {
         world.tick();
         EXPECT_EQ(block->loc(), Pos<2>::zero);
     }
-    EXPECT_EQ(world.num_active(), 0);
+    EXPECT_EQ(world.num_awake(), 0);
     EXPECT_EQ(world.num_alive(), 1);
     {
         constexpr Box<2> box({0, 0}, {5, 5});
@@ -70,7 +70,7 @@ TEST(TestWorld, idle_when_not_moving) {
             world.tick();
         }
         EXPECT_EQ(block->loc(), Pos<2>(5, -1));
-        EXPECT_EQ(world.num_active(), 0);
+        EXPECT_EQ(world.num_awake(), 0);
         EXPECT_EQ(world.num_alive(), 2);
     }
 }

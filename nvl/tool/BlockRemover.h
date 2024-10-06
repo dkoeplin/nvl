@@ -14,7 +14,7 @@ public:
     explicit BlockRemover(Window *window, World<2> *world) : Tool(window, world) {
         // Same action for dragging and moving
         on_mouse_move[{Mouse::Any}] = on_mouse_move[{}] = [this] {
-            const Pos<2> pt = world_->mouse_to_world(window_->mouse_coord());
+            const Pos<2> pt = world_->window_to_world(window_->mouse_coord());
             const Range<Actor> entities = world_->entities(pt);
             hovered_ = entities.empty() ? nullptr : *entities.begin();
         };

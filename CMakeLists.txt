@@ -72,6 +72,8 @@ add_library(nvl SHARED
         nvl/time/Duration.h
         nvl/time/TimeScale.h
         nvl/ui/InputEvent.h
+        nvl/ui/RayWindow.cpp
+        nvl/ui/RayWindow.h
         nvl/ui/Screen.cpp
         nvl/ui/Screen.h
         nvl/ui/Window.cpp
