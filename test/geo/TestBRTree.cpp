@@ -4,7 +4,7 @@
 #include "nvl/geo/Box.h"
 #include "nvl/geo/BRTree.h"
 #include "nvl/geo/Pos.h"
-#include "util/LabeledBox.h"
+#include "nvl/test/LabeledBox.h"
 
 namespace {
 
@@ -19,7 +19,7 @@ using nvl::List;
 using nvl::Pos;
 using nvl::Ref;
 using nvl::Set;
-using nvl::testing::LabeledBox;
+using nvl::test::LabeledBox;
 
 Set<At<2, Edge<2>>> view(List<Edge<2>> &list, const Pos<2> &offset) {
     Set<At<2, Edge<2>>> set;

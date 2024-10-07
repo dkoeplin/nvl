@@ -10,7 +10,7 @@
 #include "nvl/math/Random.h"
 #include "nvl/time/Duration.h"
 
-namespace nvl::testing {
+namespace nvl::test {
 
 template <U64 i, typename Tuple>
 void generate(Tuple &, Random &, const Map<U64, Distribution> &) {
@@ -78,4 +78,4 @@ private:
 template <typename Result, typename... Args>
 class FuzzingTestFixture : public Fuzzer<Result, Args...>, public ::testing::Test {};
 
-} // namespace nvl::testing
+} // namespace nvl::test

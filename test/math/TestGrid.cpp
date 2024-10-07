@@ -3,7 +3,7 @@
 
 #include "nvl/math/Grid.h"
 #include "nvl/math/Random.h"
-#include "util/Fuzzing.h"
+#include "nvl/test/Fuzzing.h"
 
 namespace {
 
@@ -37,7 +37,7 @@ TEST(TestGrid, grid_min) {
 }
 
 using Output = std::pair<I64, I64>;
-using TestGridFuzzer = nvl::testing::FuzzingTestFixture<Output, I64, I64>;
+using TestGridFuzzer = nvl::test::FuzzingTestFixture<Output, I64, I64>;
 TEST_F(TestGridFuzzer, fuzz_grid) {
     num_tests = 1E4;
     in[0] = nvl::Distribution::Uniform<I64>(-10000, 10000);

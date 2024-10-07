@@ -32,6 +32,7 @@ add_library(nvl SHARED
         nvl/data/Set.h
         nvl/data/SipHash.cpp
         nvl/data/SipHash.h
+        nvl/data/Tensor.h
         nvl/data/UnionFind.h
         nvl/draw/Color.h
         nvl/entity/Entity.h
@@ -99,6 +100,18 @@ if (APPLE)
     target_link_libraries(nvl "-framework Cocoa")
     target_link_libraries(nvl "-framework OpenGL")
 endif ()
+
+find_package(GoogleTest REQUIRED)
+
+# nvl-test
+add_library(nvl-test SHARED
+        nvl/test/Fuzzing.h
+        nvl/test/LabeledBox.h
+        nvl/test/TestWindow.cpp
+        nvl/test/TestWindow.h
+)
+target_include_directories(nvl-test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(nvl-test PUBLIC nvl gmock gtest_main)
 
 add_subdirectory(test)
 

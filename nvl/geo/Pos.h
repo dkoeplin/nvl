@@ -305,6 +305,20 @@ public:
         return std::sqrt(result);
     }
 
+    pure I64 product() const {
+        I64 product = 1;
+        for (const I64 x : indices_)
+            product *= x;
+        return product;
+    }
+
+    pure I64 sum() const {
+        I64 sum = 0;
+        for (const I64 x : indices_)
+            sum += x;
+        return sum;
+    }
+
     pure Pos strides() const {
         Pos result;
         result[N - 1] = 1;

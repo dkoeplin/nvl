@@ -1,11 +1,13 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-#include <util/Fuzzing.h>
 
 #include "nvl/geo/Box.h"
 #include "nvl/geo/Pos.h"
 #include "nvl/geo/RTree.h"
-#include "util/LabeledBox.h"
+#include "nvl/math/Distribution.h"
+#include "nvl/math/Random.h"
+#include "nvl/test/Fuzzing.h"
+#include "nvl/test/LabeledBox.h"
 
 namespace nvl {
 
@@ -40,7 +42,7 @@ using nvl::Pos;
 using nvl::Ref;
 using nvl::RTree;
 using nvl::Set;
-using nvl::testing::LabeledBox;
+using nvl::test::LabeledBox;
 
 template <typename T>
 concept HasID = requires(T a) { a.id(); };
@@ -208,7 +210,7 @@ TEST(TestRTree, fuzz_insertion) {
     constexpr I64 kNumTests = 1E3;
     RTree<2, Box<2>> tree;
 
-    struct InsertFuzzer : nvl::testing::Fuzzer<Ref<Box<2>>, Box<2>> {
+    struct InsertFuzzer : nvl::test::Fuzzer<Ref<Box<2>>, Box<2>> {
         InsertFuzzer() : Fuzzer(0xDEADBEEF) {
             num_tests = kNumTests;
             in[0] = Distribution::Uniform<I64>(-100, 100);

@@ -5,7 +5,7 @@
 #include "nvl/macros/Aliases.h"
 #include "nvl/macros/Pure.h"
 
-namespace nvl::testing {
+namespace nvl::test {
 
 class LabeledBox {
 public:
@@ -27,9 +27,9 @@ inline std::ostream &operator<<(std::ostream &os, const LabeledBox &v) {
     return os << "BOX(" << v.id() << ": " << v.bbox() << ")";
 }
 
-} // namespace nvl::testing
+} // namespace nvl::test
 
 template <>
-struct std::hash<nvl::testing::LabeledBox> {
-    pure U64 operator()(const nvl::testing::LabeledBox &a) const noexcept { return nvl::sip_hash(a); }
+struct std::hash<nvl::test::LabeledBox> {
+    pure U64 operator()(const nvl::test::LabeledBox &a) const noexcept { return nvl::sip_hash(a); }
 };

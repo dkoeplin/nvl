@@ -5,7 +5,7 @@
 #include "nvl/geo/Pos.h"
 #include "nvl/math/Distribution.h"
 #include "nvl/math/Random.h"
-#include "util/Fuzzing.h"
+#include "nvl/test/Fuzzing.h"
 
 namespace nvl {
 
@@ -192,7 +192,7 @@ TEST(TestBox, to_string) {
 
 /// Generic fuzz testing across N dimensional diffing
 template <U64 N>
-struct FuzzBoxDiff : nvl::testing::FuzzingTestFixture<List<Box<N>>, Box<N>, Box<N>> {
+struct FuzzBoxDiff : nvl::test::FuzzingTestFixture<List<Box<N>>, Box<N>, Box<N>> {
     FuzzBoxDiff() {
         using nvl::Distribution;
         using nvl::Random;
