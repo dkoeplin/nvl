@@ -7,8 +7,6 @@ namespace nvl {
 
 namespace {
 
-void set_view_offset(const Pos<2> &offset) {}
-
 constexpr ::Color raycolor(const Color &color) {
     return ::Color{.r = static_cast<U8>(color.r),
                    .g = static_cast<U8>(color.g),
@@ -31,7 +29,6 @@ void RayWindow::draw() {
     for (auto &child : children_) {
         child->draw_all();
     }
-    DrawFPS(10, 10);
     EndDrawing();
 }
 
@@ -51,6 +48,16 @@ void RayWindow::tick() {
             events.push_back(InputEvent::get<MouseUp>(button));
         }
     }
+
+    const auto [scroll_x, scroll_y] = GetMouseWheelMoveV();
+    scroll_ = {static_cast<I64>(scroll_x), static_cast<I64>(scroll_y)};
+    if (scroll_x != 0) {
+        events.push_back(InputEvent::get<MouseScroll>(Scroll::kHorizontal));
+    }
+    if (scroll_y != 0) {
+        events.push_back(InputEvent::get<MouseScroll>(Scroll::kVertical));
+    }
+
     List<Key> released;
     for (auto key : pressed_keys_) {
         if (IsKeyReleased(key)) {
@@ -62,9 +69,18 @@ void RayWindow::tick() {
 
     prev_mouse_ = curr_mouse_;
     curr_mouse_ = {GetMouseX(), GetMouseY()};
+
     if (prev_mouse_ != curr_mouse_) {
         events.push_back(InputEvent::get<MouseMove>(pressed_mouse_));
     }
+
+    /*if (!events.empty()) {
+        std::cout << "Mouse:  " << curr_mouse_ << " (delta: " << curr_mouse_ - prev_mouse_ << ")" << std::endl;
+        for (const auto &event : events) {
+            std::cout << event << std::endl;
+        }
+    }*/
+
     for (auto iter = children_.begin(); !events.empty() && iter != children_.end(); ++iter) {
         events = (*iter)->tick_all(events);
     }
@@ -94,23 +110,37 @@ void RayWindow::centered_text(const Color &color, const Pos<2> &pos, I64 font_si
     this->text(color, {x, y}, font_size, text);
 }
 
-void RayWindow::set_view_offset(const Maybe<Pos<2>> &offset) override {
+I64 RayWindow::fps() const { return GetFPS(); }
+
+void RayWindow::set_view_offset(const Maybe<Pos<2>> &offset) {
     if (offset_.has_value()) {
         EndMode2D();
     }
     offset_ = offset;
     if (offset_.has_value()) {
         Camera2D camera;
-        camera.offset = Vector2{static_cast<float>((*offset)[0]), static_cast<float>((*offset)[1])};
-        camera.rotation = 0;
-        camera.zoom = 0;
-        camera.target = Vector2{0, 0};
+        camera.offset = Vector2{0, 0};
+        camera.rotation = 0.0f;
+        camera.zoom = 1.0f;
+        camera.target = Vector2{static_cast<float>((*offset)[0]), static_cast<float>((*offset)[1])};
         BeginMode2D(camera);
     }
 }
 
+void RayWindow::set_mouse_mode(const MouseMode mode) {
+    if (mode == mouse_mode_)
+        return;
+    Window::set_mouse_mode(mode);
+    if (mode == MouseMode::kViewport) {
+        DisableCursor();
+    } else {
+        EnableCursor();
+        SetMousePosition(width() / 2, height() / 2);
+    }
+}
+
 bool RayWindow::should_close() const { return WindowShouldClose(); }
-I64 RayWindow::height() const { return GetScreenHeight(); }
-I64 RayWindow::width() const { return GetScreenWidth(); }
+I64 RayWindow::height() const { return GetRenderHeight(); }
+I64 RayWindow::width() const { return GetRenderWidth(); }
 
 } // namespace nvl

@@ -19,12 +19,12 @@ public:
         on_mouse_down[Mouse::Left] = [this] {
             const auto color = world_->random.uniform<Color>(0, 255);
             const auto material = Material::get<TestMaterial>(color);
-            init_ = world_->window_to_world(window_->mouse_coord());
+            init_ = world_->window_to_world(window_->center());
             pending_ = std::make_unique<Block<2>>(Pos<2>::zero, Box(init_, init_), material);
         };
         on_mouse_move[{Mouse::Left}] = [this] {
             if (pending_) {
-                const Pos<2> pt = world_->window_to_world(window_->mouse_coord());
+                const Pos<2> pt = world_->window_to_world(window_->center());
                 const Box box(init_, pt);
                 if (world_->entities(box).empty()) {
                     pending_ = std::make_unique<Block<2>>(Pos<2>::zero, box, pending_->material());
@@ -42,7 +42,7 @@ public:
     void tick() override {}
     void draw() override {
         if (pending_) {
-            pending_->draw(*window_, {.alpha = Color::kLighter});
+            pending_->draw(window_, {.alpha = Color::kLighter});
         }
     }
 

@@ -72,6 +72,10 @@ add_library(nvl SHARED
         nvl/time/Duration.h
         nvl/time/TimeScale.h
         nvl/ui/InputEvent.h
+        nvl/ui/Key.cpp
+        nvl/ui/Key.h
+        nvl/ui/Mouse.cpp
+        nvl/ui/Mouse.h
         nvl/ui/RayWindow.cpp
         nvl/ui/RayWindow.h
         nvl/ui/Screen.cpp

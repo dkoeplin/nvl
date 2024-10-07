@@ -10,6 +10,7 @@
 #include "nvl/message/Destroy.h"
 #include "nvl/message/Message.h"
 #include "nvl/ui/Screen.h"
+#include "nvl/ui/Window.h"
 
 namespace nvl {
 
@@ -49,12 +50,23 @@ public:
         : AbstractScreen(window),
           kGravityAccel(params.gravity_accel * kPixelsPerMeter * kMillisPerTick * kMillisPerTick / 1e6),
           kMaxVelocity(params.terminal_velocity * kMillisPerTick * kPixelsPerMeter / 1e3),
-          kGravity(Pos<N>::unit(kVerticalDim, kGravityAccel)), kMaxY(params.maximum_y * kPixelsPerMeter) {}
+          kGravity(Pos<N>::unit(kVerticalDim, kGravityAccel)), kMaxY(params.maximum_y * kPixelsPerMeter) {
+
+        on_mouse_move[{}] = on_mouse_move[{Mouse::Any}] = [this] {
+            propagate_event();               // Don't prevent children from seeing the mouse movement event
+            view_ += window_->mouse_delta(); // Change the view delta
+        };
+    }
 
     /// Converts the given coordinates from window coordinates to world coordinates.
-    pure Pos<N> window_to_world(const Pos<2> &) const {
+    pure Pos<N> window_to_world(const Pos<2> &pt) const {
         static_assert(N == 2, "window_to_world implementation only works for 2D world right now");
-        return Pos<N>::zero;
+        return pt + view_;
+    }
+
+    pure Box<N> window_to_world(const Box<2> &box) const {
+        static_assert(N == 2, "window_to_world implementation only works for 2D world right now");
+        return Box<N>(window_to_world(box.min), window_to_world(box.max));
     }
 
     pure Range<Actor> entities(const Pos<N> &pos) { return entities_[pos]; }
@@ -128,6 +140,9 @@ protected:
     Set<Actor> awake_;
     Set<Actor> died_;
     Map<Actor, List<Message>> messages_;
+
+    /// Marks the offset view. Starts at (0,0), so 2D coordinates == world coordinates
+    Pos<N> view_ = Pos<N>::zero;
 };
 
 template <U64 N>
@@ -151,7 +166,25 @@ void World<N>::tick() {
 
 template <U64 N>
 void World<N>::draw() {
-    // TODO: STUB
+    const Box<2> range = window_to_world(window_->bbox());
+    {
+        auto offset = Window::Offset::Absolute(window_, view_);
+        for (const Actor &actor : entities(range)) {
+            actor->draw(window_, {});
+        }
+    }
+
+    constexpr Color crosshair_color = Color::kBlack;
+    const auto c = window_->center();
+    const Box<2> hline({c[0] - 10, c[1] - 1}, {c[0] + 10, c[1] + 1});
+    const Box<2> vline({c[0] - 1, c[1] - 10}, {c[0] + 1, c[1] + 10});
+    window_->line_rectangle(crosshair_color, hline);
+    window_->line_rectangle(crosshair_color, vline);
+
+    window_->text(Color::kBlack, {10, 10}, 20, std::to_string(window_->fps()));
+    window_->text(Color::kBlack, {10, 40}, 20, window_to_world(range).to_string());
+    window_->text(Color::kBlack, {10, 70}, 20, "Alive: " + std::to_string(num_alive()));
+    window_->text(Color::kBlack, {10, 100}, 20, "Awake: " + std::to_string(num_awake()));
 }
 
 template <U64 N>

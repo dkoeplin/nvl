@@ -23,8 +23,12 @@ struct Mouse {
     implicit Mouse(const Value value) : value(value) {}
     implicit operator Value() const { return value; }
 
+    pure std::string to_string() const;
+
     Value value;
 };
+
+inline std::ostream &operator<<(std::ostream &os, const Mouse &mouse) { return os << mouse.to_string(); }
 
 } // namespace nvl
 

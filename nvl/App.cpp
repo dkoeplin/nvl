@@ -5,6 +5,7 @@
 
 int main() {
     nvl::RayWindow window("App", {1000, 1000});
+    window.set_mouse_mode(nvl::Window::MouseMode::kViewport);
     auto *world = window.open<nvl::World<2>>();
     window.open<nvl::ToolBelt<2>>(world);
 

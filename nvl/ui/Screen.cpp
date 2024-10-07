@@ -25,10 +25,14 @@ List<InputEvent> AbstractScreen::tick_all(const List<InputEvent> &events) {
             if (!window_->pressed_mouse().empty()) {
                 func = func ? func : on_mouse_move.get({Mouse::Any});
             }
+        } else if (auto *mouse_scroll = event.dyn_cast<MouseScroll>()) {
+            func = on_mouse_scroll.get(mouse_scroll->scroll);
         }
+        propagated_event_ = (func == nullptr);
         if (func != nullptr) {
             (*func)();
-        } else {
+        }
+        if (propagated_event_) {
             forwarded.push_back(event);
         }
     }

@@ -18,8 +18,7 @@ struct Message;
 abstract struct AbstractActor : Castable<Actor, AbstractActor>::BaseClass {
     class_tag(AbstractActor);
     virtual Status tick(const List<Message> &messages) = 0;
-    void draw(Window &window) const { draw(window, {}); }
-    virtual void draw(Window &window, const Color::Options &options) const = 0;
+    virtual void draw(Window *window, const Color::Options &options) const = 0;
 };
 
 struct Actor final : Castable<Actor, AbstractActor> {

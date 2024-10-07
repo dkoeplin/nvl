@@ -10,6 +10,7 @@
 #include "nvl/ui/InputEvent.h"
 #include "nvl/ui/Key.h"
 #include "nvl/ui/Mouse.h"
+#include "nvl/ui/Scroll.h"
 
 namespace nvl {
 
@@ -26,6 +27,9 @@ public:
     virtual void tick() = 0;
     virtual void draw() = 0;
 
+    /// Mark the current input event being processed as propagated to other siblings and/or children.
+    void propagate_event() { propagated_event_ = true; }
+
 protected:
     struct ButtonsHash {
         U64 operator()(const Set<Mouse> &buttons) const noexcept { return sip_hash(buttons.values()); }
@@ -35,9 +39,11 @@ protected:
     Map<Mouse, std::function<void()>> on_mouse_up;
     Map<Mouse, std::function<void()>> on_mouse_down;
     Map<Set<Mouse>, std::function<void()>, ButtonsHash> on_mouse_move;
+    Map<Scroll, std::function<void()>> on_mouse_scroll;
 
     List<std::shared_ptr<AbstractScreen>> children_;
     Window *window_;
+    bool propagated_event_ = false;
 };
 
 struct Screen final : Castable<Screen, AbstractScreen, std::shared_ptr<AbstractScreen>> {
