@@ -42,6 +42,7 @@ public:
     void tick() override {}
     void draw() override {
         if (pending_) {
+            const auto offset = Window::Offset::Absolute(window_, world_->view());
             pending_->draw(window_, {.alpha = Color::kLighter});
         }
     }

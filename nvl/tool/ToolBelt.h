@@ -29,7 +29,7 @@ public:
         on_key_down[Key::B] = [this] {
             index_ = (index_ + 1) % tools_.size();
             children_[0] = tools_[index_].shared_ptr();
-            cooldown_ = 100;
+            cooldown_ = 30;
         };
     }
     void tick() override {

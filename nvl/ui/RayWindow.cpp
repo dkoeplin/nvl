@@ -70,7 +70,7 @@ void RayWindow::tick() {
     prev_mouse_ = curr_mouse_;
     curr_mouse_ = {GetMouseX(), GetMouseY()};
 
-    if (prev_mouse_ != curr_mouse_) {
+    if (prev_mouse_ != curr_mouse_ && prev_mouse_.has_value() && curr_mouse_.has_value()) {
         events.push_back(InputEvent::get<MouseMove>(pressed_mouse_));
     }
 
@@ -81,8 +81,8 @@ void RayWindow::tick() {
         }
     }*/
 
-    for (auto iter = children_.begin(); !events.empty() && iter != children_.end(); ++iter) {
-        events = (*iter)->tick_all(events);
+    for (auto &child : children_) {
+        events = child->tick_all(events);
     }
 }
 
@@ -122,7 +122,7 @@ void RayWindow::set_view_offset(const Maybe<Pos<2>> &offset) {
         camera.offset = Vector2{0, 0};
         camera.rotation = 0.0f;
         camera.zoom = 1.0f;
-        camera.target = Vector2{static_cast<float>((*offset)[0]), static_cast<float>((*offset)[1])};
+        camera.target = Vector2{static_cast<float>((*offset_)[0]), static_cast<float>((*offset_)[1])};
         BeginMode2D(camera);
     }
 }

@@ -53,27 +53,24 @@ public:
           kGravity(Pos<N>::unit(kVerticalDim, kGravityAccel)), kMaxY(params.maximum_y * kPixelsPerMeter) {
 
         on_mouse_move[{}] = on_mouse_move[{Mouse::Any}] = [this] {
-            propagate_event();               // Don't prevent children from seeing the mouse movement event
-            view_ += window_->mouse_delta(); // Change the view delta
+            propagate_event(); // Don't prevent children from seeing the mouse movement event
+            view_ -= window_->mouse_delta();
         };
-    }
-
-    /// Converts the given coordinates from window coordinates to world coordinates.
-    pure Pos<N> window_to_world(const Pos<2> &pt) const {
-        static_assert(N == 2, "window_to_world implementation only works for 2D world right now");
-        return pt + view_;
-    }
-
-    pure Box<N> window_to_world(const Box<2> &box) const {
-        static_assert(N == 2, "window_to_world implementation only works for 2D world right now");
-        return Box<N>(window_to_world(box.min), window_to_world(box.max));
     }
 
     pure Range<Actor> entities(const Pos<N> &pos) { return entities_[pos]; }
     pure Range<Actor> entities(const Box<N> &box) { return entities_[box]; }
 
+    pure Pos<2> view() const { return view_; }
+
     pure U64 num_awake() const { return awake_.size(); }
     pure U64 num_alive() const { return entities_.size(); }
+
+    /// Converts the given coordinates from window coordinates to world coordinates.
+    pure Pos<2> window_to_world(const Pos<2> &pos) const { return pos - view_; }
+    pure Box<2> window_to_world(const Box<2> &box) const {
+        return {window_to_world(box.min), window_to_world(box.max)};
+    }
 
     template <typename Msg, typename... Args>
     void send(const Actor src, const Actor &dst, Args &&...args) {
@@ -141,8 +138,7 @@ protected:
     Set<Actor> died_;
     Map<Actor, List<Message>> messages_;
 
-    /// Marks the offset view. Starts at (0,0), so 2D coordinates == world coordinates
-    Pos<N> view_ = Pos<N>::zero;
+    Pos<2> view_ = Pos<2>::zero;
 };
 
 template <U64 N>
@@ -168,7 +164,7 @@ template <U64 N>
 void World<N>::draw() {
     const Box<2> range = window_to_world(window_->bbox());
     {
-        auto offset = Window::Offset::Absolute(window_, view_);
+        const auto offset = Window::Offset::Absolute(window_, view_);
         for (const Actor &actor : entities(range)) {
             actor->draw(window_, {});
         }
@@ -182,7 +178,7 @@ void World<N>::draw() {
     window_->line_rectangle(crosshair_color, vline);
 
     window_->text(Color::kBlack, {10, 10}, 20, std::to_string(window_->fps()));
-    window_->text(Color::kBlack, {10, 40}, 20, window_to_world(range).to_string());
+    window_->text(Color::kBlack, {10, 40}, 20, range.to_string());
     window_->text(Color::kBlack, {10, 70}, 20, "Alive: " + std::to_string(num_alive()));
     window_->text(Color::kBlack, {10, 100}, 20, "Awake: " + std::to_string(num_awake()));
 }
