@@ -5,6 +5,7 @@
 #include "nvl/data/Set.h"
 #include "nvl/geo/Box.h"
 #include "nvl/geo/RTree.h"
+#include "nvl/material/Bulwark.h"
 #include "nvl/math/Random.h"
 #include "nvl/message/Created.h"
 #include "nvl/message/Destroy.h"

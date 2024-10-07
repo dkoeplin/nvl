@@ -26,13 +26,12 @@ public:
 
     void draw(Window *window, const Color::Options &options) const override {
         const auto color = material_->color.highlight(options);
-        auto offset = Window::Offset::Relative(window, this->loc());
-        for (const Ref<Part<N>> &part : this->relative.parts()) {
-            window->fill_rectangle(color, part->box);
+        for (const At<N, Part<N>> &part : this->parts()) {
+            window->fill_rectangle(color, part.bbox());
         }
         const auto edge_color = color.highlight({.scale = Color::kDarker});
-        for (const Ref<Edge<N>> &edge : this->relative.edges()) {
-            window->line_rectangle(edge_color, edge->bbox());
+        for (const At<N, Edge<N>> &edge : this->edges()) {
+            window->line_rectangle(edge_color, edge.bbox());
         }
     }
 

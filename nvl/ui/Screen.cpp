@@ -36,6 +36,7 @@ List<InputEvent> AbstractScreen::tick_all(const List<InputEvent> &events) {
             forwarded.push_back(event);
         }
     }
+    tick();
     for (auto iter = children_.begin(); !forwarded.empty() && iter != children_.end(); ++iter) {
         forwarded = (*iter)->tick_all(forwarded);
     }
