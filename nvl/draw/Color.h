@@ -22,12 +22,9 @@ struct Color {
     static const Color kBlue;
     static const Color kWhite;
 
-    // constexpr Color() = default;
     constexpr static Color hex(const U64 hex) {
         return {.r = (hex >> 16) & 0xFF, .g = (hex >> 8) & 0xFF, .b = hex & 0xFF};
     }
-    // constexpr Color(const U64 r, const U64 g, const U64 b) : Color(r, g, b, 0xFF) {}
-    // constexpr Color(const U64 r, const U64 g, const U64 b, const U64 a) : r(r), g(g), b(b), a(a) {}
 
     /// Returns a "highlighted" version of this color that scales the R, G, and B channels by (highlight / 1024).
     pure constexpr Color highlight(const Options options) const {
@@ -41,6 +38,13 @@ struct Color {
         return r == rhs.r && g == rhs.g && b == rhs.b && a == rhs.a;
     }
     pure constexpr bool operator!=(const Color &rhs) const { return !(*this == rhs); }
+
+    pure std::string to_string() const {
+        std::stringstream ss;
+        ss << std::hex;
+        ss << "0x" << r << "|" << g << "|" << b << "|" << a;
+        return ss.str();
+    }
 
     U64 r = 0xFF;
     U64 g = 0xFF;
@@ -73,6 +77,8 @@ struct nvl::RandomGen<Color> {
                 .b = random.normal<I>(mean, stddev)};
     }*/
 };
+
+inline std::ostream &operator<<(std::ostream &os, const Color &color) { return os << color.to_string(); }
 
 } // namespace nvl
 

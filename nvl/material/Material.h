@@ -22,6 +22,7 @@ abstract struct AbstractMaterial : Castable<Material, AbstractMaterial>::BaseCla
     Color color;
     I64 durability;
     bool falls = true;
+    bool outline = true;
 };
 
 struct Material final : Castable<Material, AbstractMaterial, std::shared_ptr<AbstractMaterial>> {

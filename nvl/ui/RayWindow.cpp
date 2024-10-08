@@ -74,13 +74,6 @@ void RayWindow::tick() {
         events.push_back(InputEvent::get<MouseMove>(pressed_mouse_));
     }
 
-    /*if (!events.empty()) {
-        std::cout << "Mouse:  " << curr_mouse_ << " (delta: " << curr_mouse_ - prev_mouse_ << ")" << std::endl;
-        for (const auto &event : events) {
-            std::cout << event << std::endl;
-        }
-    }*/
-
     for (auto &child : children_) {
         events = child->tick_all(events);
     }

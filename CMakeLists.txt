@@ -107,8 +107,8 @@ find_package(GoogleTest REQUIRED)
 add_library(nvl-test SHARED
         nvl/test/Fuzzing.h
         nvl/test/LabeledBox.h
-        nvl/test/TestWindow.cpp
-        nvl/test/TestWindow.h
+        nvl/test/TensorWindow.cpp
+        nvl/test/TensorWindow.h
 )
 target_include_directories(nvl-test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(nvl-test PUBLIC nvl gmock gtest_main)

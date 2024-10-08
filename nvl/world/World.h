@@ -63,6 +63,7 @@ public:
     pure Range<Actor> entities(const Box<N> &box) { return entities_[box]; }
 
     pure Pos<2> view() const { return view_; }
+    void set_hud(const bool enable) { hud_ = enable; }
 
     pure U64 num_awake() const { return awake_.size(); }
     pure U64 num_alive() const { return entities_.size(); }
@@ -140,6 +141,7 @@ protected:
     Map<Actor, List<Message>> messages_;
 
     Pos<2> view_ = Pos<2>::zero;
+    bool hud_ = true;
 };
 
 template <U64 N>
@@ -171,12 +173,14 @@ void World<N>::draw() {
         }
     }
 
-    constexpr Color crosshair_color = Color::kBlack;
-    const auto c = window_->center();
-    const Box<2> hline({c[0] - 10, c[1] - 1}, {c[0] + 10, c[1] + 1});
-    const Box<2> vline({c[0] - 1, c[1] - 10}, {c[0] + 1, c[1] + 10});
-    window_->line_rectangle(crosshair_color, hline);
-    window_->line_rectangle(crosshair_color, vline);
+    if (hud_) {
+        constexpr Color crosshair_color = Color::kBlack;
+        const auto c = window_->center();
+        const Box<2> hline({c[0] - 10, c[1] - 1}, {c[0] + 10, c[1] + 1});
+        const Box<2> vline({c[0] - 1, c[1] - 10}, {c[0] + 1, c[1] + 10});
+        window_->line_rectangle(crosshair_color, hline);
+        window_->line_rectangle(crosshair_color, vline);
+    }
 
     window_->text(Color::kBlack, {10, 10}, 20, std::to_string(window_->fps()));
     window_->text(Color::kBlack, {10, 40}, 20, range.to_string());

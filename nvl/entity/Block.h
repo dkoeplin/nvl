@@ -29,9 +29,11 @@ public:
         for (const At<N, Part<N>> &part : this->parts()) {
             window->fill_rectangle(color, part.bbox());
         }
-        const auto edge_color = color.highlight({.scale = Color::kDarker});
-        for (const At<N, Edge<N>> &edge : this->edges()) {
-            window->line_rectangle(edge_color, edge.bbox());
+        if (material_->outline) {
+            const auto edge_color = color.highlight({.scale = Color::kDarker});
+            for (const At<N, Edge<N>> &edge : this->edges()) {
+                window->line_rectangle(edge_color, edge.bbox());
+            }
         }
     }
 
