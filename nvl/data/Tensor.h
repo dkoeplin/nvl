@@ -13,6 +13,9 @@ namespace nvl {
 template <U64 N, typename T>
 class Tensor {
 public:
+    /// Creates an empty tuple of empty shape.
+    Tensor() : shape_(Pos<N>::zero), strides_(Pos<N>::zero) {}
+
     explicit Tensor(Pos<N> shape, T init) : shape_(shape), data_(shape_.product(), init) {
         strides_ = shape_.strides();
     }

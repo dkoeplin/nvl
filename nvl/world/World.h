@@ -69,7 +69,7 @@ public:
     pure U64 num_alive() const { return entities_.size(); }
 
     /// Converts the given coordinates from window coordinates to world coordinates.
-    pure Pos<2> window_to_world(const Pos<2> &pos) const { return pos - view_; }
+    pure Pos<2> window_to_world(const Pos<2> &pos) const { return pos + view_; }
     pure Box<2> window_to_world(const Box<2> &box) const {
         return {window_to_world(box.min), window_to_world(box.max)};
     }
@@ -128,6 +128,8 @@ public:
     void tick() override;
     void draw() override;
 
+    void set_view(const Pos<2> view) { view_ = view; }
+
     mutable Random random;
 
 protected:
@@ -167,7 +169,7 @@ template <U64 N>
 void World<N>::draw() {
     const Box<2> range = window_to_world(window_->bbox());
     {
-        const auto offset = Window::Offset::Absolute(window_, view_);
+        const auto offset = Window::Offset(window_, view_);
         for (const Actor &actor : entities(range)) {
             actor->draw(window_, {});
         }

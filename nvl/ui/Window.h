@@ -24,12 +24,10 @@ public:
 
     class Offset {
     public:
-        static Offset Absolute(Window *parent, const Pos<2> &offset);
-        static Offset Relative(Window *parent, const Pos<2> &offset);
+        explicit Offset(Window *parent, const Pos<2> &offset);
         ~Offset();
 
     private:
-        explicit Offset(Window *parent, const Pos<2> &offset);
         Window *parent_;
         Maybe<Pos<2>> prev_offset_;
     };

@@ -117,7 +117,7 @@ public:
         Pos<N> offset_;
     };
 
-    BRTree() = default;
+    BRTree() : Parent() {}
     BRTree(std::initializer_list<Item> items) : Parent(items) {}
     BRTree(std::initializer_list<ItemRef> items) : Parent(items) {}
     explicit BRTree(Range<Item> items) : Parent(items) {}
