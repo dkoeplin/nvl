@@ -26,20 +26,21 @@ public:
     struct Params {
         Params() {}
         U64 terminal_velocity = 53; // meters/sec (default is about 120mph)
-        U64 gravity_accel = 10;     // meters/sec^2
+        U64 gravity_accel = 2;      // meters/sec^2
         I64 maximum_y = 1e3;        // meters -- down is positive
     };
 
-    static constexpr U64 kMaxEntries = 10;
-    static constexpr U64 kGridExpMin = 2;
-    static constexpr U64 kGridExpMax = 10;
+    static constexpr I64 kMaxEntries = 10;
+    static constexpr I64 kGridExpMin = 2;
+    static constexpr I64 kGridExpMax = 10;
     using EntityTree = RTree<N, Entity<N>, Actor, kMaxEntries, kGridExpMin, kGridExpMax>;
 
-    static constexpr U64 kPixelsPerMeter = 1000; // px / m
-    static constexpr U64 kMillisPerTick = 30;    // ms / tick
-    static constexpr U64 kVerticalDim = 1;
+    static constexpr I64 kPixelsPerMeter = 1000; // px / m
+    static constexpr I64 kMillisPerTick = 30;    // ms / tick
+    static constexpr I64 kNanosPerTick = kMillisPerTick * 1E6;
 
-    const U64 kGravityAccel; // px / tick^2
+    static constexpr U64 kVerticalDim = 1;
+    const I64 kGravityAccel; // px / tick^2
     const I64 kMaxVelocity;  // px / tick
     const Pos<N> kGravity;
     const I64 kMaxY; // px
@@ -55,7 +56,7 @@ public:
 
         on_mouse_move[{}] = on_mouse_move[{Mouse::Any}] = [this] {
             propagate_event(); // Don't prevent children from seeing the mouse movement event
-            view_ -= window_->mouse_delta();
+            view_ += window_->mouse_delta();
         };
     }
 

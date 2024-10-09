@@ -4,6 +4,7 @@
 #include "nvl/entity/Block.h"
 #include "nvl/material/Bulwark.h"
 #include "nvl/material/TestMaterial.h"
+#include "nvl/test/NullWindow.h"
 #include "nvl/world/World.h"
 
 namespace {
@@ -21,6 +22,7 @@ using nvl::World;
 TEST(TestWorld, fall_out_of_bounds) {
     World<2>::Params params;
     params.maximum_y = 1;
+    params.gravity_accel = 10;
     World<2> world(nullptr, params);
     constexpr Box<2> box({0, 0}, {4, 4});
     const auto color = world.random.uniform<Color>(0, 255);
@@ -48,7 +50,8 @@ TEST(TestWorld, fall_out_of_bounds) {
 }
 
 TEST(TestWorld, idle_when_not_moving) {
-    World<2> world(nullptr);
+    nvl::test::NullWindow window;
+    World<2> world(&window);
     {
         constexpr Box<2> box({0, 0}, {10, 2});
         const auto material = Material::get<Bulwark>();

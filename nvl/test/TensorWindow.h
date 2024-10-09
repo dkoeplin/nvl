@@ -1,7 +1,7 @@
 #pragma once
 
 #include "nvl/data/Tensor.h"
-#include "nvl/draw/Color.h"
+#include "nvl/ui/Color.h"
 #include "nvl/ui/Window.h"
 
 namespace nvl::test {

@@ -1,13 +1,13 @@
 #pragma once
 
 #include "nvl/actor/Actor.h"
-#include "nvl/draw/Color.h"
 #include "nvl/entity/Block.h"
 #include "nvl/geo/Box.h"
 #include "nvl/geo/Pos.h"
 #include "nvl/material/Material.h"
 #include "nvl/material/TestMaterial.h"
 #include "nvl/tool/Tool.h"
+#include "nvl/ui/Color.h"
 #include "nvl/ui/Window.h"
 
 namespace nvl {
@@ -42,7 +42,7 @@ public:
     void tick() override {}
     void draw() override {
         if (pending_) {
-            const auto offset = Window::Offset::Absolute(window_, world_->view());
+            const auto offset = Window::Offset(window_, world_->view());
             pending_->draw(window_, {.alpha = Color::kLighter});
         }
     }

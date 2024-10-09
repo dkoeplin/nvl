@@ -1,6 +1,6 @@
 #pragma once
 
-#include "nvl/draw/Color.h"
+#include "nvl/ui/Color.h"
 #include "nvl/material/Material.h"
 
 namespace nvl {

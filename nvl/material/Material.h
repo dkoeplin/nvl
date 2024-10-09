@@ -3,11 +3,11 @@
 #include <memory>
 #include <string>
 
-#include "nvl/draw/Color.h"
 #include "nvl/macros/Abstract.h"
 #include "nvl/macros/Aliases.h"
 #include "nvl/reflect/Castable.h"
 #include "nvl/reflect/ClassTag.h"
+#include "nvl/ui/Color.h"
 
 namespace nvl {
 

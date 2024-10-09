@@ -34,7 +34,6 @@ add_library(nvl SHARED
         nvl/data/SipHash.h
         nvl/data/Tensor.h
         nvl/data/UnionFind.h
-        nvl/draw/Color.h
         nvl/entity/Entity.h
         nvl/geo/At.h
         nvl/geo/Box.h
@@ -72,6 +71,8 @@ add_library(nvl SHARED
         nvl/time/Duration.cpp
         nvl/time/Duration.h
         nvl/time/TimeScale.h
+        nvl/ui/Color.cpp
+        nvl/ui/Color.h
         nvl/ui/InputEvent.h
         nvl/ui/Key.cpp
         nvl/ui/Key.h
@@ -107,6 +108,7 @@ find_package(GoogleTest REQUIRED)
 add_library(nvl-test SHARED
         nvl/test/Fuzzing.h
         nvl/test/LabeledBox.h
+        nvl/test/NullWindow.h
         nvl/test/TensorWindow.cpp
         nvl/test/TensorWindow.h
 )

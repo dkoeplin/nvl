@@ -15,16 +15,28 @@ void init_world(Window *window, World<2> *world) {
 
 } // namespace nvl
 
+using nvl::RayWindow;
+using nvl::ToolBelt;
+using nvl::Window;
+using nvl::World;
+
 int main() {
-    nvl::RayWindow window("App", {1000, 1000});
-    window.set_mouse_mode(nvl::Window::MouseMode::kViewport);
-    auto *world = window.open<nvl::World<2>>();
-    nvl::init_world(&window, world);
+    RayWindow window("App", {1000, 1000});
+    window.set_mouse_mode(Window::MouseMode::kViewport);
+    auto *world = window.open<World<2>>();
+    init_world(&window, world);
 
-    window.open<nvl::ToolBelt<2>>(world);
+    window.open<ToolBelt<2>>(world);
 
+    using Clock = std::chrono::steady_clock;
+    std::chrono::time_point<std::chrono::steady_clock> prev_tick = Clock::now();
     while (!window.should_close()) {
-        window.tick();
+        const auto now = Clock::now();
+        if (std::chrono::duration_cast<std::chrono::nanoseconds>(now - prev_tick).count() < World<2>::kNanosPerTick) {
+            prev_tick = now;
+            window.tick();
+        }
+
         window.draw();
     }
 }

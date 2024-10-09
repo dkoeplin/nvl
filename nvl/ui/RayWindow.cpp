@@ -1,6 +1,6 @@
 #include "nvl/ui/RayWindow.h"
 
-#include "nvl/draw/Color.h"
+#include "nvl/ui/Color.h"
 #include "raylib.h"
 
 namespace nvl {
@@ -18,6 +18,8 @@ constexpr ::Color raycolor(const Color &color) {
 
 RayWindow::RayWindow(std::string_view title, Pos<2> shape) : Window(title, shape) {
     InitWindow(shape[0], shape[1], title.data());
+    SetWindowFocused();
+    MaximizeWindow();
     ToggleFullscreen();
 }
 
@@ -29,6 +31,7 @@ void RayWindow::draw() {
     for (auto &child : children_) {
         child->draw_all();
     }
+    // If SetTargetFPS is used, this sleeps
     EndDrawing();
 }
 
