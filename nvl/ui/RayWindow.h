@@ -9,6 +9,7 @@ public:
     explicit RayWindow(std::string_view title, Pos<2> shape);
     ~RayWindow() override;
     void draw() override;
+    void feed() override;
     void tick() override;
     void line_rectangle(const Color &color, const Box<2> &box) override;
     void fill_rectangle(const Color &color, const Box<2> &box) override;

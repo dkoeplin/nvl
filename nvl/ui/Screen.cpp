@@ -1,10 +1,10 @@
 #include "nvl/ui/Screen.h"
 
-#include "Window.h"
+#include "nvl/ui/Window.h"
 
 namespace nvl {
 
-List<InputEvent> AbstractScreen::tick_all(const List<InputEvent> &events) {
+List<InputEvent> AbstractScreen::feed_all(const List<InputEvent> &events) {
     List<InputEvent> forwarded;
     for (const InputEvent &event : events) {
         std::function<void()> *func = nullptr;
@@ -36,11 +36,17 @@ List<InputEvent> AbstractScreen::tick_all(const List<InputEvent> &events) {
             forwarded.push_back(event);
         }
     }
-    tick();
-    for (auto iter = children_.begin(); !forwarded.empty() && iter != children_.end(); ++iter) {
-        forwarded = (*iter)->tick_all(forwarded);
+    for (auto iter = children_.begin(); iter != children_.end() && !forwarded.empty(); ++iter) {
+        forwarded = iter->get()->feed_all(forwarded);
     }
     return forwarded;
+}
+
+void AbstractScreen::tick_all() {
+    tick();
+    for (auto &child : children_) {
+        child->tick_all();
+    }
 }
 
 void AbstractScreen::draw_all() {

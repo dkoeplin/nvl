@@ -1,5 +1,6 @@
 #include "nvl/test/TensorWindow.h"
 
+#include "../../../../../../Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/System/Library/Frameworks/AudioToolbox.framework/Headers/AudioUnitProperties.h"
 #include "nvl/geo/Box.h"
 
 namespace nvl::test {
@@ -9,7 +10,13 @@ TensorWindow::TensorWindow(std::string_view title, Pos<2> shape)
 
 void TensorWindow::tick() {
     for (auto &child : children_) {
-        events_ = child->tick_all(events_);
+        child->tick_all();
+    }
+}
+
+void TensorWindow::feed() {
+    for (auto iter = children_.begin(); iter != children_.end() && !events_.empty(); ++iter) {
+        events_ = (*iter)->feed_all(events_);
     }
     events_.clear();
 }

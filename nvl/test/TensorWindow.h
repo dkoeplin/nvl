@@ -11,6 +11,7 @@ public:
     explicit TensorWindow(std::string_view title, Pos<2> shape);
     void draw() override;
     void tick() override;
+    void feed() override;
     void line_rectangle(const Color &color, const Box<2> &box) override;
     void fill_rectangle(const Color &color, const Box<2> &box) override;
     void text(const Color &color, const Pos<2> &pos, I64 font_size, std::string_view text) override;
@@ -34,5 +35,17 @@ private:
     Tensor<2, Color> tensor_;
     List<InputEvent> events_;
 };
+
+inline void print_10x10_tensor(const Tensor<2, Color> &tensor) {
+    std::cout << " 0123456789" << std::endl;
+    for (int64_t i = 0; i < 10; ++i) {
+        std::cout << i << "";
+        for (int64_t j = 0; j < 10; ++j) {
+            auto elem = tensor[{j, i}]; // Note: transposed
+            std::cout << (elem == Color::kBlack ? "X" : ".");
+        }
+        std::cout << std::endl;
+    }
+}
 
 } // namespace nvl::test

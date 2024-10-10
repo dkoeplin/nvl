@@ -35,6 +35,7 @@ public:
     explicit Window(std::string_view title, Pos<2> shape);
     virtual ~Window() = default;
 
+    virtual void feed() = 0;
     virtual void draw() = 0;
     virtual void tick() = 0;
 

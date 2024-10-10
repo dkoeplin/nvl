@@ -33,19 +33,6 @@ using nvl::Tensor;
 using nvl::World;
 using nvl::test::TensorWindow;
 
-void print_tensor(const Tensor<2, Color> &tensor) {
-    std::cout << "  0123456789" << std::endl;
-    std::cout << "------------" << std::endl;
-    for (int64_t i = 0; i < 10; ++i) {
-        std::cout << i << "|";
-        for (int64_t j = 0; j < 10; ++j) {
-            auto elem = tensor[{i, j}];
-            std::cout << (elem == Color::kBlack ? "X" : ".");
-        }
-        std::cout << std::endl;
-    }
-}
-
 TEST(TestWindow, draw) {
     TensorWindow window("Test", {10, 10});
     auto *world = window.open<World<2>>();
@@ -102,9 +89,9 @@ TEST_F(FuzzDraw, draw2d) {
                 << "Mismatched for offset=" << offset << ", loc=" << loc << ", box=" << box << std::endl
                 << "(box + loc) - offset = " << expected_box;
             std::cout << "Expected:" << std::endl;
-            print_tensor(expected);
+            nvl::test::print_10x10_tensor(expected);
             std::cout << "Actual: " << std::endl;
-            print_tensor(tensor);
+            nvl::test::print_10x10_tensor(tensor);
         }
     });
 }

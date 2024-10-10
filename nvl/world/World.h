@@ -25,39 +25,45 @@ public:
 
     struct Params {
         Params() {}
-        U64 terminal_velocity = 53; // meters/sec (default is about 120mph)
-        U64 gravity_accel = 2;      // meters/sec^2
-        I64 maximum_y = 1e3;        // meters -- down is positive
+        U64 terminal_velocity = 53;  // meters/sec (default is about 120mph)
+        U64 gravity_accel = 2;       // meters/sec^2
+        I64 maximum_y = 1e3;         // meters -- down is positive
+        U64 pixels_per_meter = 1000; // pixels / meter
+        U64 ms_per_tick = 30;        // milliseconds / tick
     };
 
     static constexpr I64 kMaxEntries = 10;
     static constexpr I64 kGridExpMin = 2;
     static constexpr I64 kGridExpMax = 10;
+    static constexpr U64 kVerticalDim = 1;
     using EntityTree = RTree<N, Entity<N>, Actor, kMaxEntries, kGridExpMin, kGridExpMax>;
 
-    static constexpr I64 kPixelsPerMeter = 1000; // px / m
-    static constexpr I64 kMillisPerTick = 30;    // ms / tick
-    static constexpr I64 kNanosPerTick = kMillisPerTick * 1E6;
+    const I64 kMillisPerTick;  // ms / tick
+    const I64 kNanosPerTick;   // ns / tick
+    const I64 kPixelsPerMeter; // pixels / meter
 
-    static constexpr U64 kVerticalDim = 1;
-    const I64 kGravityAccel; // px / tick^2
-    const I64 kMaxVelocity;  // px / tick
-    const Pos<N> kGravity;
-    const I64 kMaxY; // px
+    const I64 kGravityAccel; // pixels / tick^2
+    const I64 kMaxVelocity;  // pixels / tick
+    const Pos<N> kGravity;   // pixels / tick^2
+    const I64 kMaxY;         // pixels
 
     pure static bool is_up(const U64 dim, const Dir dir) { return dim == kVerticalDim && dir == Dir::Neg; }
     pure static bool is_down(const U64 dim, const Dir dir) { return dim == kVerticalDim && dir == Dir::Pos; }
 
     explicit World(Window *window, Params params = Params())
-        : AbstractScreen(window),
+        : AbstractScreen(window), kMillisPerTick(params.ms_per_tick), kNanosPerTick(params.ms_per_tick * 1e6),
+          kPixelsPerMeter(params.pixels_per_meter),
           kGravityAccel(params.gravity_accel * kPixelsPerMeter * kMillisPerTick * kMillisPerTick / 1e6),
           kMaxVelocity(params.terminal_velocity * kMillisPerTick * kPixelsPerMeter / 1e3),
-          kGravity(Pos<N>::unit(kVerticalDim, kGravityAccel)), kMaxY(params.maximum_y * kPixelsPerMeter) {
+          kGravity(Pos<N>::unit(kVerticalDim, kGravityAccel)), // Gravity as a vector
+          kMaxY(params.maximum_y * kPixelsPerMeter) {
 
         on_mouse_move[{}] = on_mouse_move[{Mouse::Any}] = [this] {
             propagate_event(); // Don't prevent children from seeing the mouse movement event
             view_ += window_->mouse_delta();
         };
+        // std::cout << "Gravity: " << kGravityAccel << " pixels / tick^2" << std::endl;
+        // std::cout << "MaxVelocity: " << kMaxVelocity << " pixels / tick" << std::endl;
     }
 
     pure Range<Actor> entities(const Pos<N> &pos) { return entities_[pos]; }

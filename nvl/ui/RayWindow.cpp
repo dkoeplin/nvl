@@ -35,7 +35,7 @@ void RayWindow::draw() {
     EndDrawing();
 }
 
-void RayWindow::tick() {
+void RayWindow::feed() {
     List<InputEvent> events;
     while (auto key = GetKeyPressed()) {
         pressed_keys_.emplace(static_cast<Key::Value>(key));
@@ -77,8 +77,14 @@ void RayWindow::tick() {
         events.push_back(InputEvent::get<MouseMove>(pressed_mouse_));
     }
 
+    for (auto iter = children_.begin(); iter != children_.end() && !events.empty(); ++iter) {
+        events = (*iter)->feed_all(events);
+    }
+}
+
+void RayWindow::tick() {
     for (auto &child : children_) {
-        events = child->tick_all(events);
+        child->tick_all();
     }
 }
 

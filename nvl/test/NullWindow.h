@@ -10,6 +10,7 @@ public:
     explicit NullWindow(std::string_view title, Pos<2> shape) : Window(title, shape) {}
     void draw() override {}
     void tick() override {}
+    void feed() override {}
     void line_rectangle(const Color &, const Box<2> &) override {}
     void fill_rectangle(const Color &, const Box<2> &) override {}
     void text(const Color &, const Pos<2> &, I64, std::string_view) override {}

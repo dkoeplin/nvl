@@ -18,13 +18,6 @@ struct Edge;
 template <U64 N>
 class Box {
 public:
-    static constexpr Box presorted(const Pos<N> &min, const Pos<N> &max) {
-        Box box;
-        box.min = min;
-        box.max = max;
-        return box;
-    }
-
     static const Box kUnitBox;
 
     /// Returns a Box with `min` and `max` if min is strictly less than or equal to max.
@@ -32,13 +25,13 @@ public:
     /// Used to detect cases e.g. where intersection results in an empty Box.
     static Maybe<Box> get(const Pos<N> &min, const Pos<N> &max) {
         if (min.all_lte(max)) {
-            return Box::presorted(min, max);
+            return Box(min, max);
         }
         return None;
     }
 
     /// Returns a Box with only one point.
-    static Box unit(const Pos<N> &pt) { return Box::presorted(pt, pt); }
+    static Box unit(const Pos<N> &pt) { return Box(pt, pt); }
 
     struct pos_iterator final : AbstractIteratorCRTP<pos_iterator, Pos<N>> {
         class_tag(Box<N>::pos_iterator, AbstractIterator<Pos<N>>);
@@ -98,7 +91,7 @@ public:
         template <View Type = View::kImmutable>
             requires(Type == View::kImmutable)
         static Iterator<Box<N>, Type> begin(const Box &box, const Pos<N> &shape = Pos<N>::fill(1)) {
-            return make_iterator<box_iterator, Type>(box, Box::presorted(box.min, box.min + shape - 1), shape);
+            return make_iterator<box_iterator, Type>(box, Box(box.min, box.min + shape - 1), shape);
         }
         template <View Type = View::kImmutable>
             requires(Type == View::kImmutable)
@@ -175,14 +168,14 @@ public:
     pure Box operator*(const I64 scale) const { return Box(min * scale, max * scale); }
 
     /// Returns a new Box shifted by `rhs`.
-    pure Box operator+(const Pos<N> &rhs) const { return Box::presorted(min + rhs, max + rhs); }
-    pure Box operator+(const I64 rhs) const { return Box::presorted(min + rhs, max + rhs); }
-    pure Box operator-(const Pos<N> &rhs) const { return Box::presorted(min - rhs, max - rhs); }
-    pure Box operator-(const I64 rhs) const { return Box::presorted(min - rhs, max - rhs); }
+    pure Box operator+(const Pos<N> &rhs) const { return Box(min + rhs, max + rhs); }
+    pure Box operator+(const I64 rhs) const { return Box(min + rhs, max + rhs); }
+    pure Box operator-(const Pos<N> &rhs) const { return Box(min - rhs, max - rhs); }
+    pure Box operator-(const I64 rhs) const { return Box(min - rhs, max - rhs); }
 
     /// Returns a new Box which is clamped to the given grid size.
-    pure Box clamp(const Pos<N> &grid) const { return Box::presorted(min.grid_min(grid), max.grid_max(grid)); }
-    pure Box clamp(const I64 grid) const { return Box::presorted(min.grid_min(grid), max.grid_max(grid)); }
+    pure Box clamp(const Pos<N> &grid) const { return Box(min.grid_min(grid), max.grid_max(grid)); }
+    pure Box clamp(const I64 grid) const { return Box(min.grid_min(grid), max.grid_max(grid)); }
 
     /// Returns an iterator over points in this box with the given `step` size in each dimension.
     pure Range<Pos<N>> pos_iter(const I64 step = 1) const { return pos_iter(Pos<N>::fill(step)); }
@@ -226,7 +219,7 @@ public:
     /// Returns the Box where this and `rhs` overlap. Returns None if there is no overlap.
     pure Maybe<Box> intersect(const Box &rhs) const {
         if (overlaps(rhs)) {
-            return Box::presorted(nvl::max(min, rhs.min), nvl::min(max, rhs.max));
+            return Box(nvl::max(min, rhs.min), nvl::min(max, rhs.max));
         }
         return None;
     }
@@ -269,9 +262,7 @@ public:
     pure Edge<N> edge(U64 dim, Dir dir, I64 width = 1, I64 dist = 1) const;
 
     /// Returns a new Box which is expanded by `size` in every direction/dimension.
-    pure Box widened(const U64 size) const {
-        return Box::presorted(min - Pos<N>::fill(size), max + Pos<N>::fill(size));
-    }
+    pure Box widened(const U64 size) const { return Box(min - Pos<N>::fill(size), max + Pos<N>::fill(size)); }
 
     pure std::string to_string() const {
         std::stringstream ss;
@@ -379,7 +370,7 @@ Edge<N> Box<N>::edge(const U64 dim, const Dir dir, const I64 width, const I64 di
     auto outer = unit * (width - 1);
     auto edge_min = (dir == Dir::Neg) ? min - outer - inner : min.with(dim, max[dim]) + inner;
     auto edge_max = (dir == Dir::Neg) ? max.with(dim, min[dim]) - inner : max + outer + inner;
-    return Edge<N>(dim, dir, Box::presorted(edge_min, edge_max));
+    return Edge<N>(dim, dir, Box(edge_min, edge_max));
 }
 
 template <U64 N>
@@ -409,8 +400,7 @@ std::ostream &operator<<(std::ostream &os, const Edge<N> &edge) {
 /// Note that the resulting area may be larger than the sum of the two areas.
 template <U64 N>
 pure Box<N> bounding_box(const Box<N> &a, const Box<N> &b) {
-    // presorted is sufficient here since already taking the min/max across both
-    return Box<N>::presorted(min(a.min, b.min), max(a.max, b.max));
+    return Box<N>(min(a.min, b.min), max(a.max, b.max));
 }
 
 } // namespace nvl

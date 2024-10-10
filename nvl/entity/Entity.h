@@ -138,7 +138,7 @@ Pos<N> Entity<N>::next_velocity() const {
         if (v != 0 || a != 0) {
             for (const auto &part : parts()) {
                 const Box<N> box = part.bbox();
-                const I64 x = (v >= 0) ? box.min[i] : box.max[i];
+                const I64 x = (v >= 0) ? box.max[i] : box.min[i];
                 const Box<N> trj = box.with(i, x, x + v_next);
                 for (Actor actor : world_->entities(trj)) {
                     if (auto *entity = actor.dyn_cast<Entity<N>>(); entity && entity != this) {

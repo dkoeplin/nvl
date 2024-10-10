@@ -23,7 +23,10 @@ using nvl::World;
 int main() {
     RayWindow window("App", {1000, 1000});
     window.set_mouse_mode(Window::MouseMode::kViewport);
-    auto *world = window.open<World<2>>();
+    World<2>::Params params;
+    params.maximum_y = 1000;
+    params.gravity_accel = 2;
+    auto *world = window.open<World<2>>(params);
     init_world(&window, world);
 
     window.open<ToolBelt<2>>(world);
@@ -32,11 +35,11 @@ int main() {
     std::chrono::time_point<std::chrono::steady_clock> prev_tick = Clock::now();
     while (!window.should_close()) {
         const auto now = Clock::now();
-        if (std::chrono::duration_cast<std::chrono::nanoseconds>(now - prev_tick).count() < World<2>::kNanosPerTick) {
+        if (std::chrono::duration_cast<std::chrono::nanoseconds>(now - prev_tick).count() >= world->kNanosPerTick) {
             prev_tick = now;
             window.tick();
         }
-
+        window.feed();
         window.draw();
     }
 }

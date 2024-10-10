@@ -21,16 +21,18 @@ abstract class AbstractScreen : Castable<Screen, AbstractScreen, std::shared_ptr
 public:
     class_tag(AbstractScreen);
     explicit AbstractScreen(Window *window) : window_(window) {}
-    List<InputEvent> tick_all(const List<InputEvent> &events);
+
+    List<InputEvent> feed_all(const List<InputEvent> &events);
+    void tick_all();
     void draw_all();
+
+protected:
+    /// Mark the current input event being processed as propagated to other siblings and/or children.
+    void propagate_event() { propagated_event_ = true; }
 
     virtual void tick() = 0;
     virtual void draw() = 0;
 
-    /// Mark the current input event being processed as propagated to other siblings and/or children.
-    void propagate_event() { propagated_event_ = true; }
-
-protected:
     struct ButtonsHash {
         U64 operator()(const Set<Mouse> &buttons) const noexcept { return sip_hash(buttons.values()); }
     };
