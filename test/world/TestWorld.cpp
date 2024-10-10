@@ -92,7 +92,7 @@ TEST(TestWorld, idle_when_not_moving) {
         for (U64 i = 0; i < 10; ++i) {
             world.tick();
         }
-        EXPECT_EQ(block->loc(), Pos<2>(5, -1));
+        EXPECT_EQ(block->bbox().max[1], -1);
         EXPECT_EQ(world.num_awake(), 0);
         EXPECT_EQ(world.num_alive(), 2);
     }

@@ -1,6 +1,5 @@
 #include "nvl/test/TensorWindow.h"
 
-#include "../../../../../../Library/Developer/CommandLineTools/SDKs/MacOSX15.0.sdk/System/Library/Frameworks/AudioToolbox.framework/Headers/AudioUnitProperties.h"
 #include "nvl/geo/Box.h"
 
 namespace nvl::test {
