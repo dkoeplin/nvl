@@ -1,4 +1,5 @@
 #include "nvl/entity/Entity.h"
+#include "nvl/reflect/Backtrace.h"
 #include "nvl/tool/ToolBelt.h"
 #include "nvl/ui/RayWindow.h"
 #include "nvl/world/World.h"
@@ -15,12 +16,17 @@ void init_world(Window *window, World<2> *world) {
 
 } // namespace nvl
 
+using nvl::Clock;
+using nvl::Duration;
 using nvl::RayWindow;
+using nvl::Time;
 using nvl::ToolBelt;
 using nvl::Window;
 using nvl::World;
 
 int main() {
+    nvl::register_signal_handlers();
+
     RayWindow window("App", {1000, 1000});
     window.set_mouse_mode(Window::MouseMode::kViewport);
     World<2>::Params params;
@@ -31,12 +37,9 @@ int main() {
 
     window.open<ToolBelt<2>>(world);
 
-    using Clock = std::chrono::steady_clock;
-    using Time = std::chrono::time_point<std::chrono::steady_clock>;
     Time prev_tick = Clock::now();
     while (!window.should_close()) {
-        const Time now = Clock::now();
-        if (std::chrono::duration_cast<std::chrono::nanoseconds>(now - prev_tick).count() >= world->kNanosPerTick) {
+        if (const Time now = Clock::now(); Duration(now - prev_tick) >= world->kNanosPerTick) {
             prev_tick = now;
             window.tick();
         }

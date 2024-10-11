@@ -63,6 +63,8 @@ add_library(nvl SHARED
         nvl/message/Hit.h
         nvl/message/Message.h
         nvl/message/Notify.h
+        nvl/reflect/Backtrace.cpp
+        nvl/reflect/Backtrace.h
         nvl/reflect/Castable.h
         nvl/reflect/Casting.h
         nvl/reflect/ClassTag.cpp
@@ -91,15 +93,15 @@ set(RAYLIB_VERSION 5.0)
 find_package(raylib ${RAYLIB_VERSION} REQUIRED)
 
 target_include_directories(nvl PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(nvl raylib)
+target_link_libraries(nvl PRIVATE raylib)
 
 add_executable(app ${CMAKE_CURRENT_SOURCE_DIR}/nvl/App.cpp)
 target_link_libraries(app PRIVATE nvl)
 
 if (APPLE)
-    target_link_libraries(nvl "-framework IOKit")
-    target_link_libraries(nvl "-framework Cocoa")
-    target_link_libraries(nvl "-framework OpenGL")
+    target_link_libraries(nvl PRIVATE "-framework IOKit")
+    target_link_libraries(nvl PRIVATE "-framework Cocoa")
+    target_link_libraries(nvl PRIVATE "-framework OpenGL")
 endif ()
 
 find_package(GoogleTest REQUIRED)
