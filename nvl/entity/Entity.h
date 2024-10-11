@@ -161,6 +161,8 @@ Status Entity<N>::receive(const Message &message) {
     if (const auto *h = message.dyn_cast<Hit<N>>()) {
         return hit(*h);
     } else if (message.isa<Destroy>()) {
+        const Set<Actor> neighbors = above();
+        send<Notify>(neighbors.values(), Notify::kDied);
         return Status::kDied;
     }
     return Status::kNone;
@@ -219,7 +221,7 @@ Status Entity<N>::tick(const List<Message> &messages) {
     velocity_ = next_velocity();
 
     if (velocity_ != Pos<N>::zero) {
-        if (init_velocity != Pos<N>::zero) {
+        if (init_velocity == Pos<N>::zero) {
             // When starting to move, notify anything above
             const Set<Actor> neighbors = above();
             send<Notify>(neighbors.values(), Notify::kMoved);

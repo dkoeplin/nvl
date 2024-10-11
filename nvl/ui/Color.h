@@ -8,13 +8,11 @@
 namespace nvl {
 
 struct Color {
-    static constexpr U64 kLighter = 1462;
-    static constexpr U64 kNormal = 1024;
-    static constexpr U64 kDarker = 763;
-    struct Options {
-        U64 scale = kNormal; // Scales all color channels by (scale/1024)
-        U64 alpha = kNormal; // Scales the alpha channel by (alpha/1024)
-    };
+    static const Color kLighter;
+    static const Color kNormal;
+    static const Color kDarker;
+    static const Color kMoreTransparent;
+    static const Color kLessTransparent;
 
     static const Color kBlack;
     static const Color kRed;
@@ -22,14 +20,16 @@ struct Color {
     static const Color kBlue;
     static const Color kWhite;
 
-    constexpr static Color hex(U64 hex) { return {.r = (hex >> 16) & 0xFF, .g = (hex >> 8) & 0xFF, .b = hex & 0xFF}; }
+    constexpr static Color hex(const U64 hex) {
+        return {.r = (hex >> 16) & 0xFF, .g = (hex >> 8) & 0xFF, .b = hex & 0xFF};
+    }
 
-    /// Returns a "highlighted" version of this color that scales the R, G, and B channels by (highlight / 1024).
-    pure constexpr Color highlight(Options options) const {
-        return {.r = std::min<U64>((r * options.scale) >> 10, 0xFF),
-                .g = std::min<U64>((g * options.scale) >> 10, 0xFF),
-                .b = std::min<U64>((b * options.scale) >> 10, 0xFF),
-                .a = std::min<U64>((a * options.alpha) >> 10, 0xFF)};
+    /// Returns a scaled version of this color that multiplies the R, G, and B channels by (highlight / 1024).
+    pure constexpr Color highlight(const Color &highlight) const {
+        return {.r = std::min<U64>((r * highlight.r) / 1024, 0xFF),
+                .g = std::min<U64>((g * highlight.g) / 1024, 0xFF),
+                .b = std::min<U64>((b * highlight.b) / 1024, 0xFF),
+                .a = std::min<U64>((a * highlight.a) / 1024, 0xFF)};
     }
 
     pure constexpr bool operator==(const Color &rhs) const {
@@ -46,6 +46,12 @@ struct Color {
 };
 
 // clang-format off
+constexpr Color Color::kLighter {.r = 1462, .g = 1462, .b = 1462, .a = 1024};
+constexpr Color Color::kNormal {.r = 1024, .g = 1024, .b = 1024, .a = 1024};
+constexpr Color Color::kDarker {.r = 763, .g = 763, .b = 763, .a = 1024};
+constexpr Color Color::kMoreTransparent {.r = 1024, .g = 1024, .b = 1024, .a = 763};
+constexpr Color Color::kLessTransparent {.r = 1024, .g = 1024, .b = 1024, .a = 1462};
+
 constexpr Color Color::kBlack = hex(0x000000);
 constexpr Color Color::kRed   = hex(0xFF0000);
 constexpr Color Color::kGreen = hex(0x00FF00);

@@ -22,10 +22,9 @@ void signal_handler(const int sig) {
     void *trace[kMaxDepth];
     const int size = backtrace(trace, kMaxDepth);
 
-    // Skip the first few lines in the trace. It'll just point to the trace to the signal handler itself.
     // This is using a macOS specific utility (atos) to get the source/line information from the trace:
     // https://stackoverflow.com/questions/289820/getting-the-current-stack-trace-on-mac-os-x
-    for (int i = 3; i < size; ++i) {
+    for (int i = 0; i < size; ++i) {
         Dl_info info;
         dladdr(trace[i], &info);
 

@@ -143,6 +143,11 @@ public:
     }
 
     void remove(const K &key) { parent::erase(key); }
+    void remove(const Range<K> &keys) {
+        for (const K &key : keys) {
+            parent::erase(key);
+        }
+    }
 
     pure bool has(const K &key) const { return parent::contains(key); }
 

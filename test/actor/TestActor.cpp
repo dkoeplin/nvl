@@ -20,7 +20,7 @@ struct SimpleActor final : AbstractActor {
     explicit SimpleActor(const Box<2> &box) : box_(box) {}
 
     Status tick(const List<Message> &) override { return Status::kNone; }
-    void draw(Window *, const Color::Options &) const override {}
+    void draw(Window *, const Color &) const override {}
 
     Box<2> box_;
 };

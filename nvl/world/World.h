@@ -5,7 +5,6 @@
 #include "nvl/data/Set.h"
 #include "nvl/geo/Box.h"
 #include "nvl/geo/RTree.h"
-#include "nvl/material/Bulwark.h"
 #include "nvl/math/Random.h"
 #include "nvl/message/Created.h"
 #include "nvl/message/Destroy.h"
@@ -165,7 +164,11 @@ void World<N>::tick() {
 
     // Wake any entities with pending messages
     for (auto &[actor, _] : messages_) {
-        awake_.emplace(actor);
+        if (entities_.has(actor)) {
+            awake_.emplace(actor);
+        } else {
+            died_.insert(actor);
+        }
     }
 
     Set<Actor> idled;
@@ -177,6 +180,7 @@ void World<N>::tick() {
     awake_.remove(died_.values());
     awake_.remove(idled.values());
     entities_.remove(died_.values());
+    messages_.remove(died_.values());
     died_.clear();
 
     tick_last_ = Clock::now() - start;
@@ -193,7 +197,7 @@ void World<N>::draw() {
     {
         const auto offset = Window::Offset(window_, view_);
         for (const Actor &actor : entities(range)) {
-            actor->draw(window_, {});
+            actor->draw(window_, Color::kNormal);
         }
     }
 
@@ -237,7 +241,10 @@ void World<N>::tick_entity(Set<Actor> &idled, Ref<Entity<N>> entity) {
     const Actor actor = entity->self();
     const Box<N> prev_bbox = entity->bbox();
     const auto messages_iter = messages_.find(actor);
-    const List<Message> &messages = messages_iter == messages_.end() ? kNoMessages : messages_iter->second;
+    const List<Message> messages = messages_iter == messages_.end() ? kNoMessages : messages_iter->second;
+    if (messages_iter != messages_.end()) {
+        messages_.erase(messages_iter);
+    }
     msgs_last_ += messages.size();
     const Status status = entity->tick(messages);
     if (status == Status::kDied) {
@@ -246,9 +253,6 @@ void World<N>::tick_entity(Set<Actor> &idled, Ref<Entity<N>> entity) {
         idled.insert(actor);
     } else if (status == Status::kMove) {
         entities_.move(actor, prev_bbox);
-    }
-    if (messages_iter != messages_.end()) {
-        messages_.erase(messages_iter);
     }
 
     // Check if the entity is now above the maximum Y limits (down is positive)

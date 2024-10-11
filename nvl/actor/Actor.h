@@ -3,11 +3,11 @@
 #include "nvl/actor/Status.h"
 #include "nvl/data/List.h"
 #include "nvl/data/SipHash.h"
-#include "nvl/ui/Color.h"
 #include "nvl/macros/Abstract.h"
 #include "nvl/macros/Aliases.h"
 #include "nvl/macros/Pure.h"
 #include "nvl/reflect/Castable.h"
+#include "nvl/ui/Color.h"
 
 namespace nvl {
 
@@ -18,7 +18,7 @@ struct Message;
 abstract struct AbstractActor : Castable<Actor, AbstractActor>::BaseClass {
     class_tag(AbstractActor);
     virtual Status tick(const List<Message> &messages) = 0;
-    virtual void draw(Window *window, const Color::Options &options) const = 0;
+    virtual void draw(Window *window, const Color &scale) const = 0;
 };
 
 struct Actor final : Castable<Actor, AbstractActor> {

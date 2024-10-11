@@ -13,7 +13,7 @@ using nvl::Window;
 struct SimpleEntity : Entity<2> {
     using Entity::Entity;
     Status broken(const nvl::List<Component> &) override { return Status::kNone; }
-    void draw(Window *, const Color::Options &) const override {}
+    void draw(Window *, const Color &) const override {}
 };
 
 TEST(TestEntity, construct) {

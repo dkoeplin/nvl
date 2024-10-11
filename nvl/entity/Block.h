@@ -24,13 +24,13 @@ public:
         }
     }
 
-    void draw(Window *window, const Color::Options &options) const override {
-        const auto color = material_->color.highlight(options);
+    void draw(Window *window, const Color &scale) const override {
+        const auto color = material_->color.highlight(scale);
         for (const At<N, Part<N>> &part : this->parts()) {
             window->fill_rectangle(color, part.bbox());
         }
         if (material_->outline) {
-            const auto edge_color = color.highlight({.scale = Color::kDarker});
+            const auto edge_color = color.highlight(Color::kDarker);
             for (const At<N, Edge<N>> &edge : this->edges()) {
                 window->line_rectangle(edge_color, edge.bbox());
             }
