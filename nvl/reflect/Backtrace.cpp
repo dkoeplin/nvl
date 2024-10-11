@@ -14,6 +14,7 @@ namespace nvl {
 namespace {
 
 // TODO: Make this more portable. This only works for macOS at the moment.
+#ifdef __APPLE__
 void signal_handler(const int sig) {
     static constexpr int kMaxDepth = 40;
     std::cout << "Received signal " << strsignal(sig) << std::endl;
@@ -45,11 +46,16 @@ void signal_handler(const int sig) {
     std::cout << std::flush;
     exit(sig);
 }
+#else
+void signal_handler(const int sig) {
+    // Do nothing for now
+}
+#endif // #ifdef __APPLE__
 
 } // namespace
 
 void register_signal_handlers() {
-    // Install signal handler for SIGSEGV
+    // Install signal handlers
     signal(SIGSEGV, signal_handler);
 }
 
