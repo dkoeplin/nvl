@@ -9,26 +9,6 @@
 #include "nvl/test/Fuzzing.h"
 #include "nvl/test/LabeledBox.h"
 
-namespace nvl {
-
-template <U64 N>
-struct nvl::RandomGen<Box<N>> {
-    template <typename I>
-    pure Box<N> uniform(Random &random, const I min, const I max) const {
-        const auto a = random.uniform<Pos<N>, I>(min, max);
-        const auto shape = random.uniform<Pos<N>, I>(0, 32);
-        return Box(a, a + shape);
-    }
-    template <typename I>
-    pure Box<N> normal(Random &random, const I mean, const I stddev) const {
-        const auto a = random.normal<Pos<N>, I>(mean, stddev);
-        const auto shape = random.uniform<Pos<N>, I>(0, 32);
-        return Box(a, a + shape);
-    }
-};
-
-} // namespace nvl
-
 namespace {
 
 using testing::IsEmpty;
@@ -68,6 +48,13 @@ pure Map<Box<N>, Set<U64>> collect_ids(RTree<N, Item, ItemRef, kMaxEntries> &tre
 TEST(TestRTree, create) {
     RTree<2, LabeledBox> tree;
     tree.insert({0, {{0, 5}, {5, 10}}});
+    EXPECT_EQ(tree.size(), 1);
+    EXPECT_EQ(tree.nodes(), 1);
+}
+
+TEST(TestRTree, create_high_loc) {
+    RTree<2, LabeledBox> tree;
+    tree.emplace(0, Box<2>({10000, 10000}, {10005, 10005}));
     EXPECT_EQ(tree.size(), 1);
     EXPECT_EQ(tree.nodes(), 1);
 }
@@ -220,6 +207,39 @@ TEST(TestRTree, fuzz_insertion) {
     insert_fuzzer.fuzz([&tree](Ref<Box<2>> &result, const Box<2> &in) { result = tree.insert(in); });
 
     EXPECT_EQ(tree.size(), kNumTests);
+}
+
+struct FuzzMove : nvl::test::FuzzingTestFixture<bool, Pos<2>, Pos<2>, Pos<2>> {
+    FuzzMove() = default;
+};
+
+TEST_F(FuzzMove, move2d) {
+    using nvl::Distribution;
+    using nvl::Random;
+
+    this->num_tests = 1E4;
+    this->in[0] = Distribution::Uniform<I64>(500, 1500);
+    this->in[1] = Distribution::Uniform<I64>(-1000, 0);
+    this->in[2] = Distribution::Uniform<I64>(0, 10000);
+
+    fuzz([](bool &passed, const Pos<2> &shape, const Pos<2> &loc, const Pos<2> &loc2) {
+        RTree<2, LabeledBox> tree;
+        const Box original(loc, loc + shape);
+        auto lbox = tree.emplace(0, original);
+        // std::cout << "Moved box with shape " << shape << " from " << loc << " to " << loc2 << std::endl;
+        lbox->moveto(loc2);
+        tree.move(lbox, original);
+        const Box updated = lbox->bbox();
+        // std::cout << "  Original: " << original << std::endl;
+        // std::cout << "  Updated:  " << updated << std::endl;
+        for (Box<2> b : original.diff(updated)) {
+            ASSERT_THAT(tree[b], IsEmpty());
+        }
+        for (Box<2> b : updated.diff(original)) {
+            ASSERT_THAT(tree[b], UnorderedElementsAre(lbox));
+        }
+        passed = true;
+    });
 }
 
 } // namespace

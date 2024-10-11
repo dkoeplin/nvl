@@ -173,6 +173,13 @@ public:
     pure Box operator-(const Pos<N> &rhs) const { return Box(min - rhs, max - rhs); }
     pure Box operator-(const I64 rhs) const { return Box(min - rhs, max - rhs); }
 
+    void operator+=(const Pos<2> &rhs) { *this = Box(min + rhs, max + rhs); }
+    void operator-=(const Pos<2> &rhs) { *this = Box(min - rhs, max - rhs); }
+    void operator*=(const Pos<2> &rhs) { *this = Box(min * rhs, max * rhs); }
+    void operator+=(const I64 &rhs) { *this = Box(min + rhs, max + rhs); }
+    void operator-=(const I64 &rhs) { *this = Box(min - rhs, max - rhs); }
+    void operator*=(const I64 &rhs) { *this = Box(min * rhs, max * rhs); }
+
     /// Returns a new Box which is clamped to the given grid size.
     pure Box clamp(const Pos<N> &grid) const { return Box(min.grid_min(grid), max.grid_max(grid)); }
     pure Box clamp(const I64 grid) const { return Box(min.grid_min(grid), max.grid_max(grid)); }

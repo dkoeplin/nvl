@@ -333,7 +333,7 @@ public:
     static constexpr I64 grid_min = 0x1 << kGridExpMin;
     static constexpr I64 grid_max = 0x1 << kGridExpMax;
 
-    explicit RTree() : root_(next_node(None, grid_max, {})) {}
+    RTree() : root_(next_node(None, grid_max, {})) {}
 
     RTree(std::initializer_list<Item> items) : RTree() {
         for (const auto &item : items) {
@@ -481,7 +481,6 @@ public:
         items_.clear();
         nodes_.clear();
         item_ids_.clear();
-        garbage_.clear();
         root_ = next_node(None, grid_max, {});
     }
 
@@ -524,6 +523,17 @@ public:
     }
 
 private:
+    struct Garbage {
+        explicit Garbage(RTree *parent) : parent(parent) {}
+        ~Garbage() {
+            for (const U64 removed_id : removed_nodes) {
+                parent->nodes_.erase(removed_id);
+            }
+        }
+        List<U64> removed_nodes;
+        RTree *parent;
+    };
+
     Node *next_node(const Maybe<typename Node::Parent> &parent, const I64 grid, const List<ItemRef> &items) {
         const Pos<N> grid_fill = Pos<N>::fill(grid);
         const U64 id = node_id_++;
@@ -582,25 +592,25 @@ private:
         balance_pos(node, pos);
     }
 
-    void remove(Node *node, const Pos<N> &pos) {
+    void remove(Garbage &garbage, Node *node, const Pos<N> &pos) {
         if (auto *entry = node->get(pos)) {
             if (entry->kind == Node::Entry::kNode) {
                 Node *child = entry->node;
-                garbage_.push_back(child->id);
+                garbage.removed_nodes.push_back(child->id);
             }
             node->map.remove(pos);
         }
         if (node->map.empty() && node->parent.has_value()) {
-            remove(node->parent->node, node->parent->box.min);
+            remove(garbage, node->parent->node, node->parent->box.min);
         }
     }
 
-    void remove(Node *node, const Pos<N> &pos, const ItemRef &item) {
+    void remove(Garbage &garbage, Node *node, const Pos<N> &pos, const ItemRef &item) {
         if (auto *entry = node->get(pos)) {
             ASSERT(entry->kind == Node::Entry::kList, "Cannot remove from non-list entry");
             entry->list.remove(item); // TODO: O(N) with number of items here
             if (entry->list.empty()) {
-                remove(node, pos);
+                remove(garbage, node, pos);
             }
         }
     }
@@ -612,15 +622,25 @@ private:
         return None;
     }
 
-    RTree &move(const ItemRef &item, const Box<N> &new_box, const Box<N> &prev_box) {
+    RTree &move(const ItemRef &item, const Box<N> &new_box, const Box<N> &old_box) {
         bbox_ = bbox_ ? bounding_box(*bbox_, new_box) : new_box;
         if (auto pair = get_item(item)) {
             auto [_, ref] = *pair;
-            for (const auto &removed : prev_box.diff(new_box)) {
-                remove_over(item, removed, false);
+            Garbage garbage(this);
+            for (const Box<N> &removed : old_box.diff(new_box)) {
+                for (auto [node, pos] : entries_in(removed)) {
+                    if (!new_box.overlaps({pos, pos + node->grid - 1})) {
+                        remove(garbage, node, pos, ref);
+                    }
+                }
             }
-            for (const auto &added : new_box.diff(prev_box)) {
-                populate_over(item, added);
+            for (const Box<N> &added : new_box.diff(old_box)) {
+                for (auto [node, pos] : points_in(added)) {
+                    if (!old_box.overlaps({pos, pos + node->grid - 1})) {
+                        node->map[pos].list.emplace_back(ref);
+                        balance(node, pos);
+                    }
+                }
             }
         }
         return *this;
@@ -667,16 +687,13 @@ private:
     RTree &remove_over(const ItemRef item, const Box<N> &box, const bool remove_all) {
         if (auto pair = get_item(item)) {
             // TODO: Update bounds?
+            Garbage garbage(this);
             for (auto [node, pos] : entries_in(box)) {
-                remove(node, pos, pair->second);
+                remove(garbage, node, pos, pair->second);
             }
             if (remove_all) {
                 items_.remove(pair->first);
             }
-            for (const U64 removed_id : garbage_) {
-                nodes_.erase(removed_id);
-            }
-            garbage_.clear();
         }
         return *this;
     }
@@ -693,9 +710,6 @@ private:
 
     Map<U64, Node> nodes_;
     Node *root_;
-
-    // List of nodes to be removed
-    List<U64> garbage_;
 };
 
 } // namespace nvl

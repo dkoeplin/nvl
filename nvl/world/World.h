@@ -175,6 +175,7 @@ void World<N>::tick() {
 template <U64 N>
 void World<N>::draw() {
     const Box<2> range = window_to_world(window_->bbox());
+    const Pos<2> center = window_to_world(window_->center());
     {
         const auto offset = Window::Offset(window_, view_);
         for (const Actor &actor : entities(range)) {
@@ -191,10 +192,19 @@ void World<N>::draw() {
         window_->line_rectangle(crosshair_color, vline);
     }
 
-    window_->text(Color::kBlack, {10, 10}, 20, std::to_string(window_->fps()));
-    window_->text(Color::kBlack, {10, 40}, 20, range.to_string());
-    window_->text(Color::kBlack, {10, 70}, 20, "Alive: " + std::to_string(num_alive()));
-    window_->text(Color::kBlack, {10, 100}, 20, "Awake: " + std::to_string(num_awake()));
+    std::string hover = "None";
+    if (auto over = this->entities(center); !over.empty()) {
+        if (auto *entity = over.begin()->template dyn_cast<Entity<N>>()) {
+            hover = entity->bbox().to_string();
+        }
+    }
+
+    window_->text(Color::kBlack, {10, 10}, 20, "FPS: " + std::to_string(window_->fps()));
+    window_->text(Color::kBlack, {10, 40}, 20, "VRange: " + range.to_string());
+    window_->text(Color::kBlack, {10, 70}, 20, "Center: " + center.to_string());
+    window_->text(Color::kBlack, {10, 100}, 20, "Alive: " + std::to_string(num_alive()));
+    window_->text(Color::kBlack, {10, 130}, 20, "Awake: " + std::to_string(num_awake()));
+    window_->text(Color::kBlack, {10, 160}, 20, "Hover: " + hover);
 }
 
 template <U64 N>

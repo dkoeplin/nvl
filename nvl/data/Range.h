@@ -37,6 +37,16 @@ public:
 
     pure bool empty() const { return begin_ == end_; }
 
+    /// Returns the number of elements in this range. Note that this is O(N)!
+    pure U64 size() const {
+        U64 size = 0;
+        const auto end = this->end();
+        for (auto iter = begin(); iter != end; ++iter) {
+            ++size;
+        }
+        return size;
+    }
+
     pure Iterator<Value, Type> begin() const { return begin_.copy(); }
     pure Iterator<Value, Type> end() const { return end_; }
 

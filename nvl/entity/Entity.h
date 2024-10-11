@@ -120,8 +120,9 @@ bool Entity<N>::has_below() const {
         if (World<N>::is_down(edge->dim, edge->dir)) {
             const Box<N> box = edge.bbox();
             for (const Actor &actor : world_->entities(box)) {
-                const Entity<N> &entity = *actor.dyn_cast<Entity<N>>();
-                return_if(entity.parts(box).empty(), true);
+                if (const Entity<N> *entity = actor.dyn_cast<Entity<N>>(); entity && entity != this) {
+                    return_if(!entity->parts(box).empty(), true);
+                }
             }
         }
     }
@@ -136,15 +137,15 @@ Pos<N> Entity<N>::next_velocity() const {
         const I64 a = accel_[i];
         I64 v_next = std::clamp(v + a, -world_->kMaxVelocity, world_->kMaxVelocity);
         if (v != 0 || a != 0) {
-            for (const auto &part : parts()) {
+            for (const At<N, Part<N>> &part : parts()) {
                 const Box<N> box = part.bbox();
                 const I64 x = (v >= 0) ? box.max[i] : box.min[i];
                 const Box<N> trj = box.with(i, x, x + v_next);
                 for (Actor actor : world_->entities(trj)) {
                     if (auto *entity = actor.dyn_cast<Entity<N>>(); entity && entity != this) {
-                        for (const auto &other : entity->parts(trj)) {
-                            const I64 bound = (v >= 0) ? other.bbox().min[i] - 1 : other.bbox().max[i] + 1;
-                            v_next = (v >= 0) ? std::min(v_next, bound - x) : std::max(v_next, bound - x);
+                        for (const At<N, Part<N>> &other : entity->parts(trj)) {
+                            v_next = (v >= 0) ? std::clamp<I64>(other.bbox().min[i] - 1 - x, 0, v_next)
+                                              : std::clamp<I64>(x - other.bbox().max[i] - 1, v_next, 0);
                         }
                     }
                 }

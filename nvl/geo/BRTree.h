@@ -128,10 +128,10 @@ public:
     explicit BRTree(Pos<2> loc, Range<Item> items) : Parent(items), loc(loc) {}
     explicit BRTree(Pos<2> loc, Range<ItemRef> items) : Parent(items), loc(loc) {}
 
-    BRTree &insert(const Item &item) {
-        this->items_.insert(item);
+    ItemRef insert(const Item &item) {
+        auto ref = this->items_.insert(item);
         this->mark_changed();
-        return *this;
+        return ref;
     }
 
     BRTree &insert(const Range<Item> &items) {

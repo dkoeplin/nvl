@@ -4,7 +4,25 @@
 #include "nvl/geo/Box.h"
 #include "nvl/geo/BRTree.h"
 #include "nvl/geo/Pos.h"
+#include "nvl/math/Random.h"
+#include "nvl/test/Fuzzing.h"
 #include "nvl/test/LabeledBox.h"
+
+template <U64 N>
+struct nvl::RandomGen<nvl::Box<N>> {
+    template <typename I>
+    pure Box<N> uniform(Random &random, const I min, const I max) const {
+        const auto a = random.uniform<Pos<N>, I>(min, max);
+        const auto b = random.uniform<Pos<N>, I>(min, max);
+        return Box(a, b);
+    }
+    template <typename I>
+    pure Box<N> normal(Random &random, const I mean, const I stddev) const {
+        const auto a = random.normal<Pos<N>, I>(mean, stddev);
+        const auto b = random.normal<Pos<N>, I>(mean, stddev);
+        return Box(a, b);
+    }
+};
 
 namespace {
 

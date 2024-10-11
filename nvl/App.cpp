@@ -24,7 +24,7 @@ int main() {
     RayWindow window("App", {1000, 1000});
     window.set_mouse_mode(Window::MouseMode::kViewport);
     World<2>::Params params;
-    params.maximum_y = 1000;
+    params.maximum_y = 5000;
     params.gravity_accel = 2;
     auto *world = window.open<World<2>>(params);
     init_world(&window, world);
@@ -32,9 +32,10 @@ int main() {
     window.open<ToolBelt<2>>(world);
 
     using Clock = std::chrono::steady_clock;
-    std::chrono::time_point<std::chrono::steady_clock> prev_tick = Clock::now();
+    using Time = std::chrono::time_point<std::chrono::steady_clock>;
+    Time prev_tick = Clock::now();
     while (!window.should_close()) {
-        const auto now = Clock::now();
+        const Time now = Clock::now();
         if (std::chrono::duration_cast<std::chrono::nanoseconds>(now - prev_tick).count() >= world->kNanosPerTick) {
             prev_tick = now;
             window.tick();

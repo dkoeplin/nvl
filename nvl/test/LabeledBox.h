@@ -18,6 +18,9 @@ public:
     pure U64 id() const { return id_; }
     pure const Box<2> &bbox() const { return box_; }
 
+    void move(const Pos<2> delta) { box_ += delta; }
+    void moveto(const Pos<2> pos) { box_ = Box(pos, pos + box_.shape()); }
+
 private:
     U64 id_;
     Box<2> box_;
