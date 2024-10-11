@@ -29,7 +29,7 @@ public:
         on_key_down[Key::B] = [this] {
             index_ = (index_ + 1) % tools_.size();
             children_[0] = tools_[index_].shared_ptr();
-            cooldown_ = 30;
+            cooldown_ = 60;
         };
     }
     void tick() override {
@@ -41,8 +41,8 @@ public:
             const U64 alpha = std::min<U64>(255, cooldown_ * 10);
             const Color color(20, 20, 20, alpha);
             const std::string_view name = ClassTag::get(*children_[0]).name;
-            const Pos<2> pos(window_->width() / 2, window_->height() - 20);
-            window_->text(color, pos, 10, name);
+            const Pos<2> pos(window_->width() / 2, window_->height() - 35);
+            window_->text(color, pos, 30, name);
         }
     }
 
