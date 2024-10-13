@@ -29,4 +29,9 @@ public:
     I64 health;
 };
 
+/*template <U64 N>
+std::ostream &operator<<(std::ostream &os, const Part<N> &part) {
+    return os << "Part(" << part.box << ")";
+}*/
+
 } // namespace nvl

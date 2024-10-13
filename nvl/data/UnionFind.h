@@ -26,46 +26,63 @@ public:
 
     /// Inserts a single element into its own set.
     UnionFind &add(const Item &a) {
-        ++count_;
-        ids_[a] = count_;
-        groups_[count_].insert(a);
+        const U64 id_a = ids_.get_or(a, 0);
+        if (id_a == 0) {
+            ++count_;
+            groups_[count_].insert(a);
+            ids_[a] = count_;
+        }
         return *this;
     }
 
     /// Marks elements `a` and `b` as equivalent, inserting them into a new set or combining their existing sets
     /// if either are already present.
     UnionFind &add(const Item &a, const Item &b) {
-        U64 &id_a = ids_.get_or_add(a, 0);
-        U64 &id_b = ids_.get_or_add(b, 0);
+        const U64 id_a = ids_.get_or(a, 0);
+        const U64 id_b = ids_.get_or(b, 0);
         return_if(id_a == id_b && id_a > 0, *this);
-        U64 id = 0;
-        if (id_a > 0 || id_b > 0) {
-            id = std::max(id_a, id_b);
-        } else {
+        U64 id = std::min(id_a, id_b);
+        if (id == 0) {
             ++count_;
             id = count_;
         }
-        auto &group = groups_[id];
-        move_to_current_group(id, id_a, group, a);
-        move_to_current_group(id, id_b, group, b);
+        {
+            auto &group = groups_[id];
+            move_to_current_group(id, id_a, group, a);
+            move_to_current_group(id, id_b, group, b);
+        }
+        /*std::cout << "Merged groups for " << a << " (" << id_a << ") and " << b << " (" << id_b << ") into " << id
+                  << std::endl;
+        std::cout << "> Now have " << groups_.size() << " groups over " << ids_.size() << " values" << std::endl;
+        for (const auto &[x, gid] : ids_) {
+            std::cout << "> " << x << ": " << gid << std::endl;
+        }*/
         return *this;
     }
 
     pure bool has(const Item &item) const { return ids_.contains(item); }
 
-    pure Range<Group> sets() const { return groups_.values(); }
+    pure List<Group> sets() const {
+        List<Group> sets;
+        for (auto &[_, set] : groups_) {
+            sets.push_back(set);
+        }
+        return sets;
+        // return groups_.values();
+    }
 
 private:
-    void move_to_current_group(U64 dst, U64 &src, Group &group, const Item &item) {
-        if (src != dst) {
-            if (auto iter = groups_.find(src); iter != groups_.end()) {
-                const auto &set = iter->second;
-                group.insert(set.values());
-                groups_.erase(iter);
-            } else {
-                group.insert(item);
+    void move_to_current_group(const U64 dst, const U64 src, Group &group, const Item &item) {
+        return_if(src == dst);
+        if (auto iter = groups_.find(src); iter != groups_.end()) {
+            for (const Item &member : iter->second) {
+                group.insert(member);
+                ids_[member] = dst;
             }
-            src = dst;
+            groups_.erase(src);
+        } else {
+            group.insert(item);
+            ids_[item] = dst;
         }
     }
 

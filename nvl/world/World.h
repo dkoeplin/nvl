@@ -63,12 +63,12 @@ public:
             propagate_event(); // Don't prevent children from seeing the mouse movement event
             view_ += window_->mouse_delta();
         };
-        // std::cout << "Gravity: " << kGravityAccel << " pixels / tick^2" << std::endl;
-        // std::cout << "MaxVelocity: " << kMaxVelocity << " pixels / tick" << std::endl;
+        on_key_down[Key::D] = [this] { debug_ = !debug_; };
     }
 
-    pure Range<Actor> entities(const Pos<N> &pos) { return entities_[pos]; }
-    pure Range<Actor> entities(const Box<N> &box) { return entities_[box]; }
+    pure Range<Actor> entities() const { return entities_.items(); }
+    pure Range<Actor> entities(const Pos<N> &pos) const { return entities_[pos]; }
+    pure Range<Actor> entities(const Box<N> &box) const { return entities_[box]; }
 
     pure Pos<2> view() const { return view_; }
     void set_hud(const bool enable) { hud_ = enable; }
@@ -111,17 +111,17 @@ public:
     }
 
     template <typename T, typename... Args>
-    Actor spawn(Args &&...args) {
+    T *spawn(Args &&...args) {
         Actor actor = entities_.template emplace<T>(std::forward<Args>(args)...);
         if (Entity<N> *entity = actor.template dyn_cast<Entity<N>>()) {
             awake_.emplace(entity);
             entity->bind(this);
         }
-        return actor;
+        return actor.dyn_cast<T>();
     }
 
     template <typename T, typename... Args>
-    Actor spawn_by(const Actor src, Args &&...args) {
+    T *spawn_by(const Actor src, Args &&...args) {
         Actor actor = entities_.template emplace<T>(std::forward<Args>(args)...);
         if (Entity<N> *entity = actor.template dyn_cast<Entity<N>>()) {
             awake_.emplace(entity);
@@ -130,13 +130,15 @@ public:
         if (src != nullptr) {
             send<Created>(src, actor);
         }
-        return actor;
+        return actor.dyn_cast<T>();
     }
 
     void tick() override;
     void draw() override;
 
     void set_view(const Pos<2> view) { view_ = view; }
+
+    pure const Map<Actor, List<Message>> &messages() const { return messages_; }
 
     mutable Random random;
 
@@ -155,6 +157,7 @@ protected:
     Duration draw_last_, draw_max_;
     Duration tick_last_, tick_max_;
     U64 msgs_last_ = 0, msgs_max_ = 0;
+    bool debug_ = false;
 };
 
 template <U64 N>
@@ -217,18 +220,28 @@ void World<N>::draw() {
         }
     }
 
-    window_->text(Color::kBlack, {10, 10}, 20, "FPS: " + std::to_string(window_->fps()));
-    window_->text(Color::kBlack, {10, 40}, 20, "VRange: " + range.to_string());
-    window_->text(Color::kBlack, {10, 70}, 20, "Center: " + center.to_string());
-    window_->text(Color::kBlack, {10, 100}, 20, "Alive: " + std::to_string(num_alive()));
-    window_->text(Color::kBlack, {10, 130}, 20, "Awake: " + std::to_string(num_awake()));
-    window_->text(Color::kBlack, {10, 160}, 20, "Hover: " + hover);
-    window_->text(Color::kBlack, {10, 190}, 20, "Tick(last): " + tick_last_.to_string());
-    window_->text(Color::kBlack, {10, 220}, 20, "Tick(max): " + tick_max_.to_string());
-    window_->text(Color::kBlack, {10, 250}, 20, "Draw(last): " + draw_last_.to_string());
-    window_->text(Color::kBlack, {10, 280}, 20, "Draw(max): " + draw_max_.to_string());
-    window_->text(Color::kBlack, {10, 310}, 20, "Msgs(last): " + std::to_string(msgs_last_));
-    window_->text(Color::kBlack, {10, 340}, 20, "Msgs(max): " + std::to_string(msgs_max_));
+    if (debug_) {
+        window_->text(Color::kBlack, {10, 10}, 20, "FPS: " + std::to_string(window_->fps()));
+        window_->text(Color::kBlack, {10, 40}, 20, "VRange: " + range.to_string());
+        window_->text(Color::kBlack, {10, 70}, 20, "Center: " + center.to_string());
+        window_->text(Color::kBlack, {10, 100}, 20, "Alive: " + std::to_string(num_alive()));
+        window_->text(Color::kBlack, {10, 130}, 20, "Awake: " + std::to_string(num_awake()));
+        window_->text(Color::kBlack, {10, 160}, 20, "Hover: " + hover);
+        window_->text(Color::kBlack, {10, 190}, 20, "Tick(last): " + tick_last_.to_string());
+        window_->text(Color::kBlack, {10, 220}, 20, "Tick(max): " + tick_max_.to_string());
+        window_->text(Color::kBlack, {10, 250}, 20, "Draw(last): " + draw_last_.to_string());
+        window_->text(Color::kBlack, {10, 280}, 20, "Draw(max): " + draw_max_.to_string());
+        window_->text(Color::kBlack, {10, 310}, 20, "Msgs(last): " + std::to_string(msgs_last_));
+        window_->text(Color::kBlack, {10, 340}, 20, "Msgs(max): " + std::to_string(msgs_max_));
+
+        const auto offset = Window::Offset(window_, view_);
+        {
+            for (const auto &[node, pos] : entities_.points_in(range)) {
+                const Box<N> box(pos, pos + node->grid - 1);
+                window_->line_rectangle(Color::kRed, box);
+            }
+        }
+    }
 
     draw_last_ = Clock::now() - start;
     draw_max_ = max(draw_max_, draw_last_);
@@ -241,6 +254,7 @@ void World<N>::tick_entity(Set<Actor> &idled, Ref<Entity<N>> entity) {
     const Actor actor = entity->self();
     const Box<N> prev_bbox = entity->bbox();
     const auto messages_iter = messages_.find(actor);
+    // Making a copy here to allow clearing the message queue early (prior to running tick)
     const List<Message> messages = messages_iter == messages_.end() ? kNoMessages : messages_iter->second;
     if (messages_iter != messages_.end()) {
         messages_.erase(messages_iter);

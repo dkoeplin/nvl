@@ -253,9 +253,7 @@ public:
         return result;
     }
 
-    pure List<Box> diff(const List<Box> &boxes) const {
-        return diff(Range<typename List<Box>::const_iterator>(boxes.begin(), boxes.end()));
-    }
+    pure List<Box> diff(const List<Box> &boxes) const { return diff(Range(boxes.begin(), boxes.end())); }
 
     /// Returns the sides with given `width`.
     /// Sides begin at the outermost "pixel" of the box and extend inwards.
@@ -273,7 +271,7 @@ public:
 
     pure std::string to_string() const {
         std::stringstream ss;
-        ss << min.to_string() << "::" << max.to_string();
+        ss << "{" << min.to_string() << ", " << max.to_string() << "}";
         return ss.str();
     }
 
@@ -395,7 +393,7 @@ Box<N> operator-(I64 a, const Box<N> &b) {
 
 template <U64 N>
 std::ostream &operator<<(std::ostream &os, const Box<N> &box) {
-    return os << box.min << "::" << box.max;
+    return os << "{" << box.min << ", " << box.max << "}";
 }
 
 template <U64 N>

@@ -1,4 +1,7 @@
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
+
+#include <utility>
 
 #include "nvl/actor/Actor.h"
 #include "nvl/entity/Block.h"
@@ -27,6 +30,8 @@ struct nvl::RandomGen<nvl::Box<N>> {
 
 namespace {
 
+using testing::UnorderedElementsAre;
+
 using nvl::Actor;
 using nvl::Block;
 using nvl::Box;
@@ -47,8 +52,7 @@ TEST(TestWorld, fall_out_of_bounds) {
     constexpr Box<2> box({0, 0}, {4, 4});
     const auto color = world.random.uniform<Color>(0, 255);
     const auto material = Material::get<TestMaterial>(color);
-    const Actor actor = world.spawn<Block<2>>(Pos<2>::zero, box, material);
-    const auto *block = actor.dyn_cast<Block<2>>();
+    const auto *block = world.spawn<Block<2>>(Pos<2>::zero, box, material);
     ASSERT_TRUE(block);
     EXPECT_EQ(block->bbox(), box);
     EXPECT_EQ(block->loc(), Pos<2>::zero);
@@ -75,8 +79,7 @@ TEST(TestWorld, idle_when_not_moving) {
     {
         constexpr Box<2> box({0, 0}, {10, 2});
         const auto material = Material::get<Bulwark>();
-        const auto actor = world.spawn<Block<2>>(Pos<2>::zero, box, material);
-        const auto *block = actor.dyn_cast<Block<2>>();
+        const auto *block = world.spawn<Block<2>>(Pos<2>::zero, box, material);
         world.tick();
         EXPECT_EQ(block->loc(), Pos<2>::zero);
     }
@@ -86,8 +89,7 @@ TEST(TestWorld, idle_when_not_moving) {
         constexpr Box<2> box({0, 0}, {5, 5});
         const auto color = world.random.uniform<Color>(0, 255);
         const auto material = Material::get<TestMaterial>(color);
-        const auto actor = world.spawn<Block<2>>(Pos<2>{5, -50}, box, material);
-        const auto *block = actor.dyn_cast<Block<2>>();
+        const auto *block = world.spawn<Block<2>>(Pos<2>{5, -50}, box, material);
 
         for (U64 i = 0; i < 10; ++i) {
             world.tick();
@@ -119,6 +121,70 @@ TEST(TestWorld, stop_when_fallen) {
     }
 }
 
+TEST(TestWorld, break_block) {
+    using nvl::At;
+    using nvl::Hit;
+    using nvl::List;
+    using nvl::Message;
+    using nvl::Part;
+
+    auto material = Material::get<TestMaterial>(Color::kBlack);
+    material->falls = false;
+    NullWindow window;
+    auto *world = window.open<World<2>>();
+    auto &block = *world->spawn<Block<2>>(Pos<2>::zero, Box<2>{{817, 846}, {1134, 1105}}, material);
+    block.tick({Message::get<Hit<2>>(nullptr, Box<2>{{1100, 1005}, {1140, 1045}}, 1)});
+    EXPECT_EQ(world->num_alive(), 1);
+    block.tick({Message::get<Hit<2>>(nullptr, Box<2>{{1063, 1005}, {1103, 1045}}, 1)});
+    EXPECT_EQ(world->num_alive(), 1);
+    block.tick({Message::get<Hit<2>>(nullptr, Box<2>{{1024, 1005}, {1064, 1045}}, 1)});
+    EXPECT_EQ(world->num_alive(), 1);
+
+    nvl::Set<Box<2>> boxes;
+    for (const At<2, Part<2>> &part : block.parts()) {
+        boxes.insert(part.bbox());
+    }
+    EXPECT_THAT(boxes, UnorderedElementsAre(Box<2>{{817, 846}, {1023, 1105}}, Box<2>{{1024, 1046}, {1062, 1105}},
+                                            Box<2>{{1024, 846}, {1062, 1004}}, Box<2>{{1063, 1046}, {1099, 1105}},
+                                            Box<2>{{1063, 846}, {1099, 1004}}, Box<2>{{1100, 1046}, {1134, 1105}},
+                                            Box<2>{{1100, 846}, {1134, 1004}}));
+
+    block.tick({Message::get<Hit<2>>(nullptr, Box<2>{{987, 1006}, {1027, 1046}}, 1)});
+    boxes.clear();
+    for (auto actor : world->entities()) {
+        for (const At<2, Part<2>> &part : actor.dyn_cast<Block<2>>()->parts()) {
+            boxes.insert(part.bbox());
+        }
+    }
+    EXPECT_THAT(boxes, UnorderedElementsAre(Box<2>{{817, 846}, {986, 1105}}, Box<2>{{987, 1047}, {1023, 1105}},
+                                            Box<2>{{987, 846}, {1023, 1005}}, Box<2>{{1028, 1046}, {1062, 1105}},
+                                            Box<2>{{1024, 1047}, {1027, 1105}}, Box<2>{{1024, 846}, {1062, 1004}},
+                                            Box<2>{{1063, 1046}, {1099, 1105}}, Box<2>{{1063, 846}, {1099, 1004}},
+                                            Box<2>{{1100, 1046}, {1134, 1105}}, Box<2>{{1100, 846}, {1134, 1004}}));
+    EXPECT_EQ(world->num_alive(), 1);
+}
+
+TEST(TestWorld, break_block2) {
+    using nvl::At;
+    using nvl::Hit;
+    using nvl::List;
+    using nvl::Message;
+    using nvl::Part;
+    auto material = Material::get<TestMaterial>(Color::kBlack);
+    material->falls = false;
+    NullWindow window;
+    auto *world = window.open<World<2>>();
+    const List<Part<2>> parts{
+        Part<2>({{1024, 846}, {1062, 1004}}, material),  Part<2>({{1024, 1046}, {1062, 1105}}, material),
+        Part<2>({{817, 846}, {1023, 1105}}, material),   Part<2>({{1063, 846}, {1099, 1004}}, material),
+        Part<2>({{1063, 1046}, {1099, 1105}}, material), Part<2>({{1100, 846}, {1134, 1004}}, material),
+        Part<2>({{1100, 1046}, {1134, 1105}}, material),
+    };
+    auto &block = *world->spawn<Block<2>>(Pos<2>::zero, parts.range());
+    block.tick({Message::get<Hit<2>>(nullptr, Box<2>{{987, 1006}, {1027, 1046}}, 1)});
+    EXPECT_EQ(world->num_alive(), 1);
+}
+
 struct FuzzFall : nvl::test::FuzzingTestFixture<Box<2>, Pos<2>, Box<2>, I64, I64> {
     FuzzFall() = default;
 };
@@ -140,14 +206,14 @@ TEST_F(FuzzFall, fall2d) {
         NullWindow window("Test", {1000, 1000});
         auto *world = window.open<World<2>>();
         world->spawn<Block<2>>(Pos<2>(0, y), Box<2>({0, 0}, {999, thickness}), bulwark);
-        Actor block = world->spawn<Block<2>>(loc, shape, material);
+        const auto *block = world->spawn<Block<2>>(loc, shape, material);
         for (int64_t i = 0; i < 1000 && world->num_awake() > 0; ++i) {
             world->tick();
         }
         ASSERT(world->num_awake() == 0, "Failed to converge:"
                                             << " {loc: " << loc << ", shape: " << shape << ", y: " << y
                                             << ", thickness: " << thickness << "}");
-        end = block.dyn_cast<Block<2>>()->bbox();
+        end = block->bbox();
     });
 
     verify([&](const Box<2> &end, const Pos<2> &loc, const Box<2> &shape, I64 y, I64 thickness) {

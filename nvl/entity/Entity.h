@@ -24,7 +24,8 @@ public:
     static constexpr U64 kGridExpMax = 10;
     using Tree = BRTree<N, Part<N>, Ref<Part<N>>, kMaxEntries, kGridExpMin, kGridExpMax>;
 
-    explicit Entity(Pos<2> loc, Range<Ref<Part<N>>> parts = {}) : parts_(loc, parts) {}
+    explicit Entity(Pos<N> loc, Range<Ref<Part<N>>> parts = {}) : parts_(loc, parts) {}
+    explicit Entity(Pos<N> loc, Range<Part<N>> parts) : parts_(loc, parts) {}
 
     pure Pos<N> loc() const { return parts_.loc; }
     pure Box<N> bbox() const { return parts_.bbox(); }
@@ -66,10 +67,9 @@ protected:
 
     pure Pos<N> next_velocity() const;
 
-    Status receive(const Message &message);
     Status receive(const List<Message> &messages);
 
-    Status hit(const Hit<N> &hit);
+    Status hit(const List<Hit<N>> &hits);
 
     template <typename Msg, typename... Args>
     void send(const Actor dst, Args &&...args) {
@@ -157,52 +157,52 @@ Pos<N> Entity<N>::next_velocity() const {
 }
 
 template <U64 N>
-Status Entity<N>::receive(const Message &message) {
-    if (const auto *h = message.dyn_cast<Hit<N>>()) {
-        return hit(*h);
-    } else if (message.isa<Destroy>()) {
-        const Set<Actor> neighbors = above();
-        send<Notify>(neighbors.values(), Notify::kDied);
-        return Status::kDied;
+Status Entity<N>::receive(const List<Message> &messages) {
+    List<Hit<N>> hits;
+    for (const auto &message : messages) {
+        if (const auto *h = message.dyn_cast<Hit<N>>()) {
+            hits.push_back(*h);
+        } else if (message.isa<Destroy>()) {
+            const Set<Actor> neighbors = above();
+            send<Notify>(neighbors.values(), Notify::kDied);
+            return Status::kDied; // early exit on death
+        }
+    }
+    if (!hits.empty()) {
+        return hit(hits);
     }
     return Status::kNone;
 }
 
 template <U64 N>
-Status Entity<N>::receive(const List<Message> &messages) {
-    Status status = Status::kNone;
+Status Entity<N>::hit(const List<Hit<N>> &hits) {
     Set<Actor> neighbors;
-    for (const auto &message : messages) {
-        status = std::max(status, receive(message));
-        return_if(status == Status::kDied, status); // Early exit on death
-    }
-    return status;
-}
-
-template <U64 N>
-Status Entity<N>::hit(const Hit<N> &hit) {
-    const Box<N> local_box = hit.box - parts_.loc;
-    const List<Ref<Part<N>>> hit_parts(relative.parts(local_box));
-    return_if(hit_parts.empty(), Status::kNone);
-
-    Set<Actor> neighbors;
-    for (const Ref<Part<N>> &part : hit_parts) {
-        const Box<N> area = part->bbox().widened(1);
-        neighbors.insert(world_->entities(area));
-        if (part->health > hit.strength) {
-            parts_.emplace(part->bbox().intersect(local_box).value(), part->material, part->health - hit.strength);
+    bool was_hit = false;
+    for (const Hit<N> &hit : hits) {
+        const Box<N> local_box = hit.box - parts_.loc;
+        const List<Ref<Part<N>>> hit_parts(relative.parts(local_box));
+        was_hit = was_hit || !hit_parts.empty();
+        for (const Ref<Part<N>> &part : hit_parts) {
+            const Box<N> area = part->bbox().widened(1);
+            neighbors.insert(world_->entities(area));
+            if (part->health > hit.strength) {
+                parts_.emplace(part->bbox().intersect(local_box).value(), part->material, part->health - hit.strength);
+            }
+            for (auto diff : part->diff(local_box)) {
+                parts_.insert(diff);
+            }
+            parts_.remove(part);
         }
-        for (auto diff : part->diff(local_box)) {
-            parts_.insert(diff);
-        }
-        parts_.remove(part);
     }
 
-    const List<Component> components = parts_.relative.components();
-    const bool was_broken = components.size() != 1;
-    const auto cause = was_broken ? Notify::kBroken : Notify::kChanged;
-    send<Notify>(neighbors.values(), cause);
-    return was_broken ? broken(components) : Status::kNone;
+    if (was_hit) {
+        const List<Component> components = parts_.relative.components();
+        const bool was_broken = components.size() != 1;
+        const auto cause = was_broken ? Notify::kBroken : Notify::kChanged;
+        send<Notify>(neighbors.values(), cause);
+        return was_broken ? broken(components) : Status::kNone;
+    }
+    return Status::kNone;
 }
 
 template <U64 N>

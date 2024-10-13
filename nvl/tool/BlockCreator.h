@@ -33,6 +33,7 @@ public:
         };
         on_mouse_up[Mouse::Left] = [this] {
             if (pending_) {
+                std::cout << "create " << pending_->bbox() << std::endl;
                 world_->reify(std::move(pending_));
                 pending_ = nullptr;
             }

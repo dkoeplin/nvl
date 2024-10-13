@@ -185,6 +185,18 @@ TEST(TestBox, diff) {
                                                         Box<2>({2, 12}, {6, 14}), Box<2>({2, 3}, {6, 6})));
 }
 
+TEST(TestBox, diff2) {
+    constexpr Box<2> box{{817, 846}, {1134, 1105}};
+    const List<Box<2>> rem{{{1100, 1005}, {1140, 1045}},
+                           {{1063, 1005}, {1103, 1045}},
+                           {{1024, 1005}, {1064, 1045}},
+                           {{987, 1006}, {1027, 1046}}};
+    List<Box<2>> diff = box.diff(rem);
+    for (auto &b : diff) {
+        std::cout << "Box<2>" << b << "," << std::endl;
+    }
+}
+
 TEST(TestBox, to_string) {
     constexpr Box<2> a({2, 3}, {7, 8});
     EXPECT_EQ(a.to_string(), "{2, 3}::{7, 8}");

@@ -13,9 +13,15 @@ public:
     explicit BlockBreaker(Window *window, World<2> *world) : Tool(window, world) {
         on_mouse_down[Mouse::Left] = on_mouse_move[{Mouse::Left}] = [this] {
             const Pos<2> pt = world_->window_to_world(window_->center());
-            const Box<2> box(pt - 20, pt + 20);
+            const Box<2> box(pt - radius_, pt + radius_);
             const Range<Actor> entities = world_->entities(box);
+            std::cout << "remove " << box << std::endl;
             world_->send<Hit<2>>(nullptr, entities, box, /*strength*/ 1);
+        };
+        on_mouse_scroll[Scroll::kVertical] = [this] {
+            const auto dist = window_->scroll_y();
+            std::cout << dist << std::endl;
+            radius_ = std::clamp<I64>(radius_ + dist, 1, 100);
         };
     }
 
@@ -23,9 +29,12 @@ public:
     void draw() override {
         static constexpr Color color(255, 0, 0, 32);
         const Pos<2> center = window_->center();
-        const Box<2> box(center - 20, center + 20);
+        const Box<2> box(center - radius_, center + radius_);
         window_->fill_rectangle(color, box);
     }
+
+private:
+    I64 radius_ = 20;
 };
 
 } // namespace nvl

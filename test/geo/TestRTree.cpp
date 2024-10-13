@@ -193,6 +193,18 @@ TEST(TestRTree, components_pairs) {
     EXPECT_THAT(tree.components(), UnorderedElementsAre(Comp{a, b}, Comp{c, d}));
 }
 
+TEST(TestRTree, components_complex) {
+    constexpr Box<2> box{{817, 846}, {1134, 1105}};
+    const List<Box<2>> rem{{{1100, 1005}, {1140, 1045}},
+                           {{1063, 1005}, {1103, 1045}},
+                           {{1024, 1005}, {1064, 1045}},
+                           {{987, 1006}, {1027, 1046}}};
+    List<Box<2>> diff = box.diff(rem);
+    RTree<2, Box<2>> tree;
+    tree.insert(diff.range());
+    EXPECT_EQ(tree.components().size(), 1);
+}
+
 TEST(TestRTree, fuzz_insertion) {
     constexpr I64 kNumTests = 1E3;
     RTree<2, Box<2>> tree;
@@ -239,6 +251,25 @@ TEST_F(FuzzMove, move2d) {
             ASSERT_THAT(tree[b], UnorderedElementsAre(lbox));
         }
         passed = true;
+    });
+}
+
+struct FuzzComponents : nvl::test::FuzzingTestFixture<bool, Pos<2>, Pos<2>, Pos<2>> {};
+
+TEST_F(FuzzComponents, components2d) {
+    this->num_tests = 1E3;
+    this->in[0] = Distribution::Uniform<I64>(100, 400);
+    this->in[1] = Distribution::Uniform<I64>(5, 50);
+    this->in[2] = Distribution::Uniform<I64>(0, 100);
+
+    fuzz([](bool &result, const Pos<2> &shape0, const Pos<2> &shape1, const Pos<2> &loc) {
+        const Box<2> box(Pos<2>::zero, shape0);
+        const Box<2> rem(loc, loc + shape1);
+        const auto diff = box.diff(rem);
+        RTree<2, Box<2>> tree;
+        tree.insert(diff.range());
+        EXPECT_EQ(tree.components().size(), 1);
+        result = true;
     });
 }
 
