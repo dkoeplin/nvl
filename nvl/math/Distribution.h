@@ -6,7 +6,6 @@
 #include "nvl/math/Random.h"
 #include "nvl/reflect/Castable.h"
 #include "nvl/reflect/ClassTag.h"
-#include "nvl/reflect/PrimitiveTypes.h"
 
 namespace nvl {
 
@@ -34,7 +33,7 @@ private:
 };
 
 template <typename T>
-struct UniformDistribution : AbstractDistribution {
+struct UniformDistribution final : AbstractDistribution {
     class_tag(UniformDistribution<T>);
     explicit UniformDistribution(T min, T max) : min(min), max(max) {}
     T min;
@@ -42,7 +41,7 @@ struct UniformDistribution : AbstractDistribution {
 };
 
 template <typename T>
-struct NormalDistribution : AbstractDistribution {
+struct NormalDistribution final : AbstractDistribution {
     class_tag(NormalDistribution<T>);
     explicit NormalDistribution(T mean, T stddev) : mean(mean), stddev(stddev) {}
     T mean;
@@ -50,7 +49,7 @@ struct NormalDistribution : AbstractDistribution {
 };
 
 template <typename T>
-struct CustomDistribution : AbstractDistribution {
+struct CustomDistribution final : AbstractDistribution {
     class_tag(CustomDistribution<T>);
     explicit CustomDistribution(const std::function<T(Random &)> &func) : func(func) {}
     std::function<T(Random &)> func;

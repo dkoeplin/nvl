@@ -15,12 +15,10 @@ public:
             const Pos<2> pt = world_->window_to_world(window_->center());
             const Box<2> box(pt - radius_, pt + radius_);
             const Range<Actor> entities = world_->entities(box);
-            std::cout << "remove " << box << std::endl;
             world_->send<Hit<2>>(nullptr, entities, box, /*strength*/ 1);
         };
         on_mouse_scroll[Scroll::kVertical] = [this] {
             const auto dist = window_->scroll_y();
-            std::cout << dist << std::endl;
             radius_ = std::clamp<I64>(radius_ + dist, 1, 100);
         };
     }

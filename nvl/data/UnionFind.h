@@ -1,9 +1,7 @@
 #pragma once
 
-#include "nvl/data/List.h"
 #include "nvl/data/Map.h"
 #include "nvl/data/Range.h"
-#include "nvl/data/Ref.h"
 #include "nvl/data/Set.h"
 #include "nvl/macros/Aliases.h"
 #include "nvl/macros/Pure.h"
@@ -46,30 +44,15 @@ public:
             ++count_;
             id = count_;
         }
-        {
-            auto &group = groups_[id];
-            move_to_current_group(id, id_a, group, a);
-            move_to_current_group(id, id_b, group, b);
-        }
-        /*std::cout << "Merged groups for " << a << " (" << id_a << ") and " << b << " (" << id_b << ") into " << id
-                  << std::endl;
-        std::cout << "> Now have " << groups_.size() << " groups over " << ids_.size() << " values" << std::endl;
-        for (const auto &[x, gid] : ids_) {
-            std::cout << "> " << x << ": " << gid << std::endl;
-        }*/
+        auto &group = groups_[id];
+        move_to_current_group(id, id_a, group, a);
+        move_to_current_group(id, id_b, group, b);
         return *this;
     }
 
     pure bool has(const Item &item) const { return ids_.contains(item); }
 
-    pure List<Group> sets() const {
-        List<Group> sets;
-        for (auto &[_, set] : groups_) {
-            sets.push_back(set);
-        }
-        return sets;
-        // return groups_.values();
-    }
+    pure Range<Group> sets() const { return groups_.values(); }
 
 private:
     void move_to_current_group(const U64 dst, const U64 src, Group &group, const Item &item) {

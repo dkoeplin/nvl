@@ -67,14 +67,6 @@ struct nvl::RandomGen<Color> {
         const U64 mx = std::min<I>(static_cast<U64>(max), 0xFF);
         return {.r = random.uniform<U64>(mn, mx), .g = random.uniform<U64>(mn, mx), .b = random.uniform<U64>(mn, mx)};
     }
-    /*template <typename I>
-    pure Color normal(Random &random, const I mean, const I stddev) const {
-        const U64 mn = std::max<I>(0x00, static_cast<U64>(min));
-        const U64 std = std::min<I>(static_cast<U64>(max), 0xFF);
-        return {.r = random.normal<I>(mean, stddev),
-                .g = random.normal<I>(mean, stddev),
-                .b = random.normal<I>(mean, stddev)};
-    }*/
 };
 
 inline std::ostream &operator<<(std::ostream &os, const Color &color) { return os << color.to_string(); }

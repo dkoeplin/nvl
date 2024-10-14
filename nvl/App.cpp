@@ -7,7 +7,7 @@
 
 namespace nvl {
 
-void init_world(Window *window, World<2> *world) {
+void init_world(const Window *window, World<2> *world) {
     const Material bulwark = Material::get<Bulwark>();
     const Pos<2> min = {0, window->height() - 50};
     const Pos<2> max = {window->width(), window->height()};
