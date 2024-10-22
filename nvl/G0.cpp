@@ -33,7 +33,7 @@ struct Player final : Entity<2> {
     }
     Status receive(const Message &message) override {
         if (message.isa<Jump>() && has_below() && velocity_[1] == 0) {
-            velocity_[1] = -100;
+            velocity_[1] = -10;
         } else if (message.isa<Brake>()) {
             const I64 v = velocity_[0];
             velocity_[0] = v + (v < 0 ? 1 : v > 0 ? -1 : 0);
@@ -58,7 +58,7 @@ struct Player final : Entity<2> {
 struct G0 final : World<2> {
     class_tag(G0, World<2>);
 
-    explicit G0(Window *window) : World<2>(window, {.gravity_accel = 2}) {
+    explicit G0(Window *window) : World<2>(window) {
         const Material bulwark = Material::get<Bulwark>();
         const Pos<2> min = {0, window->height() - 50};
         const Pos<2> max = {window->width(), window->height()};

@@ -132,10 +132,11 @@ bool Entity<N>::has_below() const {
 
 template <U64 N>
 Pos<N> Entity<N>::next_velocity() const {
+    const Pos<N> accel = accel_ + (falls() && !has_below() ? world_->kGravity : Pos<N>::zero);
     Pos<N> velocity;
     for (U64 i = 0; i < N; ++i) {
         const I64 v = velocity_[i];
-        const I64 a = accel_[i];
+        const I64 a = accel[i];
         I64 v_next = std::clamp(v + a, -world_->kMaxVelocity, world_->kMaxVelocity);
         if (v != 0 || a != 0) {
             for (const At<N, Part<N>> &part : parts()) {
@@ -225,10 +226,6 @@ Status Entity<N>::tick(const List<Message> &messages) {
 
     Status status = receive(messages);
     return_if(status == Status::kDied, status);
-
-    if (falls() && !has_below()) {
-        accel_ += world_->kGravity;
-    }
 
     const Pos<N> init_velocity = velocity_;
     velocity_ = next_velocity();

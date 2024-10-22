@@ -32,7 +32,6 @@ int main() {
     window.set_mouse_mode(Window::MouseMode::kViewport);
     World<2>::Params params;
     params.maximum_y = 5000;
-    params.gravity_accel = 2;
     auto *world = window.open<World<2>>(params);
     init_world(&window, world);
 

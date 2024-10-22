@@ -26,7 +26,7 @@ public:
 
     struct Params {
         U64 terminal_velocity = 53;  // meters/sec (default is about 120mph)
-        U64 gravity_accel = 2;       // meters/sec^2
+        U64 gravity_accel = 10;      // meters/sec^2
         I64 maximum_y = 1e3;         // meters -- down is positive
         U64 pixels_per_meter = 1000; // pixels / meter
         U64 ms_per_tick = 30;        // milliseconds / tick
