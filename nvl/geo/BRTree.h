@@ -199,7 +199,11 @@ public:
 
     /// Returns an unordered Range for iteration over all edges in this tree.
     /// Edges are returned as View<N, Edge<N>>, where the view is with respect to this tree's global offset.
-    pure Range<At<N, Edge<N>>> edges() const { return make_range<edge_iterator>(this->get_edges().items(), loc); }
+    pure Range<At<N, Edge<N>>> edges() const {
+        const auto &edges = edge_rtree();
+        auto iterator = edges.items();
+        return make_range<edge_iterator>(iterator, loc);
+    }
 
     struct Relative {
         using Component = typename UnionFind<ItemRef, typename ItemTree::ItemRefHash>::Group;

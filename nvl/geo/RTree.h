@@ -475,12 +475,12 @@ public:
     }
 
     void clear() {
-        bbox_ = None;
+        item_ids_.clear();
+        nodes_.clear();
+        items_.clear();
         node_id_ = 0;
         item_id_ = 0;
-        items_.clear();
-        nodes_.clear();
-        item_ids_.clear();
+        bbox_ = None;
         root_ = next_node(None, grid_max, {});
     }
 

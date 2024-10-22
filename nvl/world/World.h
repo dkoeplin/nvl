@@ -25,7 +25,6 @@ public:
     class_tag(World<N>, AbstractScreen);
 
     struct Params {
-        Params() {}
         U64 terminal_velocity = 53;  // meters/sec (default is about 120mph)
         U64 gravity_accel = 2;       // meters/sec^2
         I64 maximum_y = 1e3;         // meters -- down is positive
@@ -51,7 +50,7 @@ public:
     pure static bool is_up(const U64 dim, const Dir dir) { return dim == kVerticalDim && dir == Dir::Neg; }
     pure static bool is_down(const U64 dim, const Dir dir) { return dim == kVerticalDim && dir == Dir::Pos; }
 
-    explicit World(Window *window, Params params = Params())
+    explicit World(Window *window, Params params = {})
         : AbstractScreen(window), kMillisPerTick(params.ms_per_tick), kNanosPerTick(params.ms_per_tick * 1e6),
           kPixelsPerMeter(params.pixels_per_meter),
           kGravityAccel(params.gravity_accel * kPixelsPerMeter * kMillisPerTick * kMillisPerTick / 1e6),
@@ -63,7 +62,7 @@ public:
             propagate_event(); // Don't prevent children from seeing the mouse movement event
             view_ += window_->mouse_delta();
         };
-        on_key_down[Key::D] = [this] { debug_ = !debug_; };
+        on_key_down[Key::Slash] = [this] { debug_ = !debug_; };
     }
 
     pure Range<Actor> entities() const { return entities_.items(); }

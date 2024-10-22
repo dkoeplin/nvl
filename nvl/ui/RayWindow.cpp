@@ -16,7 +16,7 @@ constexpr ::Color raycolor(const Color &color) {
 
 } // namespace
 
-RayWindow::RayWindow(std::string_view title, Pos<2> shape) : Window(title, shape) {
+RayWindow::RayWindow(const std::string &title, Pos<2> shape) : Window(title, shape) {
     InitWindow(shape[0], shape[1], title.data());
     SetWindowFocused();
     MaximizeWindow();

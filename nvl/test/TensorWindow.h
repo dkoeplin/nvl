@@ -8,7 +8,7 @@ namespace nvl::test {
 
 class TensorWindow final : public Window {
 public:
-    explicit TensorWindow(std::string_view title, Pos<2> shape);
+    explicit TensorWindow(const std::string &title, Pos<2> shape);
     void draw() override;
     void tick() override;
     void feed() override;

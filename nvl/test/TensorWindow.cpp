@@ -4,7 +4,7 @@
 
 namespace nvl::test {
 
-TensorWindow::TensorWindow(std::string_view title, Pos<2> shape)
+TensorWindow::TensorWindow(const std::string &title, Pos<2> shape)
     : Window(title, shape), title_(title), tensor_(shape, Color::kWhite) {}
 
 void TensorWindow::tick() {

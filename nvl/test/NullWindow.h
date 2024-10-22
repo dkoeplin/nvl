@@ -7,7 +7,6 @@ namespace nvl::test {
 class NullWindow final : public Window {
 public:
     NullWindow() : Window("null", {0, 0}) {}
-    explicit NullWindow(std::string_view title, Pos<2> shape) : Window(title, shape) {}
     void draw() override {}
     void tick() override {}
     void feed() override {}

@@ -4,9 +4,9 @@
 
 namespace nvl {
 
-class RayWindow final : public Window {
+class RayWindow : public Window {
 public:
-    explicit RayWindow(std::string_view title, Pos<2> shape);
+    explicit RayWindow(const std::string &title, Pos<2> shape);
     ~RayWindow() override;
     void draw() override;
     void feed() override;

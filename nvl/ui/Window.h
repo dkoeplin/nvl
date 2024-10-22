@@ -32,7 +32,7 @@ public:
         Maybe<Pos<2>> prev_offset_;
     };
 
-    explicit Window(std::string_view title, Pos<2> shape);
+    explicit Window(const std::string &title, Pos<2> shape);
     virtual ~Window() = default;
 
     virtual void feed() = 0;
@@ -59,8 +59,8 @@ public:
     pure const Set<Key> &pressed_keys() const { return pressed_keys_; }
     pure const Set<Mouse> &pressed_mouse() const { return pressed_mouse_; }
 
-    pure bool is_pressed(const Key key) const { return pressed_keys_.has(key); }
-    pure bool is_pressed(const Mouse mouse) const { return pressed_mouse_.has(mouse); }
+    pure bool pressed(const Key key) const { return pressed_keys_.has(key); }
+    pure bool down(const Mouse mouse) const { return pressed_mouse_.has(mouse); }
 
     virtual void line_rectangle(const Color &color, const Box<2> &box) = 0;
     virtual void fill_rectangle(const Color &color, const Box<2> &box) = 0;

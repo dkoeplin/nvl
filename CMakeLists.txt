@@ -12,6 +12,7 @@ set(CMAKE_CXX_FLAGS " \
 -Wpedantic \
 -Wshadow \
 -Werror \
+-fsanitize=address\
 "
 )
 
@@ -97,6 +98,9 @@ target_link_libraries(nvl PRIVATE raylib)
 
 add_executable(app ${CMAKE_CURRENT_SOURCE_DIR}/nvl/App.cpp)
 target_link_libraries(app PRIVATE nvl)
+
+add_executable(g0 ${CMAKE_CURRENT_SOURCE_DIR}/nvl/G0.cpp)
+target_link_libraries(g0 PRIVATE nvl)
 
 if (APPLE)
     target_link_libraries(nvl PRIVATE "-framework IOKit")

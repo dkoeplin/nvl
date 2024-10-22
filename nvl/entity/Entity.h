@@ -67,6 +67,7 @@ protected:
 
     pure Pos<N> next_velocity() const;
 
+    virtual Status receive(const Message &message);
     Status receive(const List<Message> &messages);
 
     Status hit(const List<Hit<N>> &hits);
@@ -157,21 +158,33 @@ Pos<N> Entity<N>::next_velocity() const {
 }
 
 template <U64 N>
+Status Entity<N>::receive(const Message &message) {
+    if (message.isa<Destroy>()) {
+        return Status::kDied;
+    }
+    return Status::kNone;
+}
+
+template <U64 N>
 Status Entity<N>::receive(const List<Message> &messages) {
     List<Hit<N>> hits;
+    Status status = Status::kNone;
     for (const auto &message : messages) {
         if (const auto *h = message.dyn_cast<Hit<N>>()) {
             hits.push_back(*h);
-        } else if (message.isa<Destroy>()) {
+        } else {
+            status = std::max(status, receive(message));
+        }
+        if (status == Status::kDied) {
             const Set<Actor> neighbors = above();
             send<Notify>(neighbors.values(), Notify::kDied);
-            return Status::kDied; // early exit on death
+            return status; // early exit on death
         }
     }
     if (!hits.empty()) {
         return hit(hits);
     }
-    return Status::kNone;
+    return status;
 }
 
 template <U64 N>

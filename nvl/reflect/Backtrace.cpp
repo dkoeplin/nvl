@@ -56,6 +56,7 @@ void signal_handler(const int sig) {
 void register_signal_handlers() {
     // Install signal handlers
     signal(SIGSEGV, signal_handler);
+    signal(SIGABRT, signal_handler);
 }
 
 } // namespace nvl

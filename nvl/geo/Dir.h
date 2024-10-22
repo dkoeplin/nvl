@@ -1,6 +1,7 @@
 #pragma once
 
 #include "nvl/macros/Aliases.h"
+#include "nvl/macros/Implicit.h"
 #include "nvl/macros/Pure.h"
 
 namespace nvl {
@@ -16,6 +17,7 @@ public:
     static const Dir list[2];
 
     Dir() = default;
+    pure implicit operator I64() const { return value; }
 
     pure constexpr Dir operator-() const { return Dir(-value); }
     pure bool operator==(const Dir &rhs) const { return value == rhs.value; }

@@ -203,7 +203,7 @@ TEST_F(FuzzFall, fall2d) {
     auto bulwark = Material::get<Bulwark>();
 
     fuzz([material, bulwark](Box<2> &end, const Pos<2> &loc, const Box<2> &shape, I64 y, I64 thickness) {
-        NullWindow window("Test", {1000, 1000});
+        NullWindow window;
         auto *world = window.open<World<2>>();
         world->spawn<Block<2>>(Pos<2>(0, y), Box<2>({0, 0}, {999, thickness}), bulwark);
         const auto *block = world->spawn<Block<2>>(loc, shape, material);
