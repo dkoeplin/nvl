@@ -33,7 +33,7 @@ struct Player final : Entity<2> {
     }
     Status receive(const Message &message) override {
         if (message.isa<Jump>() && has_below() && velocity_[1] == 0) {
-            velocity_[1] = -10;
+            velocity_[1] = -30;
         } else if (message.isa<Brake>()) {
             const I64 v = velocity_[0];
             velocity_[0] = v + (v < 0 ? 1 : v > 0 ? -1 : 0);
@@ -50,22 +50,54 @@ struct Player final : Entity<2> {
             const auto color = part->material->color.highlight(scale);
             window->fill_rectangle(color, part.bbox());
         }
+        if (digging) {
+            const auto color = Color::kBlue.highlight({.a = 100});
+            const auto bbox = this->bbox();
+            const Box<2> dig_box{bbox.min - 10, {bbox.max[0] + 10, bbox.max[1]}};
+            window->fill_rectangle(color, dig_box);
+        }
+    }
+
+    Status tick(const List<Message> &messages) override {
+        const auto bbox = this->bbox();
+        Box<2> dig_box{bbox.min - 10, {bbox.max[0] + 10, bbox.max[1]}};
+        if (digging) {
+            if (velocity_[1] < 0) {
+                dig_box.min[1] += velocity_[1];
+            }
+            for (const Actor &overlap : world_->entities(dig_box)) {
+                if (overlap != self()) {
+                    send<Hit<2>>(overlap, dig_box, 1);
+                }
+            }
+        } else if (velocity_ != Pos<2>::zero) {
+            for (const Actor &overlap : world_->entities(dig_box)) {
+                if (overlap != self()) {
+                    send<Notify>(overlap, Notify::kMoved);
+                }
+            }
+        }
+        return Entity::tick(messages);
     }
 
     Status broken(const List<Component> &) override { return Status::kNone; }
+
+    bool digging = false;
 };
 
 struct G0 final : World<2> {
     class_tag(G0, World<2>);
 
-    explicit G0(Window *window) : World<2>(window) {
+    explicit G0(Window *window) : World<2>(window, {.gravity_accel = 3}) {
         const Material bulwark = Material::get<Bulwark>();
         const Pos<2> min = {0, window->height() - 50};
         const Pos<2> max = {window->width(), window->height()};
         const Box<2> base(min, max);
         spawn<Block<2>>(Pos<2>::zero, base, bulwark);
-        prev_tick = Clock::now();
-        player = spawn<Player>(Pos<2>{window->center()[0], -30});
+
+        const Pos<2> start{window->center()[0], min[1] - 100};
+        player = spawn<Player>(start);
+        view_ = start - window->shape() / 2;
 
         on_key_down[Key::P] = [this] { paused = (paused > 0) ? 0 : 255; };
     }
@@ -83,6 +115,20 @@ struct G0 final : World<2> {
         World<2>::tick();
         const auto diff = player->loc() - prev_player_loc;
         view_ += diff;
+
+        if (window_->ticks() - prev_generated >= ticks_per_gen) {
+            const auto slots = ceil_div(window_->width(), 50);
+            const auto left = random.uniform<I64, I64>(-4, slots);
+            const auto width = random.uniform<I64, I64>(1, 5);
+            const auto height = random.uniform<I64, I64>(1, 3);
+            const auto top = std::min(view_[1], entities_.bbox().min[1]) - height * 50 - 200;
+            const auto color = random.uniform<Color>(0, 255);
+            const auto material = Material::get<TestMaterial>(color);
+            const Pos<2> pos{left * 50, top};
+            const Box<2> box{{0, 0}, {width * 50, height * 50}};
+            spawn<Block<2>>(pos, box, material);
+            prev_generated = window_->ticks();
+        }
     }
 
     void draw() override {
@@ -94,13 +140,17 @@ struct G0 final : World<2> {
     }
 
     Player *player;
-    Time prev_tick;
     U64 paused = 1;
     Dir pause_dir = Dir::Pos;
+    U64 prev_generated = 0;
+    U64 ticks_per_gen = 10;
 };
 
 struct PlayerControls final : Tool<2> {
-    explicit PlayerControls(Window *window, G0 *world) : Tool(window, world), g0(world) {}
+    explicit PlayerControls(Window *window, G0 *world) : Tool(window, world), g0(world) {
+        on_key_down[Key::J] = [this] { g0->player->digging = true; };
+        on_key_up[Key::J] = [this] { g0->player->digging = false; };
+    }
     void tick() override {
         Actor player(g0->player);
         if (window_->pressed(Key::Space)) {
@@ -140,7 +190,7 @@ int main() {
     while (!window.should_close()) {
         if (const Time now = Clock::now(); Duration(now - prev_tick) >= world->kNanosPerTick) {
             prev_tick = now;
-            window.tick();
+            window.tick_all();
         }
         window.feed();
         window.draw();

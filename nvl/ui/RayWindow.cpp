@@ -82,12 +82,6 @@ void RayWindow::feed() {
     }
 }
 
-void RayWindow::tick() {
-    for (auto &child : children_) {
-        child->tick_all();
-    }
-}
-
 void RayWindow::line_rectangle(const Color &color, const Box<2> &box) {
     const Pos<2> shape = box.shape();
     DrawRectangleLines(box.min[0], box.min[1], shape[0], shape[1], raycolor(color));

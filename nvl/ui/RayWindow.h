@@ -10,7 +10,6 @@ public:
     ~RayWindow() override;
     void draw() override;
     void feed() override;
-    void tick() override;
     void line_rectangle(const Color &color, const Box<2> &box) override;
     void fill_rectangle(const Color &color, const Box<2> &box) override;
     void text(const Color &color, const Pos<2> &pos, I64 font_size, std::string_view text) override;
@@ -22,6 +21,9 @@ public:
     pure I64 height() const override;
     pure I64 width() const override;
     pure I64 fps() const override;
+
+protected:
+    void tick() override {}
 };
 
 } // namespace nvl

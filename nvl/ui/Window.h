@@ -35,9 +35,10 @@ public:
     explicit Window(const std::string &title, Pos<2> shape);
     virtual ~Window() = default;
 
+    void tick_all();
+
     virtual void feed() = 0;
     virtual void draw() = 0;
-    virtual void tick() = 0;
 
     template <typename T, typename... Args>
     T *open(Args &&...args) {
@@ -89,14 +90,21 @@ public:
 
     pure virtual I64 fps() const = 0;
 
+    /// Returns the shape of this window in window coordinates (width x height).
+    pure Pos<2> shape() const { return {width(), height()}; }
+
     /// Returns the window view range in window coordinates.
-    pure Box<2> bbox() const { return {{0, 0}, {width(), height()}}; }
+    pure Box<2> bbox() const { return {Pos<2>::zero, shape()}; }
 
     /// Returns the center of the window in window coordinates.
-    pure Pos<2> center() const { return Pos<2>(width(), height()) / 2; }
+    pure Pos<2> center() const { return shape() / 2; }
+
+    pure U64 ticks() const { return ticks_; }
 
 protected:
     friend class Offset;
+
+    virtual void tick() = 0;
 
     Maybe<Pos<2>> offset_ = None;
 
@@ -109,6 +117,7 @@ protected:
     List<Screen> children_;
 
     MouseMode mouse_mode_ = MouseMode::kStandard;
+    U64 ticks_ = 0;
 };
 
 } // namespace nvl
