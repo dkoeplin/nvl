@@ -27,7 +27,7 @@ public:
     struct Params {
         U64 terminal_velocity = 53;  // meters/sec (default is about 120mph)
         U64 gravity_accel = 10;      // meters/sec^2
-        I64 maximum_y = 1e3;         // meters -- down is positive
+        I64 maximum_y = 1e3;         // pixels -- down is positive
         U64 pixels_per_meter = 1000; // pixels / meter
         U64 ms_per_tick = 30;        // milliseconds / tick
     };
@@ -56,7 +56,7 @@ public:
           kGravityAccel(params.gravity_accel * kPixelsPerMeter * kMillisPerTick * kMillisPerTick / 1e6),
           kMaxVelocity(params.terminal_velocity * kMillisPerTick * kPixelsPerMeter / 1e3),
           kGravity(Pos<N>::unit(kVerticalDim, kGravityAccel)), // Gravity as a vector
-          kMaxY(params.maximum_y * kPixelsPerMeter) {
+          kMaxY(params.maximum_y) {
 
         on_mouse_move[{}] = on_mouse_move[{Mouse::Any}] = [this] {
             propagate_event(); // Don't prevent children from seeing the mouse movement event

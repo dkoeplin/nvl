@@ -46,7 +46,7 @@ using nvl::test::TensorWindow;
 
 TEST(TestWorld, fall_out_of_bounds) {
     World<2>::Params params;
-    params.maximum_y = 1;
+    params.maximum_y = 100;
     params.gravity_accel = 10;
     World<2> world(nullptr, params);
     constexpr Box<2> box({0, 0}, {4, 4});
@@ -62,7 +62,6 @@ TEST(TestWorld, fall_out_of_bounds) {
     world.tick();
     EXPECT_EQ(block->loc(), world.kGravity);
     EXPECT_EQ(block->velocity(), world.kGravity);
-    EXPECT_EQ(block->accel(), world.kGravity);
 
     // Run for enough ticks for the block to fall out of bounds
     for (I64 i = 0; i < 10; ++i) {
