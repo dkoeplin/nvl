@@ -245,32 +245,36 @@ struct G1 final : World<3> {
 
         if (dead) {
             const Color color = Color::kRed.highlight(dead);
-            window_->centered_text(color, window_->center(), 50, "DED");
+            window_->fill_box(color, Box<2>({0, 0}, window_->shape()));
+            window_->centered_text(Color::kRed, window_->center(), 50, "OH NO YOU DIED");
             if (dead_count > kMinDeadTicks) {
-                window_->centered_text(color, pos, 30, "Press Any Key to Respawn");
+                window_->centered_text(Color::kBlack, pos, 30, "Press Any Key to Respawn");
             }
         } else if (paused) {
             const Color color = Color::kBlack.highlight(paused);
-            window_->centered_text(color, window_->center(), 50, "PAUSED");
-            window_->centered_text(color, pos, 30, "Press [P] to Resume");
+            window_->fill_box(color, Box<2>({0, 0}, window_->shape()));
+            window_->centered_text(Color::kBlack, window_->center(), 50, "PAUSED");
+            window_->centered_text(Color::kBlack, pos, 30, "Press [P] to Resume");
         }
     }
 
     View3D &view3d() { return *view_.dyn_cast<View3D>(); }
 
     struct GlowEffect {
-        explicit GlowEffect(const U64 min = 256, const U64 max = 1024) : count(min), min(min), max(max) {}
+        explicit GlowEffect(const U64 speed = 10, const U64 min = 512, const U64 max = 756)
+            : speed(speed), count(min), min(min), max(max) {}
         pure explicit operator bool() const { return enabled; }
         pure implicit operator Color() const { return {.a = count}; }
         void advance() {
             if (!enabled)
                 return;
-            count += 10 * dir;
+            count += speed * dir;
             if (count > max || count < min) {
                 dir = -dir;
                 count = std::clamp<U64>(count, min, max);
             }
         }
+        U64 speed;
         bool enabled = false;
         U64 count;
         Dir dir = Dir::Pos;
@@ -281,8 +285,8 @@ struct G1 final : World<3> {
     static constexpr U64 kMinDeadTicks = 100;
 
     Player *player;
-    GlowEffect paused;
-    GlowEffect dead;
+    GlowEffect paused = GlowEffect(3, 512, 756);
+    GlowEffect dead = GlowEffect(10, 512, 900);
     U64 dead_count = 0;
     U64 prev_generated = 0;
     U64 ticks_per_gen = 50;
