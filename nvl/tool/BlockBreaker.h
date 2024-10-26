@@ -28,7 +28,7 @@ public:
         static constexpr Color color(255, 0, 0, 32);
         const Pos<2> center = window_->center();
         const Box<2> box(center - radius_, center + radius_);
-        window_->fill_rectangle(color, box);
+        window_->fill_box(color, box);
     }
 
 private:

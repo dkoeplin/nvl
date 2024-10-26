@@ -30,15 +30,27 @@ public:
     }
 
     void draw(Window *window, const Color &scale) const override {
-        const auto color = material_->color.highlight(scale);
-        for (const At<N, Part<N>> &part : this->parts()) {
-            window->fill_rectangle(color, part.bbox());
-        }
-        if (material_->outline) {
-            const auto edge_color = color.highlight(Color::kDarker);
-            for (const At<N, Edge<N>> &edge : this->edges()) {
-                window->line_rectangle(edge_color, edge.bbox());
+        if constexpr (N == 2) {
+            const auto color = material_->color.highlight(scale);
+            for (const At<N, Part<N>> &part : this->parts()) {
+                window->fill_box(color, part.bbox());
             }
+            if (material_->outline) {
+                const auto edge_color = color.highlight(Color::kDarker);
+                for (const At<N, Edge<N>> &edge : this->edges()) {
+                    window->line_box(edge_color, edge.bbox());
+                }
+            }
+        } else if constexpr (N == 3) {
+            const auto color = material_->color.highlight(scale);
+            const auto edge_color = color.highlight(Color::kDarker);
+            for (const At<N, Part<N>> &part : this->parts()) {
+                window->fill_cube(color, part.bbox());
+                window->fill_cube(edge_color, part.bbox());
+            }
+            /*for (const At<N, Edge<N>> &edge : this->edges()) {
+                window->line_cube(edge_color, edge.bbox());
+            }*/
         }
     }
 

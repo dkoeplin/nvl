@@ -6,6 +6,7 @@
 #include "nvl/tool/ToolBelt.h"
 #include "nvl/ui/RayWindow.h"
 #include "nvl/world/World.h"
+#include "raylib.h"
 
 namespace nvl {
 
@@ -13,9 +14,14 @@ struct Jump final : AbstractMessage {
     class_tag(Jump, AbstractMessage);
     explicit Jump(Actor src) : AbstractMessage(std::move(src)) {}
 };
+struct Strafe final : AbstractMessage {
+    class_tag(Strafe, AbstractMessage);
+    explicit Strafe(Actor src, const Dir dir) : AbstractMessage(std::move(src)), dir(dir) {}
+    Dir dir;
+};
 struct Move final : AbstractMessage {
-    class_tag(Move, AbstractMessage);
-    explicit Move(Actor src, const Dir dir) : AbstractMessage(std::move(src)), dir(dir) {}
+    class_tag(Move, AbstractMessage) explicit Move(Actor src, const Dir dir)
+        : AbstractMessage(std::move(src)), dir(dir) {}
     Dir dir;
 };
 struct Brake final : AbstractMessage {
@@ -23,30 +29,38 @@ struct Brake final : AbstractMessage {
     explicit Brake(Actor src) : AbstractMessage(std::move(src)) {}
 };
 
-struct Player final : Entity<2> {
+struct Player final : Entity<3> {
     static constexpr I64 kMaxVelocity = 10;
     class_tag(Player, Entity<2>);
-    explicit Player(const Pos<2> loc) : Entity(loc) {
-        const auto material = Material::get<TestMaterial>(Color::kGreen);
-        parts_.emplace(Box<2>({-5, 0}, {5, 10}), material);
-        parts_.emplace(Box<2>({-10, 10}, {10, 30}), material);
+    explicit Player(const Pos<3> &loc) : Entity(loc) {
+        const auto material = Material::get<TestMaterial>(Color::kBlue);
+        parts_.emplace(Box<3>({-5, 0, -5}, {5, 10, 5}), material);
+        parts_.emplace(Box<3>({-10, 10, -10}, {10, 30, 10}), material);
     }
     Status receive(const Message &message) override {
         if (message.isa<Jump>() && has_below() && velocity_[1] == 0) {
+            std::cout << "Jump" << std::endl;
             velocity_[1] = -30;
         } else if (message.isa<Brake>()) {
-            const I64 v = velocity_[0];
-            velocity_[0] = v + (v < 0 ? 1 : v > 0 ? -1 : 0);
+            const I64 v0 = velocity_[0];
+            const I64 v2 = velocity_[2];
+            std::cout << "Brake" << std::endl;
+            velocity_[0] = v0 + (v0 < 0 ? 1 : v0 > 0 ? -1 : 0);
+            velocity_[2] = v2 + (v2 < 0 ? 1 : v2 > 0 ? -1 : 0);
+        } else if (const auto strafe = message.dyn_cast<Strafe>()) {
+            std::cout << "Strafe" << std::endl;
+            velocity_[0] = std::clamp<I64>(velocity_[0] + 2 * strafe->dir, -kMaxVelocity, kMaxVelocity);
         } else if (const auto move = message.dyn_cast<Move>()) {
-            velocity_[0] = std::clamp<I64>(velocity_[0] + 2 * move->dir, -kMaxVelocity, kMaxVelocity);
+            std::cout << "Move" << std::endl;
+            velocity_[2] = std::clamp<I64>(velocity_[2] + 2 * strafe->dir, -kMaxVelocity, kMaxVelocity);
         } else {
             return Entity::receive(message);
         }
         return Status::kNone;
     }
 
-    void draw(Window *window, const Color &scale) const override {
-        for (const At<2, Part<2>> &part : this->parts()) {
+    void draw(Window *, const Color &) const override {
+        /*for (const At<3, Part<3>> &part : this->parts()) {
             const auto color = part->material->color.highlight(scale);
             window->fill_box(color, part.bbox());
         }
@@ -55,11 +69,11 @@ struct Player final : Entity<2> {
             const auto bbox = this->bbox();
             const Box<2> dig_box{bbox.min - 10, {bbox.max[0] + 10, bbox.max[1]}};
             window->fill_box(color, dig_box);
-        }
+        }*/
     }
 
     Status tick(const List<Message> &messages) override {
-        const auto bbox = this->bbox();
+        /*const auto bbox = this->bbox();
         Box<2> dig_box{bbox.min - 10, {bbox.max[0] + 10, bbox.max[1]}};
         if (digging) {
             if (velocity_[1] < 0) {
@@ -73,10 +87,10 @@ struct Player final : Entity<2> {
         } else if (velocity_ != Pos<2>::zero) {
             for (const Actor &overlap : world_->entities(dig_box)) {
                 if (overlap != self()) {
-                    send<Notify>(overlap, Notify::kMoved);
+                    send<Notify>(overlap, Notify::kStrafed);
                 }
             }
-        }
+        }*/
         return Entity::tick(messages);
     }
 
@@ -85,19 +99,19 @@ struct Player final : Entity<2> {
     bool digging = false;
 };
 
-struct G0 final : World<2> {
-    class_tag(G0, World<2>);
+struct G1 final : World<3> {
+    class_tag(G1, World<3>);
 
-    explicit G0(Window *window) : World(window, {.gravity_accel = 3}) {
+    explicit G1(Window *window) : World(window, {.gravity_accel = 3}) {
         const Material bulwark = Material::get<Bulwark>();
-        const Pos<2> min = {0, window->height() - 50};
-        const Pos<2> max = {window->width(), window->height()};
-        const Box<2> base(min, max);
-        spawn<Block<2>>(Pos<2>::zero, base, bulwark);
+        const Pos<3> min = {0, 1000, 0};
+        const Pos<3> max = {2000, 1050, 2000};
+        const Box<3> base(min, max);
+        spawn<Block<3>>(Pos<3>::zero, base, bulwark);
 
-        const Pos<2> start{window->center()[0], min[1] - 100};
+        const Pos<3> start{500, 950, 500};
         player = spawn<Player>(start);
-        view_ = start - window->shape() / 2;
+        view3d().offset = start;
 
         on_key_down[Key::P] = [this] { paused = (paused > 0) ? 0 : 255; };
     }
@@ -114,19 +128,21 @@ struct G0 final : World<2> {
         const auto prev_player_loc = player->loc();
         World::tick();
         const auto diff = player->loc() - prev_player_loc;
-        view_ += diff;
+        view3d().offset += diff;
 
         if (window_->ticks() - prev_generated >= ticks_per_gen) {
-            const auto slots = ceil_div(window_->width(), 50);
-            const auto left = random.uniform<I64, I64>(-4, slots);
+            const auto slots = ceil_div(1000, 50);
+            const auto left = random.uniform<I64, I64>(-4, slots + 4);
+            const auto back = random.uniform<I64, I64>(-4, slots + 4);
             const auto width = random.uniform<I64, I64>(1, 5);
-            const auto height = random.uniform<I64, I64>(1, 3);
-            const auto top = std::min(view_[1], entities_.bbox().min[1]) - height * 50 - 200;
+            const auto height = random.uniform<I64, I64>(1, 5);
+            const auto depth = random.uniform<I64, I64>(1, 5);
+            const auto top = std::min<I64>(0, entities_.bbox().min[1]) - height * 50 - 200;
             const auto color = random.uniform<Color>(0, 255);
             const auto material = Material::get<TestMaterial>(color);
-            const Pos<2> pos{left * 50, top};
-            const Box<2> box{{0, 0}, {width * 50, height * 50}};
-            spawn<Block<2>>(pos, box, material);
+            const Pos<3> pos{left * 50, top, back};
+            const Box<3> box{{0, 0, 0}, {width * 50, height * 50, depth * 50}};
+            spawn<Block<3>>(pos, box, material);
             prev_generated = window_->ticks();
         }
     }
@@ -139,33 +155,46 @@ struct G0 final : World<2> {
         }
     }
 
+    View3D &view3d() { return *view_.dyn_cast<View3D>(); }
+
     Player *player;
     U64 paused = 1;
     Dir pause_dir = Dir::Pos;
     U64 prev_generated = 0;
-    U64 ticks_per_gen = 10;
+    U64 ticks_per_gen = 50;
 };
 
-struct PlayerControls final : Tool<2> {
-    explicit PlayerControls(Window *window, G0 *world) : Tool(window, world), g0(world) {
-        on_key_down[Key::J] = [this] { g0->player->digging = true; };
-        on_key_up[Key::J] = [this] { g0->player->digging = false; };
+struct PlayerControls final : Tool<3> {
+    explicit PlayerControls(Window *window, G1 *world) : Tool(window, world), g1(world) {
+        on_key_down[Key::J] = [this] { g1->player->digging = true; };
+        on_key_up[Key::J] = [this] { g1->player->digging = false; };
     }
     void tick() override {
-        Actor player(g0->player);
+        Actor player(g1->player);
         if (window_->pressed(Key::Space)) {
             world_->send<Jump>(nullptr, player);
         }
-        if (!window_->pressed(Key::A) && !window_->pressed(Key::D)) {
-            world_->send<Brake>(nullptr, player);
-        } else if (window_->pressed(Key::A)) {
-            world_->send<Move>(nullptr, player, Dir::Neg);
+        bool no_strafe = false, no_move = false;
+        if (window_->pressed(Key::A)) {
+            world_->send<Strafe>(nullptr, player, Dir::Neg);
         } else if (window_->pressed(Key::D)) {
+            world_->send<Strafe>(nullptr, player, Dir::Pos);
+        } else {
+            no_strafe = true;
+        }
+        if (window_->pressed(Key::W)) {
             world_->send<Move>(nullptr, player, Dir::Pos);
+        } else if (window_->pressed(Key::S)) {
+            world_->send<Move>(nullptr, player, Dir::Neg);
+        } else {
+            no_move = true;
+        }
+        if (no_strafe && no_move) {
+            world_->send<Brake>(nullptr, player);
         }
     }
     void draw() override {}
-    G0 *g0;
+    G1 *g1;
 };
 
 } // namespace nvl
@@ -183,7 +212,7 @@ int main() {
 
     RayWindow window("App", {1000, 1000});
     window.set_mouse_mode(Window::MouseMode::kViewport);
-    auto *world = window.open<nvl::G0>();
+    auto *world = window.open<nvl::G1>();
     window.open<nvl::PlayerControls>(world);
 
     Time prev_tick = Clock::now();

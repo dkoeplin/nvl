@@ -9,6 +9,7 @@
 #include "nvl/tool/Tool.h"
 #include "nvl/ui/Color.h"
 #include "nvl/ui/Window.h"
+#include "nvl/world/World.h"
 
 namespace nvl {
 
@@ -42,8 +43,9 @@ public:
     void tick() override {}
     void draw() override {
         if (pending_) {
-            const auto offset = Window::Offset(window_, world_->view());
+            window_->push_view(world_->view());
             pending_->draw(window_, Color::kMoreTransparent);
+            window_->pop_view();
         }
     }
 

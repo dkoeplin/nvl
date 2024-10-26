@@ -1,5 +1,6 @@
 #include "nvl/ui/RayWindow.h"
 
+#include "nvl/macros/Unreachable.h"
 #include "nvl/ui/Color.h"
 #include "raylib.h"
 
@@ -82,14 +83,32 @@ void RayWindow::feed() {
     }
 }
 
-void RayWindow::line_rectangle(const Color &color, const Box<2> &box) {
+void RayWindow::line_box(const Color &color, const Box<2> &box) {
     const Pos<2> shape = box.shape();
     DrawRectangleLines(box.min[0], box.min[1], shape[0], shape[1], raycolor(color));
 }
 
-void RayWindow::fill_rectangle(const Color &color, const Box<2> &box) {
+void RayWindow::fill_box(const Color &color, const Box<2> &box) {
     const Pos<2> shape = box.shape();
     DrawRectangle(box.min[0], box.min[1], shape[0], shape[1], raycolor(color));
+}
+
+void RayWindow::line_cube(const Color &color, const Box<3> &cube) {
+    const Pos<3> shape = cube.shape();
+    Vector3 pos;
+    pos.x = cube.min[0];
+    pos.y = cube.min[1];
+    pos.z = cube.min[2];
+    DrawCubeWires(pos, shape[0], shape[1], shape[2], raycolor(color));
+}
+
+void RayWindow::fill_cube(const Color &color, const Box<3> &cube) {
+    const Pos<3> shape = cube.shape();
+    Vector3 pos;
+    pos.x = cube.min[0];
+    pos.y = cube.min[1];
+    pos.z = cube.min[2];
+    DrawCube(pos, shape[0], shape[1], shape[2], raycolor(color));
 }
 
 void RayWindow::text(const Color &color, const Pos<2> &pos, I64 font_size, std::string_view text) {
@@ -108,18 +127,38 @@ void RayWindow::centered_text(const Color &color, const Pos<2> &pos, I64 font_si
 
 I64 RayWindow::fps() const { return GetFPS(); }
 
-void RayWindow::set_view_offset(const Maybe<Pos<2>> &offset) {
-    if (offset_.has_value()) {
-        EndMode2D();
-    }
-    offset_ = offset;
-    if (offset_.has_value()) {
+void RayWindow::set_view_offset(const ViewOffset &offset) {
+    if (auto *view2d = offset.dyn_cast<View2D>()) {
         Camera2D camera;
         camera.offset = Vector2{0, 0};
         camera.rotation = 0.0f;
         camera.zoom = 1.0f;
-        camera.target = Vector2{static_cast<float>((*offset_)[0]), static_cast<float>((*offset_)[1])};
+        camera.target = Vector2{static_cast<float>(view2d->offset[0]), static_cast<float>(view2d->offset[1])};
         BeginMode2D(camera);
+    } else if (auto *view3d = offset.dyn_cast<View3D>()) {
+        Camera3D camera;
+        camera.projection = CAMERA_PERSPECTIVE;
+        camera.fovy = static_cast<float>(view3d->fov);
+        camera.up = {0.0f, -1.0f, 0.0f};
+        camera.position = Vector3{.x = static_cast<float>(view3d->offset[0]),
+                                  .y = static_cast<float>(view3d->offset[1]),
+                                  .z = static_cast<float>(view3d->offset[2])};
+        const auto target = view3d->project(view3d->offset, 100);
+        camera.target = {
+            .x = static_cast<float>(target[0]), .y = static_cast<float>(target[1]), .z = static_cast<float>(target[2])};
+        BeginMode3D(camera);
+    } else {
+        UNREACHABLE;
+    }
+}
+
+void RayWindow::end_view_offset(const ViewOffset &offset) {
+    if (offset.isa<View2D>()) {
+        EndMode2D();
+    } else if (offset.isa<View3D>()) {
+        EndMode3D();
+    } else {
+        UNREACHABLE;
     }
 }
 

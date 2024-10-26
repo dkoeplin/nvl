@@ -85,6 +85,8 @@ add_library(nvl SHARED
         nvl/ui/RayWindow.h
         nvl/ui/Screen.cpp
         nvl/ui/Screen.h
+        nvl/ui/ViewOffset.cpp
+        nvl/ui/ViewOffset.h
         nvl/ui/Window.cpp
         nvl/ui/Window.h
         nvl/world/World.h
@@ -94,13 +96,16 @@ set(RAYLIB_VERSION 5.0)
 find_package(raylib ${RAYLIB_VERSION} REQUIRED)
 
 target_include_directories(nvl PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(nvl PRIVATE raylib)
+target_link_libraries(nvl PUBLIC raylib)
 
 add_executable(app ${CMAKE_CURRENT_SOURCE_DIR}/nvl/App.cpp)
 target_link_libraries(app PRIVATE nvl)
 
 add_executable(g0 ${CMAKE_CURRENT_SOURCE_DIR}/nvl/G0.cpp)
 target_link_libraries(g0 PRIVATE nvl)
+
+add_executable(g1 ${CMAKE_CURRENT_SOURCE_DIR}/nvl/G1.cpp)
+target_link_libraries(g1 PRIVATE nvl raylib)
 
 if (APPLE)
     target_link_libraries(nvl PRIVATE "-framework IOKit")

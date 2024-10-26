@@ -29,8 +29,12 @@ void TensorWindow::draw() {
     }
 }
 
-void TensorWindow::line_rectangle(const Color &color, const Box<2> &box) {
-    for (const Edge<2> side : (box - offset_.value_or(Pos<2>::zero)).sides()) {
+void TensorWindow::line_box(const Color &color, const Box<2> &box) {
+    Pos<2> view = Pos<2>::zero;
+    if (!views_.empty() && views_.back().isa<View2D>()) {
+        view = views_.get_back()->dyn_cast<View2D>()->offset;
+    }
+    for (const Edge<2> side : (box - view).sides()) {
         for (const Pos<2> i : side.box.pos_iter()) {
             if (tensor_.has(i)) {
                 tensor_[i] = color;
@@ -39,8 +43,12 @@ void TensorWindow::line_rectangle(const Color &color, const Box<2> &box) {
     }
 }
 
-void TensorWindow::fill_rectangle(const Color &color, const Box<2> &box) {
-    for (const Pos<2> i : (box - offset_.value_or(Pos<2>::zero)).pos_iter()) {
+void TensorWindow::fill_box(const Color &color, const Box<2> &box) {
+    Pos<2> view = Pos<2>::zero;
+    if (!views_.empty() && views_.back().isa<View2D>()) {
+        view = views_.get_back()->dyn_cast<View2D>()->offset;
+    }
+    for (const Pos<2> i : (box - view).pos_iter()) {
         if (tensor_.has(i)) {
             tensor_[i] = color;
         }
@@ -54,7 +62,5 @@ void TensorWindow::text(const Color &, const Pos<2> &, const I64, std::string_vi
 void TensorWindow::centered_text(const Color &, const Pos<2> &, const I64, std::string_view) {
     // Nothing yet
 }
-
-void TensorWindow::set_view_offset(const Maybe<Pos<2>> &offset) { offset_ = offset; }
 
 } // namespace nvl::test

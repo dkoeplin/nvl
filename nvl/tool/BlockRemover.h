@@ -29,8 +29,9 @@ public:
     void tick() override {}
     void draw() override {
         if (hovered_) {
-            const auto offset = Window::Offset(window_, world_->view());
+            window_->push_view(world_->view());
             hovered_->draw(window_, Color::kLighter);
+            window_->pop_view();
         }
     }
 

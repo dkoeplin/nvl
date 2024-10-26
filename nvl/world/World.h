@@ -60,7 +60,13 @@ public:
 
         on_mouse_move[{}] = on_mouse_move[{Mouse::Any}] = [this] {
             propagate_event(); // Don't prevent children from seeing the mouse movement event
-            view_ += window_->mouse_delta();
+            if constexpr (N == 2) {
+                auto *view2d = view_.dyn_cast<View2D>();
+                view2d->offset += window_->mouse_delta();
+            } else if constexpr (N == 3) {
+                auto *view3d = view_.dyn_cast<View3D>();
+                view3d->rotate(window_->mouse_delta(), window_->shape());
+            }
         };
         on_key_down[Key::Slash] = [this] { debug_ = !debug_; };
     }
@@ -69,15 +75,21 @@ public:
     pure Range<Actor> entities(const Pos<N> &pos) const { return entities_[pos]; }
     pure Range<Actor> entities(const Box<N> &box) const { return entities_[box]; }
 
-    pure Pos<2> view() const { return view_; }
+    pure ViewOffset view() const { return view_; }
     void set_hud(const bool enable) { hud_ = enable; }
 
     pure U64 num_awake() const { return awake_.size(); }
     pure U64 num_alive() const { return entities_.size(); }
 
     /// Converts the given coordinates from window coordinates to world coordinates.
-    pure Pos<2> window_to_world(const Pos<2> &pos) const { return pos + view_; }
-    pure Box<2> window_to_world(const Box<2> &box) const {
+    pure Pos<N> window_to_world(const Pos<2> &pos) const {
+        if constexpr (N == 2) {
+            auto *view2d = view_.dyn_cast<View2D>();
+            return pos + view2d->offset;
+        }
+        UNREACHABLE;
+    }
+    pure Box<N> window_to_world(const Box<2> &box) const {
         return {window_to_world(box.min), window_to_world(box.max)};
     }
 
@@ -135,7 +147,7 @@ public:
     void tick() override;
     void draw() override;
 
-    void set_view(const Pos<2> view) { view_ = view; }
+    void set_view(const ViewOffset &view) { view_ = view; }
 
     pure const Map<Actor, List<Message>> &messages() const { return messages_; }
 
@@ -151,12 +163,12 @@ protected:
     Set<Actor> died_;
     Map<Actor, List<Message>> messages_;
 
-    Pos<2> view_ = Pos<2>::zero;
-    bool hud_ = true;
-    Duration draw_last_, draw_max_;
-    Duration tick_last_, tick_max_;
-    U64 msgs_last_ = 0, msgs_max_ = 0;
-    bool debug_ = false;
+    ViewOffset view_ = ViewOffset::zero<N>(); // Location of the camera in world coordinates
+    Duration draw_last_, draw_max_;           // Draw times (previous tick and max)
+    Duration tick_last_, tick_max_;           // Tick times (previous tick and max)
+    U64 msgs_last_ = 0, msgs_max_ = 0;        // Message queue sizes (previous tick and max)
+    bool hud_ = true;                         // True if HUD should be drawn over world view
+    bool debug_ = true;                       // True if debug should be drawn over world view
 };
 
 template <U64 N>
@@ -194,52 +206,59 @@ template <U64 N>
 void World<N>::draw() {
     const Time start = Clock::now();
 
-    const Box<2> range = window_to_world(window_->bbox());
-    const Pos<2> center = window_to_world(window_->center());
-    {
-        const auto offset = Window::Offset(window_, view_);
+    window_->push_view(view_);
+    if constexpr (N == 2) {
+        const auto range = window_to_world(window_->bbox());
         for (const Actor &actor : entities(range)) {
             actor->draw(window_, Color::kNormal);
         }
+    } else if constexpr (N == 3) {
+        // TODO: Restrict to only visible entities
+        for (const Actor &actor : entities_) {
+            actor->draw(window_, Color::kNormal);
+        }
     }
+    window_->pop_view();
 
     if (hud_) {
         constexpr Color crosshair_color = Color::kBlack;
         const auto c = window_->center();
         const Box<2> hline({c[0] - 10, c[1] - 1}, {c[0] + 10, c[1] + 1});
         const Box<2> vline({c[0] - 1, c[1] - 10}, {c[0] + 1, c[1] + 10});
-        window_->line_rectangle(crosshair_color, hline);
-        window_->line_rectangle(crosshair_color, vline);
-    }
-
-    std::string hover = "None";
-    if (auto over = this->entities(center); !over.empty()) {
-        if (auto *entity = over.begin()->template dyn_cast<Entity<N>>()) {
-            hover = entity->bbox().to_string();
-        }
+        window_->line_box(crosshair_color, hline);
+        window_->line_box(crosshair_color, vline);
     }
 
     if (debug_) {
         window_->text(Color::kBlack, {10, 10}, 20, "FPS: " + std::to_string(window_->fps()));
-        window_->text(Color::kBlack, {10, 40}, 20, "VRange: " + range.to_string());
-        window_->text(Color::kBlack, {10, 70}, 20, "Center: " + center.to_string());
-        window_->text(Color::kBlack, {10, 100}, 20, "Alive: " + std::to_string(num_alive()));
-        window_->text(Color::kBlack, {10, 130}, 20, "Awake: " + std::to_string(num_awake()));
-        window_->text(Color::kBlack, {10, 160}, 20, "Hover: " + hover);
+        if constexpr (N == 2) {
+            const Pos<2> center = window_to_world(window_->center());
+            std::string hover = "None";
+            if (auto over = this->entities(center); !over.empty()) {
+                if (auto *entity = over.begin()->template dyn_cast<Entity<N>>()) {
+                    hover = entity->bbox().to_string();
+                }
+            }
+
+            window_->text(Color::kBlack, {10, 40}, 20, "Center: " + center.to_string());
+            window_->text(Color::kBlack, {10, 70}, 20, "Hover: " + hover);
+        } else if constexpr (N == 3) {
+            const auto *view3d = view_.dyn_cast<View3D>();
+            const auto target = view3d->project(100);
+
+            window_->text(Color::kBlack, {10, 40}, 20, "Look: " + target.to_string());
+            window_->text(Color::kBlack, {10, 70}, 20, "View: " + view3d->offset.to_string());
+            window_->text(Color::kBlack, {10, 100}, 20, "Pitch: " + std::to_string(view3d->pitch));
+            window_->text(Color::kBlack, {10, 130}, 20, "Angle: " + std::to_string(view3d->angle));
+        }
+        window_->text(Color::kBlack, {10, 160}, 20,
+                      "Alive: " + std::to_string(num_awake()) + "/" + std::to_string(num_alive()));
         window_->text(Color::kBlack, {10, 190}, 20, "Tick(last): " + tick_last_.to_string());
         window_->text(Color::kBlack, {10, 220}, 20, "Tick(max): " + tick_max_.to_string());
         window_->text(Color::kBlack, {10, 250}, 20, "Draw(last): " + draw_last_.to_string());
         window_->text(Color::kBlack, {10, 280}, 20, "Draw(max): " + draw_max_.to_string());
         window_->text(Color::kBlack, {10, 310}, 20, "Msgs(last): " + std::to_string(msgs_last_));
         window_->text(Color::kBlack, {10, 340}, 20, "Msgs(max): " + std::to_string(msgs_max_));
-
-        const auto offset = Window::Offset(window_, view_);
-        {
-            for (const auto &[node, pos] : entities_.points_in(range)) {
-                const Box<N> box(pos, pos + node->grid - 1);
-                window_->line_rectangle(Color::kRed, box);
-            }
-        }
     }
 
     draw_last_ = Clock::now() - start;

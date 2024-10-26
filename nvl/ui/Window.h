@@ -10,6 +10,7 @@
 #include "nvl/ui/Key.h"
 #include "nvl/ui/Mouse.h"
 #include "nvl/ui/Screen.h"
+#include "nvl/ui/ViewOffset.h"
 
 namespace nvl {
 
@@ -20,16 +21,6 @@ public:
     enum class MouseMode {
         kViewport, // Invisible mouse, always centered.
         kStandard, // Visible mouse, moved by user.
-    };
-
-    class Offset {
-    public:
-        explicit Offset(Window *parent, const Pos<2> &offset);
-        ~Offset();
-
-    private:
-        Window *parent_;
-        Maybe<Pos<2>> prev_offset_;
     };
 
     explicit Window(const std::string &title, Pos<2> shape);
@@ -60,11 +51,16 @@ public:
     pure const Set<Key> &pressed_keys() const { return pressed_keys_; }
     pure const Set<Mouse> &pressed_mouse() const { return pressed_mouse_; }
 
+    pure bool pressed(const Set<Key> &keys) const {
+        return keys.values().exists([&](const Key &key) { return pressed_keys_.has(key); });
+    }
     pure bool pressed(const Key key) const { return pressed_keys_.has(key); }
     pure bool down(const Mouse mouse) const { return pressed_mouse_.has(mouse); }
 
-    virtual void line_rectangle(const Color &color, const Box<2> &box) = 0;
-    virtual void fill_rectangle(const Color &color, const Box<2> &box) = 0;
+    virtual void line_box(const Color &color, const Box<2> &box) = 0;
+    virtual void fill_box(const Color &color, const Box<2> &box) = 0;
+    virtual void line_cube(const Color &color, const Box<3> &cube) = 0;
+    virtual void fill_cube(const Color &color, const Box<3> &cube) = 0;
 
     /// Draws the given text with the top-left of the text at `pos`.
     virtual void text(const Color &color, const Pos<2> &pos, I64 font_size, std::string_view text) = 0;
@@ -72,7 +68,8 @@ public:
     /// Draws the given text with the center of the text at `pos`.
     virtual void centered_text(const Color &color, const Pos<2> &pos, I64 font_size, std::string_view text) = 0;
 
-    virtual void set_view_offset(const Maybe<Pos<2>> &offset) = 0;
+    void push_view(const ViewOffset &offset);
+    void pop_view();
 
     virtual void set_mouse_mode(const MouseMode mode) {
         mouse_mode_ = mode;
@@ -104,9 +101,9 @@ public:
 protected:
     friend class Offset;
 
+    virtual void set_view_offset(const ViewOffset &offset) = 0;
+    virtual void end_view_offset(const ViewOffset &offset) = 0;
     virtual void tick() = 0;
-
-    Maybe<Pos<2>> offset_ = None;
 
     Set<Key> pressed_keys_;
     Set<Mouse> pressed_mouse_;
@@ -115,6 +112,7 @@ protected:
     Pos<2> scroll_ = Pos<2>::zero;
 
     List<Screen> children_;
+    List<ViewOffset> views_;
 
     MouseMode mouse_mode_ = MouseMode::kStandard;
     U64 ticks_ = 0;

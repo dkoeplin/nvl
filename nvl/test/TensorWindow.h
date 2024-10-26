@@ -12,12 +12,16 @@ public:
     void draw() override;
     void tick() override;
     void feed() override;
-    void line_rectangle(const Color &color, const Box<2> &box) override;
-    void fill_rectangle(const Color &color, const Box<2> &box) override;
+    void line_box(const Color &color, const Box<2> &box) override;
+    void fill_box(const Color &color, const Box<2> &box) override;
+    void line_cube(const Color &, const Box<3> &) override {}
+    void fill_cube(const Color &, const Box<3> &) override {}
+
     void text(const Color &color, const Pos<2> &pos, I64 font_size, std::string_view text) override;
     void centered_text(const Color &color, const Pos<2> &pos, I64 font_size, std::string_view text) override;
 
-    void set_view_offset(const Maybe<Pos<2>> &offset) override;
+    void set_view_offset(const ViewOffset &) override {}
+    void end_view_offset(const ViewOffset &) override {}
     pure bool should_close() const override { return false; }
     pure I64 height() const override { return tensor_.shape()[1]; }
     pure I64 width() const override { return tensor_.shape()[0]; }
