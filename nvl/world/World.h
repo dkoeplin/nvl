@@ -147,6 +147,8 @@ public:
     void tick() override;
     void draw() override;
 
+    virtual void remove(const Actor &actor);
+
     void set_view(const ViewOffset &view) { view_ = view; }
 
     pure const Map<Actor, List<Message>> &messages() const { return messages_; }
@@ -280,7 +282,7 @@ void World<N>::tick_entity(Set<Actor> &idled, Ref<Entity<N>> entity) {
     msgs_last_ += messages.size();
     const Status status = entity->tick(messages);
     if (status == Status::kDied) {
-        died_.insert(actor);
+        remove(actor);
     } else if (status == Status::kIdle) {
         idled.insert(actor);
     } else if (status == Status::kMove) {
@@ -291,6 +293,11 @@ void World<N>::tick_entity(Set<Actor> &idled, Ref<Entity<N>> entity) {
     if (status != Status::kDied && entity->bbox().min[kVerticalDim] > kMaxY) {
         send<Destroy>(nullptr, actor, Destroy::kOutOfBounds);
     }
+}
+
+template <U64 N>
+void World<N>::remove(const Actor &actor) {
+    died_.insert(actor);
 }
 
 } // namespace nvl

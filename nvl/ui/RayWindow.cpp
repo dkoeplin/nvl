@@ -28,7 +28,7 @@ RayWindow::~RayWindow() { CloseWindow(); }
 
 void RayWindow::draw() {
     BeginDrawing();
-    ClearBackground(raycolor(RAYWHITE));
+    ClearBackground(raycolor(background_));
     for (auto &child : children_) {
         child->draw_all();
     }
@@ -95,19 +95,23 @@ void RayWindow::fill_box(const Color &color, const Box<2> &box) {
 
 void RayWindow::line_cube(const Color &color, const Box<3> &cube) {
     const Pos<3> shape = cube.shape();
+    const Pos<3> center = cube.min + shape / 2;
+    // Cube position is the _center_ position for raylib
     Vector3 pos;
-    pos.x = cube.min[0];
-    pos.y = cube.min[1];
-    pos.z = cube.min[2];
+    pos.x = center[0];
+    pos.y = center[1];
+    pos.z = center[2];
     DrawCubeWires(pos, shape[0], shape[1], shape[2], raycolor(color));
 }
 
 void RayWindow::fill_cube(const Color &color, const Box<3> &cube) {
     const Pos<3> shape = cube.shape();
+    const Pos<3> center = cube.min + shape / 2;
+    // Cube position is the _center_ position for raylib
     Vector3 pos;
-    pos.x = cube.min[0];
-    pos.y = cube.min[1];
-    pos.z = cube.min[2];
+    pos.x = center[0];
+    pos.y = center[1];
+    pos.z = center[2];
     DrawCube(pos, shape[0], shape[1], shape[2], raycolor(color));
 }
 
@@ -138,12 +142,12 @@ void RayWindow::set_view_offset(const ViewOffset &offset) {
     } else if (auto *view3d = offset.dyn_cast<View3D>()) {
         Camera3D camera;
         camera.projection = CAMERA_PERSPECTIVE;
-        camera.fovy = static_cast<float>(view3d->fov);
+        camera.fovy = view3d->fov;
         camera.up = {0.0f, -1.0f, 0.0f};
         camera.position = Vector3{.x = static_cast<float>(view3d->offset[0]),
                                   .y = static_cast<float>(view3d->offset[1]),
                                   .z = static_cast<float>(view3d->offset[2])};
-        const auto target = view3d->project(view3d->offset, 100);
+        const auto target = view3d->project();
         camera.target = {
             .x = static_cast<float>(target[0]), .y = static_cast<float>(target[1]), .z = static_cast<float>(target[2])};
         BeginMode3D(camera);

@@ -14,11 +14,31 @@ struct Color {
     static const Color kMoreTransparent;
     static const Color kLessTransparent;
 
-    static const Color kBlack;
+    static const Color kLightGray;
+    static const Color kGray;
+    static const Color kDarkGray;
+    static const Color kYellow;
+    static const Color kGold;
+    static const Color kOrange;
+    static const Color kPink;
     static const Color kRed;
+    static const Color kMaroon;
+    static const Color kMagenta;
     static const Color kGreen;
+    static const Color kLime;
+    static const Color kDarkGreen;
+    static const Color kSkyBlue;
     static const Color kBlue;
+    static const Color kDarkBlue;
+    static const Color kPurple;
+    static const Color kViolet;
+    static const Color kDarkPurple;
+    static const Color kBeige;
+    static const Color kBrown;
+    static const Color kDarkBrown;
     static const Color kWhite;
+    static const Color kBlack;
+    static const Color kRayWhite;
 
     constexpr static Color hex(const U64 hex) {
         return {.r = (hex >> 16) & 0xFF, .g = (hex >> 8) & 0xFF, .b = hex & 0xFF};
@@ -52,11 +72,34 @@ constexpr Color Color::kDarker {.r = 763, .g = 763, .b = 763, .a = 1024};
 constexpr Color Color::kMoreTransparent {.r = 1024, .g = 1024, .b = 1024, .a = 763};
 constexpr Color Color::kLessTransparent {.r = 1024, .g = 1024, .b = 1024, .a = 1462};
 
-constexpr Color Color::kBlack = hex(0x000000);
-constexpr Color Color::kRed   = hex(0xFF0000);
-constexpr Color Color::kGreen = hex(0x00FF00);
-constexpr Color Color::kBlue  = hex(0x0000FF);
-constexpr Color Color::kWhite = hex(0xFFFFFF);
+// Adapted from the raylib color pallete
+constexpr Color Color::kLightGray  { 200, 200, 200, 255 };
+constexpr Color Color::kGray       { 130, 130, 130, 255 };
+constexpr Color Color::kDarkGray   { 80, 80, 80, 255 };
+constexpr Color Color::kYellow     { 253, 249, 0, 255 };
+constexpr Color Color::kGold       { 255, 203, 0, 255 };
+constexpr Color Color::kOrange     { 255, 161, 0, 255 };
+constexpr Color Color::kPink       { 255, 109, 194, 255 };
+constexpr Color Color::kRed        { 230, 41, 55, 255 };
+constexpr Color Color::kMaroon     { 190, 33, 55, 255 };
+constexpr Color Color::kMagenta    { 255, 0, 255, 255 };
+constexpr Color Color::kGreen      { 0, 228, 48, 255 };
+constexpr Color Color::kLime       { 0, 158, 47, 255 };
+constexpr Color Color::kDarkGreen  { 0, 117, 44, 255 };
+constexpr Color Color::kSkyBlue    { 102, 191, 255, 255 };
+constexpr Color Color::kBlue       { 0, 121, 241, 255 };
+constexpr Color Color::kDarkBlue   { 0, 82, 172, 255 };
+constexpr Color Color::kPurple     { 200, 122, 255, 255 };
+constexpr Color Color::kViolet     { 135, 60, 190, 255 };
+constexpr Color Color::kDarkPurple { 112, 31, 126, 255 };
+constexpr Color Color::kBeige      { 211, 176, 131, 255 };
+constexpr Color Color::kBrown      { 127, 106, 79, 255 };
+constexpr Color Color::kDarkBrown  { 76, 63, 47, 255 };
+
+constexpr Color Color::kWhite      { 255, 255, 255, 255 };
+constexpr Color Color::kBlack      { 0, 0, 0, 255 };
+constexpr Color Color::kRayWhite   { 245, 245, 245, 255 };
+
 // clang-format on
 
 template <>

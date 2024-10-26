@@ -28,11 +28,11 @@ struct View3D final : AbstractViewOffset {
     pure Pos<3> project(U64 length) const;
     pure Pos<3> project(const Pos<3> &from, U64 length) const;
 
-    Pos<3> offset = Pos<3>::zero;
-    float pitch = 0; // Between -90 and 90
-    float angle = 0; // Between -180 and 180
-    I64 fov = 45;    // Between 0 and 90
-    I64 dist = 1000; // View distance
+    Pos<3> offset = Pos<3>::zero; // Location of camera, in world coordinates
+    float pitch = 0;              // Angle between XY, between -89 and 89
+    float angle = 0;              // Angle between XZ, between 0 and 360
+    float fov = 45;               // Viewing field of view, between 0 and 90
+    I64 dist = 1000;              // View distance
 };
 
 struct ViewOffset final : Castable<ViewOffset, AbstractViewOffset, std::shared_ptr<AbstractViewOffset>> {

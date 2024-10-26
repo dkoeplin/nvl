@@ -30,6 +30,12 @@ struct Brake final : AbstractMessage {
     explicit Brake(Actor src) : AbstractMessage(std::move(src)) {}
 };
 
+struct Teleport final : AbstractMessage {
+    class_tag(Teleport, AbstractMessage);
+    explicit Teleport(Actor src, const Pos<3> &dst) : AbstractMessage(std::move(src)), dst(dst) {}
+    Pos<3> dst;
+};
+
 struct Player final : Entity<3> {
     class_tag(Player, Entity<3>);
 
@@ -45,7 +51,8 @@ struct Player final : Entity<3> {
         if (message.isa<Jump>() && has_below() && velocity_[1] == 0) {
             velocity_[1] = -30;
             return Status::kMove;
-        } else if (message.isa<Brake>()) {
+        }
+        if (message.isa<Brake>()) {
             const I64 v0 = velocity_[0];
             const I64 v2 = velocity_[2];
             velocity_[0] = v0 > 0 ? std::max<I64>(v0 - 2, 0) : std::min<I64>(v0 + 2, 0);
@@ -59,18 +66,31 @@ struct Player final : Entity<3> {
             const float delta_z = std::round(strafe->dir * 2 * std::sin((view->angle - 90) * kDeg2Rad));
             velocity_[0] = std::clamp<I64>(velocity_[0] + delta_x, -kMaxVelocity, kMaxVelocity);
             velocity_[2] = std::clamp<I64>(velocity_[2] + delta_z, -kMaxVelocity, kMaxVelocity);
-        } else if (const auto move = message.dyn_cast<Move>()) {
+            return Status::kMove;
+        }
+        if (const auto move = message.dyn_cast<Move>()) {
             const float delta_x = std::round(move->dir * 2 * std::cos(view->angle * kDeg2Rad));
             const float delta_z = std::round(move->dir * 2 * std::sin(view->angle * kDeg2Rad));
             velocity_[0] = std::clamp<I64>(velocity_[0] + delta_x, -kMaxVelocity, kMaxVelocity);
             velocity_[2] = std::clamp<I64>(velocity_[2] + delta_z, -kMaxVelocity, kMaxVelocity);
-        } else {
-            return Entity::receive(message);
+            return Status::kMove;
         }
-        return Status::kNone;
+        if (const auto *teleport = message.dyn_cast<Teleport>()) {
+            parts_.loc = teleport->dst;
+            return Status::kMove;
+        }
+
+        return Entity::receive(message);
     }
 
-    void draw(Window *, const Color &) const override {}
+    void draw(Window *, const Color &) const override {
+        // const auto box_color = Color::kBlue; //.highlight(color);
+        //  const auto edge_color = color.highlight(Color::kDarker);
+        // for (const At<3, Part<3>> &part : this->parts()) {
+        //  window->fill_cube(box_color, part.bbox());
+        //  window->fill_cube(edge_color, part.bbox());
+        // }
+    }
 
     Status tick(const List<Message> &messages) override {
         /*const auto bbox = this->bbox();
@@ -91,8 +111,7 @@ struct Player final : Entity<3> {
                 }
             }
         }*/
-        Entity::tick(messages);
-        return Status::kNone;
+        return Entity::tick(messages);
     }
 
     Status broken(const List<Component> &) override { return Status::kNone; }
@@ -100,30 +119,110 @@ struct Player final : Entity<3> {
     bool digging = false;
 };
 
+static const std::vector kColors = {
+    Color::kLightGray,  Color::kGray,    Color::kDarkGray, Color::kYellow,    Color::kGold,   Color::kOrange,
+    Color::kPink,       Color::kRed,     Color::kMaroon,   Color::kMagenta,   Color::kGreen,  Color::kLime,
+    Color::kDarkGreen,  Color::kSkyBlue, Color::kBlue,     Color::kDarkBlue,  Color::kPurple, Color::kViolet,
+    Color::kDarkPurple, Color::kBeige,   Color::kBrown,    Color::kDarkBrown,
+};
+
 struct G1 final : World<3> {
     class_tag(G1, World<3>);
 
-    explicit G1(Window *window) : World(window, {.gravity_accel = 3}) {
-        const Material bulwark = Material::get<Bulwark>();
-        const Pos<3> min = {0, 1000, 0};
-        const Pos<3> max = {2000, 1050, 2000};
-        const Box<3> base(min, max);
-        spawn<Block<3>>(Pos<3>::zero, base, bulwark);
+    std::vector<Material> materials;
 
-        const Pos<3> start{500, 950, 500};
+    explicit G1(Window *window) : World(window, {.gravity_accel = 3, .maximum_y = 3000}) {
+        paused.enabled = true;
+        window_->set_background(Color::kSkyBlue);
+
+        for (const auto &color : kColors) {
+            materials.push_back(Material::get<TestMaterial>(color));
+        }
+
+        const Material bulwark = Material::get<Bulwark>(Color::kDarkGreen);
+        constexpr Box<3> base({0, 0, 0}, {2000, 50, 2000});
+        spawn<Block<3>>(Pos<3>{0, 1000, 0}, base, bulwark);
+
+        constexpr Pos<3> start{500, 950, 300};
         player = spawn<Player>(start);
         view3d().offset = start;
+        view3d().angle = 90;
+        view3d().pitch = 10;
 
-        on_key_down[Key::P] = [this] { paused = (paused > 0) ? 0 : 255; };
+        const std::vector colors{Color::kRed, Color::kGreen, Color::kBlue};
+        I64 x = 500;
+        constexpr Box<3> box{{0, 0, 0}, {49, 49, 49}};
+        for (const auto &color : colors) {
+            const Pos<3> loc{x, 950, 500};
+            spawn<Block<3>>(loc, box, Material::get<TestMaterial>(color));
+            x += 100;
+        }
+        const std::vector colors2{Color::kYellow, Color::kOrange, Color::kPurple};
+        x = 500;
+        for (const auto &color : colors2) {
+            const Pos<3> loc{x, 850, 500};
+            spawn<Block<3>>(loc, box, Material::get<TestMaterial>(color));
+            x += 100;
+        }
+
+        on_key_down[Key::P] = [this] { paused.enabled = !paused.enabled; };
+        on_key_down[Key::L] = [this] {
+            for (const Actor &actor : entities_) {
+                if (const auto *block = actor.dyn_cast<Block<3>>()) {
+                    std::cout << block->bbox() << std::endl;
+                } else if (const auto *p = actor.dyn_cast<Player>()) {
+                    std::cout << "PLAYER: " << std::endl;
+                    for (const At<3, Part<3>> &part : p->parts()) {
+                        std::cout << "  " << part.bbox() << std::endl;
+                    }
+                }
+            }
+            std::cout << "VIEW: " << view3d().offset << std::endl;
+        };
+        on_key_down[Key::N] = [this] { spawn_random_cube(); };
+
+        on_key_down[Key::Any] = [this, start] {
+            if (dead && dead_count > kMinDeadTicks) {
+                dead.enabled = false;
+                dead_count = 0;
+                send<Teleport>(nullptr, Actor(player), start);
+                view3d().angle = 90;
+                view3d().pitch = 10;
+            }
+        };
+    }
+
+    void remove(const Actor &actor) override {
+        if (auto *p = actor.dyn_cast<Player>()) {
+            dead.enabled = true;
+        } else {
+            World::remove(actor);
+        }
+    }
+
+    void spawn_random_cube() {
+        const auto slots = ceil_div(1000, 50);
+        const auto left = random.uniform<I64, I64>(-4, slots + 4);
+        const auto back = random.uniform<I64, I64>(-4, slots + 4);
+        const auto width = random.uniform<I64, I64>(1, 5);
+        const auto height = random.uniform<I64, I64>(1, 5);
+        const auto depth = random.uniform<I64, I64>(1, 5);
+        const auto top = std::min<I64>(0, entities_.bbox().min[1]) - height * 50 - 200;
+        const auto color_idx = random.uniform<U64, U64>(0, materials.size() - 1);
+        const auto material = materials.at(color_idx);
+        const Pos<3> pos{left * 50, top, back};
+        const Box<3> box{{0, 0, 0}, {width * 50, height * 50, depth * 50}};
+        spawn<Block<3>>(pos, box, material);
+        prev_generated = window_->ticks();
     }
 
     void tick() override {
-        if (paused) {
-            paused += 10 * pause_dir;
-            if (paused > 255 || pause_dir < 1) {
-                pause_dir = -pause_dir;
-                paused = std::clamp<U64>(paused, 1, 255);
-            }
+        dead.advance();
+        paused.advance();
+        if (dead) {
+            dead_count += 1;
+        }
+        if (dead || paused) {
             return;
         }
         const auto prev_player_loc = player->loc();
@@ -131,36 +230,60 @@ struct G1 final : World<3> {
         const auto diff = player->loc() - prev_player_loc;
         view3d().offset += diff;
 
+#if 0
         if (window_->ticks() - prev_generated >= ticks_per_gen) {
-            const auto slots = ceil_div(1000, 50);
-            const auto left = random.uniform<I64, I64>(-4, slots + 4);
-            const auto back = random.uniform<I64, I64>(-4, slots + 4);
-            const auto width = random.uniform<I64, I64>(1, 5);
-            const auto height = random.uniform<I64, I64>(1, 5);
-            const auto depth = random.uniform<I64, I64>(1, 5);
-            const auto top = std::min<I64>(0, entities_.bbox().min[1]) - height * 50 - 200;
-            const auto color = random.uniform<Color>(0, 255);
-            const auto material = Material::get<TestMaterial>(color);
-            const Pos<3> pos{left * 50, top, back};
-            const Box<3> box{{0, 0, 0}, {width * 50, height * 50, depth * 50}};
-            spawn<Block<3>>(pos, box, material);
-            prev_generated = window_->ticks();
+            spawn_random_cube();
         }
+#endif
     }
 
     void draw() override {
         World::draw();
-        if (paused) {
-            const Color color = Color::kBlack.highlight({.a = paused});
-            window_->centered_text(color, window_->center(), 50, "PAUSED [P]");
+        const auto center = window_->center();
+        auto pos = center;
+        pos[1] += 80;
+
+        if (dead) {
+            const Color color = Color::kRed.highlight(dead);
+            window_->centered_text(color, window_->center(), 50, "DED");
+            if (dead_count > kMinDeadTicks) {
+                window_->centered_text(color, pos, 30, "Press Any Key to Respawn");
+            }
+        } else if (paused) {
+            const Color color = Color::kBlack.highlight(paused);
+            window_->centered_text(color, window_->center(), 50, "PAUSED");
+            window_->centered_text(color, pos, 30, "Press [P] to Resume");
         }
     }
 
     View3D &view3d() { return *view_.dyn_cast<View3D>(); }
 
+    struct GlowEffect {
+        explicit GlowEffect(const U64 min = 256, const U64 max = 1024) : count(min), min(min), max(max) {}
+        pure explicit operator bool() const { return enabled; }
+        pure implicit operator Color() const { return {.a = count}; }
+        void advance() {
+            if (!enabled)
+                return;
+            count += 10 * dir;
+            if (count > max || count < min) {
+                dir = -dir;
+                count = std::clamp<U64>(count, min, max);
+            }
+        }
+        bool enabled = false;
+        U64 count;
+        Dir dir = Dir::Pos;
+        const U64 min;
+        const U64 max;
+    };
+
+    static constexpr U64 kMinDeadTicks = 100;
+
     Player *player;
-    U64 paused = 1;
-    Dir pause_dir = Dir::Pos;
+    GlowEffect paused;
+    GlowEffect dead;
+    U64 dead_count = 0;
     U64 prev_generated = 0;
     U64 ticks_per_gen = 50;
 };

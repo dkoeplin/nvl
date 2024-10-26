@@ -2,6 +2,7 @@
 
 #include <string_view>
 
+#include "Color.h"
 #include "nvl/data/List.h"
 #include "nvl/data/Set.h"
 #include "nvl/geo/Box.h"
@@ -98,6 +99,8 @@ public:
 
     pure U64 ticks() const { return ticks_; }
 
+    void set_background(const Color &color) { background_ = color; }
+
 protected:
     friend class Offset;
 
@@ -116,6 +119,7 @@ protected:
 
     MouseMode mouse_mode_ = MouseMode::kStandard;
     U64 ticks_ = 0;
+    Color background_ = Color::kRayWhite;
 };
 
 } // namespace nvl

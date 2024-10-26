@@ -1,13 +1,13 @@
 #pragma once
 
-#include "nvl/ui/Color.h"
 #include "nvl/material/Material.h"
+#include "nvl/ui/Color.h"
 
 namespace nvl {
 
 struct Bulwark final : AbstractMaterial {
     class_tag(Bulwark, AbstractMaterial);
-    Bulwark() : AbstractMaterial(Color::kBlack, 100, false) {}
+    explicit Bulwark(const Color &color = Color::kBlack) : AbstractMaterial(color, 10000, false) {}
 };
 
 } // namespace nvl
