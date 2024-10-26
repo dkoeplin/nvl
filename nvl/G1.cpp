@@ -1,5 +1,6 @@
 #include <utility>
 
+#include "math/Trig.h"
 #include "nvl/entity/Entity.h"
 #include "nvl/material/Bulwark.h"
 #include "nvl/reflect/Backtrace.h"
@@ -30,47 +31,46 @@ struct Brake final : AbstractMessage {
 };
 
 struct Player final : Entity<3> {
+    class_tag(Player, Entity<3>);
+
     static constexpr I64 kMaxVelocity = 10;
-    class_tag(Player, Entity<2>);
+
     explicit Player(const Pos<3> &loc) : Entity(loc) {
         const auto material = Material::get<TestMaterial>(Color::kBlue);
         parts_.emplace(Box<3>({-5, 0, -5}, {5, 10, 5}), material);
         parts_.emplace(Box<3>({-10, 10, -10}, {10, 30, 10}), material);
     }
+
     Status receive(const Message &message) override {
         if (message.isa<Jump>() && has_below() && velocity_[1] == 0) {
-            std::cout << "Jump" << std::endl;
             velocity_[1] = -30;
+            return Status::kMove;
         } else if (message.isa<Brake>()) {
             const I64 v0 = velocity_[0];
             const I64 v2 = velocity_[2];
-            std::cout << "Brake" << std::endl;
-            velocity_[0] = v0 + (v0 < 0 ? 1 : v0 > 0 ? -1 : 0);
-            velocity_[2] = v2 + (v2 < 0 ? 1 : v2 > 0 ? -1 : 0);
-        } else if (const auto strafe = message.dyn_cast<Strafe>()) {
-            std::cout << "Strafe" << std::endl;
-            velocity_[0] = std::clamp<I64>(velocity_[0] + 2 * strafe->dir, -kMaxVelocity, kMaxVelocity);
+            velocity_[0] = v0 > 0 ? std::max<I64>(v0 - 2, 0) : std::min<I64>(v0 + 2, 0);
+            velocity_[2] = v2 > 0 ? std::max<I64>(v2 - 2, 0) : std::min<I64>(v2 + 2, 0);
+            return Status::kMove;
+        }
+        const auto *view = world_->view().dyn_cast<View3D>();
+
+        if (const auto strafe = message.dyn_cast<Strafe>()) {
+            const float delta_x = std::round(strafe->dir * 2 * std::cos((view->angle - 90) * kDeg2Rad));
+            const float delta_z = std::round(strafe->dir * 2 * std::sin((view->angle - 90) * kDeg2Rad));
+            velocity_[0] = std::clamp<I64>(velocity_[0] + delta_x, -kMaxVelocity, kMaxVelocity);
+            velocity_[2] = std::clamp<I64>(velocity_[2] + delta_z, -kMaxVelocity, kMaxVelocity);
         } else if (const auto move = message.dyn_cast<Move>()) {
-            std::cout << "Move" << std::endl;
-            velocity_[2] = std::clamp<I64>(velocity_[2] + 2 * strafe->dir, -kMaxVelocity, kMaxVelocity);
+            const float delta_x = std::round(move->dir * 2 * std::cos(view->angle * kDeg2Rad));
+            const float delta_z = std::round(move->dir * 2 * std::sin(view->angle * kDeg2Rad));
+            velocity_[0] = std::clamp<I64>(velocity_[0] + delta_x, -kMaxVelocity, kMaxVelocity);
+            velocity_[2] = std::clamp<I64>(velocity_[2] + delta_z, -kMaxVelocity, kMaxVelocity);
         } else {
             return Entity::receive(message);
         }
         return Status::kNone;
     }
 
-    void draw(Window *, const Color &) const override {
-        /*for (const At<3, Part<3>> &part : this->parts()) {
-            const auto color = part->material->color.highlight(scale);
-            window->fill_box(color, part.bbox());
-        }
-        if (digging) {
-            const auto color = Color::kBlue.highlight({.a = 100});
-            const auto bbox = this->bbox();
-            const Box<2> dig_box{bbox.min - 10, {bbox.max[0] + 10, bbox.max[1]}};
-            window->fill_box(color, dig_box);
-        }*/
-    }
+    void draw(Window *, const Color &) const override {}
 
     Status tick(const List<Message> &messages) override {
         /*const auto bbox = this->bbox();
@@ -91,7 +91,8 @@ struct Player final : Entity<3> {
                 }
             }
         }*/
-        return Entity::tick(messages);
+        Entity::tick(messages);
+        return Status::kNone;
     }
 
     Status broken(const List<Component> &) override { return Status::kNone; }

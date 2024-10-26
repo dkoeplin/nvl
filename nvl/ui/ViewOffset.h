@@ -24,6 +24,7 @@ struct View3D final : AbstractViewOffset {
 
     void rotate(const Pos<2> &delta, const Pos<2> &shape);
 
+    pure Pos<3> project() const;
     pure Pos<3> project(U64 length) const;
     pure Pos<3> project(const Pos<3> &from, U64 length) const;
 
@@ -31,6 +32,7 @@ struct View3D final : AbstractViewOffset {
     float pitch = 0; // Between -90 and 90
     float angle = 0; // Between -180 and 180
     I64 fov = 45;    // Between 0 and 90
+    I64 dist = 1000; // View distance
 };
 
 struct ViewOffset final : Castable<ViewOffset, AbstractViewOffset, std::shared_ptr<AbstractViewOffset>> {

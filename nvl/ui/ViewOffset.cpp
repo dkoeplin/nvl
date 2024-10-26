@@ -13,6 +13,8 @@ void View3D::rotate(const Pos<2> &delta, const Pos<2> &shape) {
     pitch = std::clamp<float>(pitch + delta_y, -89, 89);
 }
 
+Pos<3> View3D::project() const { return project(offset, dist); }
+
 Pos<3> View3D::project(const U64 length) const { return project(offset, length); }
 
 Pos<3> View3D::project(const Pos<3> &from, const U64 length) const {
