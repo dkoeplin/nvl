@@ -5,9 +5,9 @@
 #include "nvl/material/Bulwark.h"
 #include "nvl/reflect/Backtrace.h"
 #include "nvl/tool/ToolBelt.h"
+#include "nvl/ui/GlowEffect.h"
 #include "nvl/ui/RayWindow.h"
 #include "nvl/world/World.h"
-#include "raylib.h"
 
 namespace nvl {
 
@@ -93,18 +93,18 @@ struct Player final : Entity<3> {
     }
 
     Status tick(const List<Message> &messages) override {
-        /*const auto bbox = this->bbox();
-        Box<2> dig_box{bbox.min - 10, {bbox.max[0] + 10, bbox.max[1]}};
+        const auto bbox = this->bbox();
+        Box<3> dig_box{bbox.min - 5, {bbox.max[0] + 5, bbox.max[1], bbox.max[2] + 5}};
         if (digging) {
             if (velocity_[1] < 0) {
                 dig_box.min[1] += velocity_[1];
             }
             for (const Actor &overlap : world_->entities(dig_box)) {
                 if (overlap != self()) {
-                    send<Hit<2>>(overlap, dig_box, 1);
+                    send<Hit<3>>(overlap, dig_box, 1);
                 }
             }
-        } else if (velocity_ != Pos<2>::zero) {
+        } /* else if (velocity_ != Pos<2>::zero) {
             for (const Actor &overlap : world_->entities(dig_box)) {
                 if (overlap != self()) {
                     send<Notify>(overlap, Notify::kStrafed);
@@ -116,7 +116,7 @@ struct Player final : Entity<3> {
 
     Status broken(const List<Component> &) override { return Status::kNone; }
 
-    bool digging = false;
+    GlowEffect digging = GlowEffect(10, 256, 512);
 };
 
 static const std::vector kColors = {
@@ -165,6 +165,7 @@ struct G1 final : World<3> {
             x += 100;
         }
 
+        on_key_down[Key::J] = [this] { player->digging.enabled = !player->digging.enabled; };
         on_key_down[Key::P] = [this] { paused.enabled = !paused.enabled; };
         on_key_down[Key::L] = [this] {
             for (const Actor &actor : entities_) {
@@ -210,7 +211,7 @@ struct G1 final : World<3> {
         const auto top = std::min<I64>(0, entities_.bbox().min[1]) - height * 50 - 200;
         const auto color_idx = random.uniform<U64, U64>(0, materials.size() - 1);
         const auto material = materials.at(color_idx);
-        const Pos<3> pos{left * 50, top, back};
+        const Pos<3> pos{left * 50, top, back * 50};
         const Box<3> box{{0, 0, 0}, {width * 50, height * 50, depth * 50}};
         spawn<Block<3>>(pos, box, material);
         prev_generated = window_->ticks();
@@ -255,32 +256,13 @@ struct G1 final : World<3> {
             window_->fill_box(color, Box<2>({0, 0}, window_->shape()));
             window_->centered_text(Color::kBlack, window_->center(), 50, "PAUSED");
             window_->centered_text(Color::kBlack, pos, 30, "Press [P] to Resume");
+        } else if (player->digging) {
+            const Color color = Color::kBlue.highlight(paused);
+            window_->fill_box(color, Box<2>({0, 0}, window_->shape()));
         }
     }
 
     View3D &view3d() { return *view_.dyn_cast<View3D>(); }
-
-    struct GlowEffect {
-        explicit GlowEffect(const U64 speed = 10, const U64 min = 512, const U64 max = 756)
-            : speed(speed), count(min), min(min), max(max) {}
-        pure explicit operator bool() const { return enabled; }
-        pure implicit operator Color() const { return {.a = count}; }
-        void advance() {
-            if (!enabled)
-                return;
-            count += speed * dir;
-            if (count > max || count < min) {
-                dir = -dir;
-                count = std::clamp<U64>(count, min, max);
-            }
-        }
-        U64 speed;
-        bool enabled = false;
-        U64 count;
-        Dir dir = Dir::Pos;
-        const U64 min;
-        const U64 max;
-    };
 
     static constexpr U64 kMinDeadTicks = 100;
 
@@ -294,8 +276,7 @@ struct G1 final : World<3> {
 
 struct PlayerControls final : Tool<3> {
     explicit PlayerControls(Window *window, G1 *world) : Tool(window, world), g1(world) {
-        on_key_down[Key::J] = [this] { g1->player->digging = true; };
-        on_key_up[Key::J] = [this] { g1->player->digging = false; };
+        // on_key_up[Key::J] = [this] { g1->player->digging = false; };
     }
     void tick() override {
         Actor player(g1->player);

@@ -95,23 +95,21 @@ void RayWindow::fill_box(const Color &color, const Box<2> &box) {
 
 void RayWindow::line_cube(const Color &color, const Box<3> &cube) {
     const Pos<3> shape = cube.shape();
-    const Pos<3> center = cube.min + shape / 2;
     // Cube position is the _center_ position for raylib
     Vector3 pos;
-    pos.x = center[0];
-    pos.y = center[1];
-    pos.z = center[2];
+    pos.x = static_cast<float>(cube.min[0]) + static_cast<float>(shape[0]) / 2;
+    pos.y = static_cast<float>(cube.min[1]) + static_cast<float>(shape[1]) / 2;
+    pos.z = static_cast<float>(cube.min[2]) + static_cast<float>(shape[2]) / 2;
     DrawCubeWires(pos, shape[0], shape[1], shape[2], raycolor(color));
 }
 
 void RayWindow::fill_cube(const Color &color, const Box<3> &cube) {
     const Pos<3> shape = cube.shape();
-    const Pos<3> center = cube.min + shape / 2;
     // Cube position is the _center_ position for raylib
     Vector3 pos;
-    pos.x = center[0];
-    pos.y = center[1];
-    pos.z = center[2];
+    pos.x = static_cast<float>(cube.min[0]) + static_cast<float>(shape[0]) / 2;
+    pos.y = static_cast<float>(cube.min[1]) + static_cast<float>(shape[1]) / 2;
+    pos.z = static_cast<float>(cube.min[2]) + static_cast<float>(shape[2]) / 2;
     DrawCube(pos, shape[0], shape[1], shape[2], raycolor(color));
 }
 

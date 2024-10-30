@@ -96,7 +96,7 @@ set(RAYLIB_VERSION 5.0)
 find_package(raylib ${RAYLIB_VERSION} REQUIRED)
 
 target_include_directories(nvl PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(nvl PUBLIC raylib)
+target_link_libraries(nvl PRIVATE raylib)
 
 add_executable(app ${CMAKE_CURRENT_SOURCE_DIR}/nvl/App.cpp)
 target_link_libraries(app PRIVATE nvl)
@@ -105,7 +105,7 @@ add_executable(g0 ${CMAKE_CURRENT_SOURCE_DIR}/nvl/G0.cpp)
 target_link_libraries(g0 PRIVATE nvl)
 
 add_executable(g1 ${CMAKE_CURRENT_SOURCE_DIR}/nvl/G1.cpp)
-target_link_libraries(g1 PRIVATE nvl raylib)
+target_link_libraries(g1 PRIVATE nvl)
 
 if (APPLE)
     target_link_libraries(nvl PRIVATE "-framework IOKit")
