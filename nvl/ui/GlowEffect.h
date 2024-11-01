@@ -15,6 +15,15 @@ struct GlowEffect {
         : speed(speed), count(min), min(min), max(max) {}
     pure explicit operator bool() const { return enabled; }
     pure implicit operator Color() const { return {.a = count}; }
+
+    void toggle() {
+        enabled = !enabled;
+        if (enabled) {
+            count = 0;
+            dir = Dir::Pos;
+        }
+    }
+
     void advance() {
         if (!enabled)
             return;

@@ -40,6 +40,7 @@ struct Player final : Entity<3> {
     class_tag(Player, Entity<3>);
 
     static constexpr I64 kMaxVelocity = 10;
+    static constexpr I64 kDigTicks = 5;
 
     explicit Player(const Pos<3> &loc) : Entity(loc) {
         const auto material = Material::get<TestMaterial>(Color::kBlue);
@@ -93,30 +94,30 @@ struct Player final : Entity<3> {
     }
 
     Status tick(const List<Message> &messages) override {
-        const auto bbox = this->bbox();
-        Box<3> dig_box{bbox.min - 5, {bbox.max[0] + 5, bbox.max[1], bbox.max[2] + 5}};
         if (digging) {
-            if (velocity_[1] < 0) {
-                dig_box.min[1] += velocity_[1];
-            }
-            for (const Actor &overlap : world_->entities(dig_box)) {
-                if (overlap != self()) {
-                    send<Hit<3>>(overlap, dig_box, 1);
+            const auto now = world_->ticks();
+            const auto time = last_dig.has_value() ? now - *last_dig : kDigTicks;
+            if (time >= kDigTicks) {
+                last_dig = Some(now);
+                for (const Actor &overlap : world_->entities(dig_box)) {
+                    if (overlap != self()) {
+                        send<Hit<3>>(overlap, dig_box, 1);
+                    }
                 }
             }
-        } /* else if (velocity_ != Pos<2>::zero) {
-            for (const Actor &overlap : world_->entities(dig_box)) {
-                if (overlap != self()) {
-                    send<Notify>(overlap, Notify::kStrafed);
-                }
-            }
-        }*/
+        }
         return Entity::tick(messages);
     }
 
     Status broken(const List<Component> &) override { return Status::kNone; }
 
-    GlowEffect digging = GlowEffect(10, 256, 512);
+    void toggle_digging() {
+        digging = !digging;
+        last_dig = None;
+    }
+
+    Maybe<I64> last_dig = None;
+    bool digging = false;
 };
 
 static const std::vector kColors = {
@@ -165,7 +166,7 @@ struct G1 final : World<3> {
             x += 100;
         }
 
-        on_key_down[Key::J] = [this] { player->digging.enabled = !player->digging.enabled; };
+        on_key_down[Key::J] = [this] { player->digging = !player->digging; };
         on_key_down[Key::P] = [this] { paused.enabled = !paused.enabled; };
         on_key_down[Key::L] = [this] {
             for (const Actor &actor : entities_) {
@@ -214,7 +215,7 @@ struct G1 final : World<3> {
         const Pos<3> pos{left * 50, top, back * 50};
         const Box<3> box{{0, 0, 0}, {width * 50, height * 50, depth * 50}};
         spawn<Block<3>>(pos, box, material);
-        prev_generated = window_->ticks();
+        prev_generated = ticks();
     }
 
     void tick() override {

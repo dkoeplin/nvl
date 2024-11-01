@@ -97,8 +97,6 @@ public:
     /// Returns the center of the window in window coordinates.
     pure Pos<2> center() const { return shape() / 2; }
 
-    pure U64 ticks() const { return ticks_; }
-
     void set_background(const Color &color) { background_ = color; }
 
 protected:
@@ -118,7 +116,6 @@ protected:
     List<ViewOffset> views_;
 
     MouseMode mouse_mode_ = MouseMode::kStandard;
-    U64 ticks_ = 0;
     Color background_ = Color::kRayWhite;
 };
 

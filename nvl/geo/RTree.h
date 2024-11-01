@@ -12,6 +12,7 @@
 #include "nvl/data/UnionFind.h"
 #include "nvl/geo/Box.h"
 #include "nvl/geo/HasBBox.h"
+#include "nvl/geo/Line.h"
 #include "nvl/geo/Pos.h"
 #include "nvl/io/IO.h"
 #include "nvl/macros/Abstract.h"
@@ -409,6 +410,20 @@ public:
 
     pure Range<ItemRef> operator[](const Pos<N> &pos) const { return operator[](Box<N>::unit(pos)); }
     pure Range<ItemRef> operator[](const Box<N> &box) const { return make_range<window_iterator>(*this, box); }
+
+    pure Maybe<ItemRef> first_in_where(const Line<N> &line, const std::function<Maybe<F64>(ItemRef)> &dist) const {
+        Maybe<ItemRef> closest = None;
+        Maybe<F64> distance = None;
+        for (auto item : operator[](Box<N>(line.a, line.b))) {
+            if (line.intersects(bbox(item))) {
+                if (auto len = dist(item); len && (!distance.has_value() || *len < *distance)) {
+                    distance = len;
+                    closest = item;
+                }
+            }
+        }
+        return closest;
+    }
 
     /// Returns a Range for unordered iteration over all items in this tree.
     pure MRange<ItemRef> items() { return {begin(), end()}; }

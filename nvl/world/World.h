@@ -153,6 +153,8 @@ public:
 
     pure const Map<Actor, List<Message>> &messages() const { return messages_; }
 
+    pure U64 ticks() const { return ticks_; }
+
     mutable Random random;
 
 protected:
@@ -171,12 +173,14 @@ protected:
     U64 msgs_last_ = 0, msgs_max_ = 0;        // Message queue sizes (previous tick and max)
     bool hud_ = true;                         // True if HUD should be drawn over world view
     bool debug_ = true;                       // True if debug should be drawn over world view
+    U64 ticks_ = 0;
 };
 
 template <U64 N>
 void World<N>::tick() {
     const Time start = Clock::now();
     msgs_last_ = 0;
+    ticks_ += 1;
 
     // Wake any entities with pending messages
     for (auto &[actor, _] : messages_) {

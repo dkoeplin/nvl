@@ -46,9 +46,7 @@ public:
             const auto edge_color = color.highlight(Color::kDarker);
             for (const At<N, Part<N>> &part : this->parts()) {
                 window->fill_cube(color, part.bbox());
-            }
-            for (const At<N, Edge<N>> &edge : this->edges()) {
-                window->line_cube(edge_color, edge.bbox());
+                window->line_cube(edge_color, part.bbox());
             }
         }
     }
