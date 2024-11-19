@@ -7,6 +7,7 @@
 #include "nvl/geo/Dir.h"
 #include "nvl/geo/HasBBox.h"
 #include "nvl/geo/Pos.h"
+#include "nvl/geo/Vec.h"
 #include "nvl/macros/Aliases.h"
 #include "nvl/macros/Pure.h"
 
@@ -213,8 +214,18 @@ public:
         return true;
     }
 
-    /// Returns true if `pt` is somewhere within this box.
+    /// Returns true if `pt` is contained somewhere within this box.
     pure bool contains(const Pos<N> &pt) const {
+        for (U64 i = 0; i < N; ++i) {
+            if (pt[i] < min[i] || pt[i] > max[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /// Returns true if `pt` is contained somewhere within this box.
+    pure bool contains(const Vec<N> &pt) const {
         for (U64 i = 0; i < N; ++i) {
             if (pt[i] < min[i] || pt[i] > max[i]) {
                 return false;
@@ -255,9 +266,9 @@ public:
 
     pure List<Box> diff(const List<Box> &boxes) const { return diff(Range(boxes.begin(), boxes.end())); }
 
-    /// Returns the sides with given `width`.
-    /// Sides begin at the outermost "pixel" of the box and extend inwards.
-    pure List<Edge<N>> sides(I64 width = 1) const;
+    /// Returns the faces with given `width`.
+    /// Faces begin at the outermost "pixel" of the box and extend inwards.
+    pure List<Edge<N>> faces(I64 width = 1) const;
 
     /// Returns the edges with given width and distance from the outermost pixel.
     /// Edges begin at `dist` "pixels" away from the outermost 'pixel" of the box and extend outwards.
@@ -353,7 +364,7 @@ template <U64 N>
 constexpr Box<N> Box<N>::kUnitBox = Box(Pos<N>::fill(-1), Pos<N>::fill(1));
 
 template <U64 N>
-List<Edge<N>> Box<N>::sides(const I64 width) const {
+List<Edge<N>> Box<N>::faces(const I64 width) const {
     return edges(-width, 0);
 }
 

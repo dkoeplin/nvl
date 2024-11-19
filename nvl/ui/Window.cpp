@@ -5,7 +5,6 @@ namespace nvl {
 Window::Window(const std::string &, Pos<2>) {}
 
 void Window::tick_all() {
-    ticks_ += 1;
     tick();
     for (auto &child : children_) {
         child->tick_all();

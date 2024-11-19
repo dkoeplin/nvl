@@ -34,7 +34,7 @@ void TensorWindow::line_box(const Color &color, const Box<2> &box) {
     if (!views_.empty() && views_.back().isa<View2D>()) {
         view = views_.get_back()->dyn_cast<View2D>()->offset;
     }
-    for (const Edge<2> side : (box - view).sides()) {
+    for (const Edge<2> side : (box - view).faces()) {
         for (const Pos<2> i : side.box.pos_iter()) {
             if (tensor_.has(i)) {
                 tensor_[i] = color;

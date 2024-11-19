@@ -1,5 +1,7 @@
 #pragma once
 
+#include <utility>
+
 #include "nvl/actor/Actor.h"
 #include "nvl/data/Map.h"
 #include "nvl/data/Set.h"
@@ -38,6 +40,13 @@ public:
     static constexpr U64 kVerticalDim = 1;
     using EntityTree = RTree<N, Entity<N>, Actor, kMaxEntries, kGridExpMin, kGridExpMax>;
 
+    struct Intersect : nvl::Intersect<N> {
+        Intersect(const nvl::Intersect<N> &init, Actor actor, Ref<Part<N>> part)
+            : nvl::Intersect<N>(init), actor(std::move(actor)), part(part) {}
+        Actor actor;
+        Ref<Part<N>> part;
+    };
+
     const I64 kMillisPerTick;  // ms / tick
     const I64 kNanosPerTick;   // ns / tick
     const I64 kPixelsPerMeter; // pixels / meter
@@ -74,6 +83,8 @@ public:
     pure Range<Actor> entities() const { return entities_.items(); }
     pure Range<Actor> entities(const Pos<N> &pos) const { return entities_[pos]; }
     pure Range<Actor> entities(const Box<N> &box) const { return entities_[box]; }
+
+    pure Maybe<Actor> first(const Line<N> &line) const;
 
     pure ViewOffset view() const { return view_; }
     void set_hud(const bool enable) { hud_ = enable; }
@@ -175,6 +186,22 @@ protected:
     bool debug_ = true;                       // True if debug should be drawn over world view
     U64 ticks_ = 0;
 };
+
+template <U64 N>
+pure Maybe<Actor> World<N>::first(const Line<N> &line) const {
+    Maybe<Intersect> closest = None;
+    for (Actor actor : (*this)[{line.a, line.b}]) {
+        auto *entity = actor.dyn_cast<Entity<N>>();
+        if (auto int0 = line.intersect(entity->bbox())) {
+            if (auto int1 = entity->first(line)) {
+                if (!closest.has_value() || int1->dist < closest->dist) {
+                    closest = Intersect(int1, actor, int1.item);
+                }
+            }
+        }
+    }
+    return closest;
+}
 
 template <U64 N>
 void World<N>::tick() {

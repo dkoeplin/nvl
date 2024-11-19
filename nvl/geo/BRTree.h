@@ -77,6 +77,7 @@ public:
     using Parent = detail::BRTreeEdges<N, Item, ItemRef, kMaxEntries, kGridExpMin, kGridExpMax>;
     using ItemTree = RTree<N, Item, ItemRef, kMaxEntries, kGridExpMin, kGridExpMax>;
     using EdgeTree = RTree<N, Edge<N>, Ref<Edge<N>>, kMaxEntries, kGridExpMin, kGridExpMax>;
+    using Intersect = typename ItemTree::Intersect;
 
     /// Provides an iterator which returns a View of each Item when dereferenced.
     template <typename Entry, typename EntryRef>
@@ -187,6 +188,11 @@ public:
     pure Range<At<N, Item>> operator[](const Pos<N> &pos) const { return operator[](Box<N>::unit(pos)); }
     pure Range<At<N, Item>> operator[](const Box<N> &box) const {
         return make_mrange<window_iterator>(this->items_[box - loc], loc);
+    }
+
+    /// Returns the closest item which intersects with the line segment according to the distance function.
+    pure Maybe<Intersect> first_where(const Line<N> &line, const std::function<Maybe<F64>(ItemRef)> &dist) const {
+        return this->items_.first_where(line, dist);
     }
 
     /// Returns an unordered Range for iteration over all values in this tree.

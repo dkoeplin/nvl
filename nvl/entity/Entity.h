@@ -23,6 +23,7 @@ public:
     static constexpr U64 kGridExpMin = 2;
     static constexpr U64 kGridExpMax = 10;
     using Tree = BRTree<N, Part<N>, Ref<Part<N>>, kMaxEntries, kGridExpMin, kGridExpMax>;
+    using Intersect = typename Tree::Intersect;
 
     explicit Entity(Pos<N> loc, Range<Ref<Part<N>>> parts = {}) : parts_(loc, parts) {}
     explicit Entity(Pos<N> loc, Range<Part<N>> parts) : parts_(loc, parts) {}
@@ -37,6 +38,8 @@ public:
     pure Range<At<N, Part<N>>> parts() const { return parts_.items(); }
     pure Range<At<N, Part<N>>> parts(const Box<N> &box) const { return parts_[box]; }
     pure Range<At<N, Part<N>>> parts(const Pos<N> &pos) const { return parts_[pos]; }
+
+    pure Maybe<Intersect> first(const Line<N> &line) const;
 
     struct Relative {
         explicit Relative(Entity &entity) : entity(entity) {}
@@ -95,6 +98,11 @@ protected:
     /// Binds
     World<N> *world_ = nullptr;
 };
+
+template <U64 N>
+pure Maybe<typename Entity<N>::Intersect> Entity<N>::first(const Line<N> &line) const {
+    return parts_.first_where(line, [](const Intersect &x) { return x.dist; });
+}
 
 template <U64 N>
 Set<Actor> Entity<N>::above() const {

@@ -43,6 +43,7 @@ add_library(nvl SHARED
         nvl/geo/HasBBox.h
         nvl/geo/Pos.h
         nvl/geo/RTree.h
+        nvl/geo/Tuple.h
         nvl/io/HasPrint.h
         nvl/io/IO.h
         nvl/macros/Abstract.h

@@ -411,14 +411,21 @@ public:
     pure Range<ItemRef> operator[](const Pos<N> &pos) const { return operator[](Box<N>::unit(pos)); }
     pure Range<ItemRef> operator[](const Box<N> &box) const { return make_range<window_iterator>(*this, box); }
 
-    pure Maybe<ItemRef> first_in_where(const Line<N> &line, const std::function<Maybe<F64>(ItemRef)> &dist) const {
-        Maybe<ItemRef> closest = None;
+    struct Intersect : nvl::Intersect<N> {
+        explicit Intersect(const nvl::Intersect<N> &init, ItemRef ref) : nvl::Intersect<N>(init), item(ref) {}
+        ItemRef item;
+    };
+
+    /// Returns the closest item which intersects with the line segment according to the distance function.
+    pure Maybe<Intersect> first_where(const Line<N> &line, const std::function<Maybe<F64>(Intersect)> &dist) const {
+        Maybe<Intersect> closest = None;
         Maybe<F64> distance = None;
         for (auto item : operator[](Box<N>(line.a, line.b))) {
-            if (line.intersects(bbox(item))) {
-                if (auto len = dist(item); len && (!distance.has_value() || *len < *distance)) {
+            if (auto intersection = line.intersect(bbox(item))) {
+                Intersect inter(*intersection, item);
+                if (auto len = dist(inter); len && (!distance.has_value() || *len < *distance)) {
                     distance = len;
-                    closest = item;
+                    closest = inter;
                 }
             }
         }
