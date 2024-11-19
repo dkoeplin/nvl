@@ -15,12 +15,15 @@ struct AbstractViewOffset : Castable<ViewOffset, AbstractViewOffset, std::shared
 struct View2D final : AbstractViewOffset {
     class_tag(View2D, AbstractViewOffset);
     View2D() = default;
+    explicit View2D(const Pos<2> &offset) : offset(offset) {}
+
     Pos<2> offset = Pos<2>::zero;
 };
 
 struct View3D final : AbstractViewOffset {
     class_tag(View3D, AbstractViewOffset);
     View3D() = default;
+    explicit View3D(const Pos<3> &offset) : offset(offset) {}
 
     void rotate(const Pos<2> &delta, const Pos<2> &shape);
 
@@ -43,6 +46,16 @@ struct ViewOffset final : Castable<ViewOffset, AbstractViewOffset, std::shared_p
             return ViewOffset::get<View2D>();
         } else if constexpr (N == 3) {
             return ViewOffset::get<View3D>();
+        } else {
+            UNREACHABLE;
+        }
+    }
+    template <U64 N>
+    static ViewOffset at(const Pos<N> &pt) {
+        if constexpr (N == 2) {
+            return ViewOffset::get<View2D>(pt);
+        } else if constexpr (N == 3) {
+            return ViewOffset::get<View3D>(pt);
         } else {
             UNREACHABLE;
         }

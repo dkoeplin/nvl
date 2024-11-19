@@ -191,7 +191,7 @@ public:
     }
 
     /// Returns the closest item which intersects with the line segment according to the distance function.
-    pure Maybe<Intersect> first_where(const Line<N> &line, const std::function<Maybe<F64>(ItemRef)> &dist) const {
+    pure Maybe<Intersect> first_where(const Line<N> &line, const std::function<Maybe<F64>(Intersect)> &dist) const {
         return this->items_.first_where(line, dist);
     }
 

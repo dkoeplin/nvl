@@ -30,6 +30,8 @@ using nvl::Color;
 using nvl::Material;
 using nvl::Pos;
 using nvl::Tensor;
+using nvl::View2D;
+using nvl::ViewOffset;
 using nvl::World;
 using nvl::test::TensorWindow;
 
@@ -70,7 +72,7 @@ TEST_F(FuzzDraw, draw2d) {
         TensorWindow window("Test", {10, 10});
         auto *world = window.open<World<2>>();
         world->set_hud(false);
-        world->set_view(offset);
+        world->set_view(ViewOffset::at(offset));
         world->spawn<Block<2>>(loc, box, material);
         window.draw();
         tensor = window.tensor();

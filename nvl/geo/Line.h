@@ -18,11 +18,14 @@ struct Intersect {
 
 /**
  * @struct Line
- * @brief A line segment between integer points a and b.
+ * @brief A line segment between points a and b.
  * @tparam N
  */
 template <U64 N>
 struct Line {
+    constexpr Line() = default;
+    constexpr Line(const Pos<N> &x, const Pos<N> &y) : a(x), b(y) {}
+
     /// Returns the point closest to `a` which overlaps with the given box, if one exists.
     pure Maybe<Intersect<N>> intersect(const Box<N> &box) const;
 
@@ -61,15 +64,15 @@ Maybe<Intersect<N>> intersect(const Line<N> &line, const Box<N> &box) {
         const Box<N> &f = face.bbox();
         const U64 d = face.dim;
         const I64 x0 = a[d];
-        const F64 dx = static_cast<F64>(line.b[d] - line.a[d]);
+        const F64 dx = static_cast<F64>(b[d] - a[d]);
         const I64 x = f.min[d];
-        if (line.a[d] != line.b[d]) {
+        if (a[d] != b[d]) {
             // If the line has a non-zero slope in dimension d, calculate the slope with all other dimensions.
             // Use this to calculate the point on the line where dimension d would intersect with this face.
             Vec<N> pt;
             bool on_segment = true;
             for (U64 i = 0; i < N && on_segment; ++i) {
-                const F64 dy = static_cast<F64>(line.b[i] - line.a[i]);
+                const F64 dy = static_cast<F64>(b[i] - a[i]);
                 const I64 y0 = a[i];
                 const I64 y1 = b[i];
                 const F64 m = dy / dx;

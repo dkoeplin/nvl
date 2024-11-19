@@ -84,7 +84,7 @@ public:
     pure Range<Actor> entities(const Pos<N> &pos) const { return entities_[pos]; }
     pure Range<Actor> entities(const Box<N> &box) const { return entities_[box]; }
 
-    pure Maybe<Actor> first(const Line<N> &line) const;
+    pure Maybe<Intersect> first(const Line<N> &line) const;
 
     pure ViewOffset view() const { return view_; }
     void set_hud(const bool enable) { hud_ = enable; }
@@ -188,14 +188,14 @@ protected:
 };
 
 template <U64 N>
-pure Maybe<Actor> World<N>::first(const Line<N> &line) const {
+pure Maybe<typename World<N>::Intersect> World<N>::first(const Line<N> &line) const {
     Maybe<Intersect> closest = None;
-    for (Actor actor : (*this)[{line.a, line.b}]) {
+    for (Actor actor : entities(Box<N>{line.a, line.b})) {
         auto *entity = actor.dyn_cast<Entity<N>>();
         if (auto int0 = line.intersect(entity->bbox())) {
             if (auto int1 = entity->first(line)) {
                 if (!closest.has_value() || int1->dist < closest->dist) {
-                    closest = Intersect(int1, actor, int1.item);
+                    closest = Intersect(*int1, actor, int1->item);
                 }
             }
         }

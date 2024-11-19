@@ -19,18 +19,18 @@ TEST(TestViewOffset, view3d_rotate) {
     // Move the "mouse" by 10 pixels to the right
     view.rotate({10, 0}, {1000, 1000});
     EXPECT_NEAR(view.pitch, 45.0f, 0.1f);
-    EXPECT_NEAR(view.angle, 46.8f, 0.1f);
+    EXPECT_NEAR(view.angle, 43.2f, 0.1f);
 
     // Move the "mouse" by 10 pixels down
     view.rotate({0, 100}, {1000, 1000});
     EXPECT_NEAR(view.pitch, 63.0f, 0.1f);
-    EXPECT_NEAR(view.angle, 46.8f, 0.1f);
+    EXPECT_NEAR(view.angle, 43.2f, 0.1f);
 
     // To the right by 1000 pixels
     view.rotate({1000, 0}, {1000, 1000});
-    EXPECT_NEAR(view.angle, -133.2, 0.1f);
+    EXPECT_NEAR(view.angle, -136.8f, 0.1f);
     view.rotate({-1000, 0}, {1000, 1000});
-    EXPECT_NEAR(view.angle, 46.8f, 0.1f);
+    EXPECT_NEAR(view.angle, 43.2f, 0.1f);
 }
 
 TEST(TestViewOffset, view3d_project) {

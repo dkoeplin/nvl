@@ -13,6 +13,7 @@ namespace nvl {
 template <U64 N>
 class Vec : public Tuple<N, F64, Vec<N>> {
 public:
+    using Tuple<N, F64, Vec>::Tuple;
 };
 
 } // namespace nvl

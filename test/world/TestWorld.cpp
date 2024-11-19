@@ -37,9 +37,11 @@ using nvl::Block;
 using nvl::Box;
 using nvl::Bulwark;
 using nvl::Color;
+using nvl::Line;
 using nvl::Material;
 using nvl::Pos;
 using nvl::TestMaterial;
+using nvl::Vec;
 using nvl::World;
 using nvl::test::NullWindow;
 using nvl::test::TensorWindow;
@@ -97,6 +99,21 @@ TEST(TestWorld, idle_when_not_moving) {
         EXPECT_EQ(world.num_awake(), 0);
         EXPECT_EQ(world.num_alive(), 2);
     }
+}
+
+TEST(TestWorld, first) {
+    NullWindow window;
+    World<2> world(&window);
+    constexpr Line<2> line({-2, 5}, {102, 5});
+    constexpr Box<2> box({0, 0}, {10, 10});
+    const auto material = Material::get<Bulwark>();
+    const auto *block = world.spawn<Block<2>>(Pos<2>::zero, box, material);
+    const auto inter = world.first(line);
+    ASSERT_TRUE(inter.has_value());
+    EXPECT_EQ(inter->actor.ptr(), block);
+    EXPECT_EQ(inter->pt, Vec<2>(0, 5));
+    EXPECT_EQ(inter->dim, 0);
+    EXPECT_EQ(inter->dir, nvl::Dir::Neg);
 }
 
 TEST(TestWorld, stop_when_fallen) {
