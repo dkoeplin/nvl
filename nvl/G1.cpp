@@ -41,6 +41,8 @@ struct Player final : Entity<3> {
 
     static constexpr I64 kMaxVelocity = 10;
     static constexpr I64 kDigTicks = 5;
+    static constexpr I64 kDigDist = 100;
+    static constexpr I64 kDigRadius = 5;
 
     explicit Player(const Pos<3> &loc) : Entity(loc) {
         const auto material = Material::get<TestMaterial>(Color::kBlue);
@@ -98,11 +100,15 @@ struct Player final : Entity<3> {
             const auto now = world_->ticks();
             const auto time = last_dig.has_value() ? now - *last_dig : kDigTicks;
             if (time >= kDigTicks) {
-                last_dig = Some(now);
-                for (const Actor &overlap : world_->entities(dig_box)) {
-                    if (overlap != self()) {
-                        send<Hit<3>>(overlap, dig_box, 1);
-                    }
+                const auto *view = world_->view().dyn_cast<View3D>();
+                const Pos<3> &start = view->offset;
+                const Pos<3> end = view->project(kDigDist);
+                const Line sight(start, end);
+                if (auto itx = world_->first_except(sight, self())) {
+                    const Pos<3> pt = Pos<3>::round(itx->pt);
+                    const Box<3> dig_box(pt - 5, pt + 5);
+                    send<Hit<3>>(itx->actor, dig_box, 1);
+                    last_dig = Some(now);
                 }
             }
         }
@@ -110,11 +116,6 @@ struct Player final : Entity<3> {
     }
 
     Status broken(const List<Component> &) override { return Status::kNone; }
-
-    void toggle_digging() {
-        digging = !digging;
-        last_dig = None;
-    }
 
     Maybe<I64> last_dig = None;
     bool digging = false;
@@ -166,7 +167,6 @@ struct G1 final : World<3> {
             x += 100;
         }
 
-        on_key_down[Key::J] = [this] { player->digging = !player->digging; };
         on_key_down[Key::P] = [this] { paused.enabled = !paused.enabled; };
         on_key_down[Key::L] = [this] {
             for (const Actor &actor : entities_) {
@@ -257,9 +257,6 @@ struct G1 final : World<3> {
             window_->fill_box(color, Box<2>({0, 0}, window_->shape()));
             window_->centered_text(Color::kBlack, window_->center(), 50, "PAUSED");
             window_->centered_text(Color::kBlack, pos, 30, "Press [P] to Resume");
-        } else if (player->digging) {
-            const Color color = Color::kBlue.highlight(paused);
-            window_->fill_box(color, Box<2>({0, 0}, window_->shape()));
         }
     }
 
@@ -277,7 +274,8 @@ struct G1 final : World<3> {
 
 struct PlayerControls final : Tool<3> {
     explicit PlayerControls(Window *window, G1 *world) : Tool(window, world), g1(world) {
-        // on_key_up[Key::J] = [this] { g1->player->digging = false; };
+        on_mouse_down[Mouse::Left] = [this] { g1->player->digging = true; };
+        on_mouse_up[Mouse::Left] = [this] { g1->player->digging = false; };
     }
     void tick() override {
         Actor player(g1->player);

@@ -18,6 +18,14 @@ public:
 
     using Tuple<N, I64, Pos>::Tuple;
 
+    static Pos round(const Vec<N> &vec) {
+        Pos result;
+        for (U64 i = 0; i < N; ++i) {
+            result[i] = static_cast<I64>(std::round(vec[i]));
+        }
+        return result;
+    }
+
     /// Returns a new Pos with the result of element-wise clamping to the given grid.
     /// Elements are rounded up to the grid in each dimension.
     pure Pos grid_max(const Pos &grid) const {
