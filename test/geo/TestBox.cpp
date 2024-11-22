@@ -145,10 +145,10 @@ TEST(TestBox, clamp) {
 */
 TEST(TestBox, edges) {
     constexpr Box<2> box({3, 3}, {5, 5});
-    EXPECT_THAT(box.edges(), UnorderedElementsAre(Edge<2>(0, Dir::Neg, Box<2>({2, 3}, {2, 5})),
-                                                  Edge<2>(0, Dir::Pos, Box<2>({6, 3}, {6, 5})),
-                                                  Edge<2>(1, Dir::Neg, Box<2>({3, 2}, {5, 2})),
-                                                  Edge<2>(1, Dir::Pos, Box<2>({3, 6}, {5, 6}))));
+    EXPECT_THAT(box.edges(), UnorderedElementsAre(Edge<2>(Dir::Neg, 0, Box<2>({2, 3}, {2, 5})),
+                                                  Edge<2>(Dir::Pos, 0, Box<2>({6, 3}, {6, 5})),
+                                                  Edge<2>(Dir::Neg, 1, Box<2>({3, 2}, {5, 2})),
+                                                  Edge<2>(Dir::Pos, 1, Box<2>({3, 6}, {5, 6}))));
 }
 
 TEST(TestBox, overlaps) {

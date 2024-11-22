@@ -16,12 +16,14 @@ using testing::UnorderedElementsAre;
 
 using nvl::Box;
 using nvl::Distribution;
+using nvl::Line;
 using nvl::List;
 using nvl::Map;
 using nvl::Pos;
 using nvl::Ref;
 using nvl::RTree;
 using nvl::Set;
+using nvl::Vec;
 using nvl::test::LabeledBox;
 
 template <typename T>
@@ -167,6 +169,15 @@ TEST(TestRTree, fetch) {
     EXPECT_THAT(range0, UnorderedElementsAre(a, b));
     EXPECT_THAT(range1, IsEmpty());
     EXPECT_THAT(range2, UnorderedElementsAre(a));
+}
+
+TEST(TestRTree, first_where) {
+    constexpr Line<3> line{{528, 969, 410}, {528, 974, 510}};
+    RTree<3, Box<3>> tree;
+    tree.emplace<Box<3>>(Pos<3>{500, 950, 500}, Pos<3>{549, 999, 549});
+    auto intersect = tree.first_where(line, [](const auto &intersect) { return intersect.dist; });
+    ASSERT_TRUE(intersect.has_value());
+    EXPECT_EQ(intersect->pt, Vec<3>(528, 973.5, 500));
 }
 
 TEST(TestRTree, empty_components) {

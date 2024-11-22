@@ -1,20 +1,13 @@
 #pragma once
 
 #include "nvl/geo/Box.h"
+#include "nvl/geo/Intersect.h"
 #include "nvl/geo/Pos.h"
 #include "nvl/geo/Vec.h"
 #include "nvl/macros/Aliases.h"
 #include "nvl/macros/Pure.h"
 
 namespace nvl {
-
-template <U64 N>
-struct Intersect {
-    Vec<N> pt;          // Location of intersection
-    F64 dist = 0;       // Distance from the line start point (a)
-    U64 dim = 0;        // Which face (dimension) of the box was intersected
-    Dir dir = Dir::Pos; // Which face (dir) of the box was intersected
-};
 
 /**
  * @struct Line
@@ -31,6 +24,11 @@ struct Line {
 
     /// Returns true if this line segment intersects the given box.
     pure bool intersects(const Box<N> &box) const { return intersect(box).has_value(); }
+
+    pure std::string to_string() const {
+        std::stringstream ss;
+        return ss << "Line{" << a << ", " << b << "}";
+    }
 
     Pos<N> a;
     Pos<N> b;
@@ -50,8 +48,7 @@ Maybe<Intersect<N>> intersect(const Line<N> &line, const Box<N> &box) {
         Intersect<N> result;
         result.pt = a;
         result.dist = 0;
-        result.dim = 0;
-        result.dir = Dir::Pos;
+        result.face = Face(Dir::Pos, 0);
         return result;
     }
 
@@ -59,10 +56,10 @@ Maybe<Intersect<N>> intersect(const Line<N> &line, const Box<N> &box) {
     // Iterate over faces of the box
     // If the line intersects with the box, and the point a is outside the box,
     // the closest point to a should be on one of the faces of the box.
-    for (const Edge<N> &face : box.faces()) {
+    for (const Edge<N> &edge : box.faces()) {
         // A face is an N-dimensional surface where one of the dimensions (d) has a fixed value.
-        const Box<N> &f = face.bbox();
-        const U64 d = face.dim;
+        const Box<N> &f = edge.bbox();
+        const U64 d = edge.dim;
         const I64 x0 = a[d];
         const F64 dx = static_cast<F64>(b[d] - a[d]);
         const I64 x = f.min[d];
@@ -90,8 +87,7 @@ Maybe<Intersect<N>> intersect(const Line<N> &line, const Box<N> &box) {
                 if (keep) {
                     closest->pt = pt;
                     closest->dist = dist;
-                    closest->dim = face.dim;
-                    closest->dir = face.dir;
+                    closest->face = edge.face();
                 }
             }
         } else {

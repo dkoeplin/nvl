@@ -37,6 +37,7 @@ using nvl::Block;
 using nvl::Box;
 using nvl::Bulwark;
 using nvl::Color;
+using nvl::Face;
 using nvl::Line;
 using nvl::Material;
 using nvl::Pos;
@@ -101,19 +102,31 @@ TEST(TestWorld, idle_when_not_moving) {
     }
 }
 
-TEST(TestWorld, first) {
+TEST(TestWorld, first_2d) {
     NullWindow window;
     World<2> world(&window);
     constexpr Line<2> line({-2, 5}, {102, 5});
     constexpr Box<2> box({0, 0}, {10, 10});
     const auto material = Material::get<Bulwark>();
     const auto *block = world.spawn<Block<2>>(Pos<2>::zero, box, material);
-    const auto inter = world.first(line);
-    ASSERT_TRUE(inter.has_value());
-    EXPECT_EQ(inter->actor.ptr(), block);
-    EXPECT_EQ(inter->pt, Vec<2>(0, 5));
-    EXPECT_EQ(inter->dim, 0);
-    EXPECT_EQ(inter->dir, nvl::Dir::Neg);
+    const auto intersect = world.first(line);
+    ASSERT_TRUE(intersect.has_value());
+    EXPECT_EQ(intersect->actor.ptr(), block);
+    EXPECT_EQ(intersect->pt, Vec<2>(0, 5));
+    EXPECT_EQ(intersect->face, Face(nvl::Dir::Neg, 0));
+}
+
+TEST(TestWorld, first_3d) {
+    NullWindow window;
+    World<3> world(&window);
+    constexpr Line<3> line{{528, 969, 410}, {528, 974, 510}};
+    constexpr Box<3> box{{500, 950, 500}, {549, 999, 549}};
+    const auto material = Material::get<Bulwark>();
+    const auto *block = world.spawn<Block<3>>(Pos<3>::zero, box, material);
+    const auto intersect = world.first(line);
+    ASSERT_TRUE(intersect.has_value());
+    EXPECT_EQ(intersect->actor.ptr(), block);
+    EXPECT_EQ(intersect->pt, Vec<3>(528, 973.5, 500));
 }
 
 TEST(TestWorld, stop_when_fallen) {
@@ -226,9 +239,8 @@ TEST_F(FuzzFall, fall2d) {
         for (int64_t i = 0; i < 1000 && world->num_awake() > 0; ++i) {
             world->tick();
         }
-        ASSERT(world->num_awake() == 0, "Failed to converge:"
-                                            << " {loc: " << loc << ", shape: " << shape << ", y: " << y
-                                            << ", thickness: " << thickness << "}");
+        ASSERT(world->num_awake() == 0, "Failed to converge:" << " {loc: " << loc << ", shape: " << shape
+                                                              << ", y: " << y << ", thickness: " << thickness << "}");
         end = block->bbox();
     });
 

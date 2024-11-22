@@ -14,6 +14,8 @@ public:
     void fill_box(const Color &, const Box<2> &) override {}
     void line_cube(const Color &, const Box<3> &) override {}
     void fill_cube(const Color &, const Box<3> &) override {}
+    void line(const Color &, const Line<2> &) override {}
+    void line(const Color &, const Line<3> &) override {}
 
     void text(const Color &, const Pos<2> &, I64, std::string_view) override {}
     void centered_text(const Color &, const Pos<2> &, I64, std::string_view) override {}

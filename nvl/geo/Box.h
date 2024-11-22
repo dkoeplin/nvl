@@ -5,6 +5,7 @@
 #include "nvl/data/Maybe.h"
 #include "nvl/data/Range.h"
 #include "nvl/geo/Dir.h"
+#include "nvl/geo/Face.h"
 #include "nvl/geo/HasBBox.h"
 #include "nvl/geo/Pos.h"
 #include "nvl/geo/Vec.h"
@@ -275,7 +276,7 @@ public:
     pure List<Edge<N>> edges(I64 width = 1, I64 dist = 1) const;
 
     /// Returns the edge on the side of the box in dimension `dim` in direction `dir`.
-    pure Edge<N> edge(U64 dim, Dir dir, I64 width = 1, I64 dist = 1) const;
+    pure Edge<N> edge(Dir dir, U64 dim, I64 width = 1, I64 dist = 1) const;
 
     /// Returns a new Box which is expanded by `size` in every direction/dimension.
     pure Box widened(const U64 size) const { return Box(min - Pos<N>::fill(size), max + Pos<N>::fill(size)); }
@@ -327,9 +328,9 @@ private:
 };
 
 template <U64 N>
-struct Edge {
+struct Edge : Face {
     Edge() = default;
-    explicit Edge(const U64 dim, const Dir dir, const Box<N> &box) : dim(dim), dir(dir), box(box) {}
+    explicit Edge(const Dir dir, const U64 dim, const Box<N> &box) : Face(dir, dim), box(box) {}
 
     pure List<Edge> diff(const Box<N> &rhs) const {
         List<Edge> result;
@@ -344,7 +345,7 @@ struct Edge {
     pure List<Edge> diff(Range<Value> range) const {
         List<Edge> result;
         for (const Box<N> &b : box.diff(range)) {
-            result.emplace_back(dim, dir, b);
+            result.emplace_back(dir, dim, b);
         }
         return result;
     }
@@ -355,8 +356,8 @@ struct Edge {
     pure U64 thickness() const { return box.shape(dim); }
     pure Box<N> bbox() const { return box; }
 
-    U64 dim = 0;
-    Dir dir;
+    pure Face face() const { return Face(dir, dim); }
+
     Box<N> box;
 };
 
@@ -373,20 +374,20 @@ List<Edge<N>> Box<N>::edges(const I64 width, const I64 dist) const {
     List<Edge<N>> result;
     for (U64 i = 0; i < N; ++i) {
         for (const auto &dir : Dir::list) {
-            result.push_back(edge(i, dir, width, dist));
+            result.push_back(edge(dir, i, width, dist));
         }
     }
     return result;
 }
 
 template <U64 N>
-Edge<N> Box<N>::edge(const U64 dim, const Dir dir, const I64 width, const I64 dist) const {
+Edge<N> Box<N>::edge(const Dir dir, const U64 dim, const I64 width, const I64 dist) const {
     auto unit = Pos<N>::unit(dim);
     auto inner = unit * dist;
     auto outer = unit * (width - 1);
     auto edge_min = (dir == Dir::Neg) ? min - outer - inner : min.with(dim, max[dim]) + inner;
     auto edge_max = (dir == Dir::Neg) ? max.with(dim, min[dim]) - inner : max + outer + inner;
-    return Edge<N>(dim, dir, Box(edge_min, edge_max));
+    return Edge<N>(dir, dim, Box(edge_min, edge_max));
 }
 
 template <U64 N>

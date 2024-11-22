@@ -190,13 +190,12 @@ template <U64 N>
 pure Maybe<typename World<N>::Intersect> World<N>::first_except(const Line<N> &line, const Actor &act) const {
     Maybe<Intersect> closest = None;
     for (Actor actor : entities({line.a, line.b})) {
-        if (actor == act)
-            continue;
-        auto *entity = actor.dyn_cast<Entity<N>>();
-        if (auto int0 = line.intersect(entity->bbox())) {
-            if (auto int1 = entity->first(line)) {
-                if (!closest.has_value() || int1->dist < closest->dist) {
-                    closest = Intersect(*int1, actor, int1->item);
+        if (auto *entity = actor.dyn_cast<Entity<N>>(); entity && actor != act) {
+            if (auto int0 = line.intersect(entity->bbox())) {
+                if (auto int1 = entity->first(line)) {
+                    if (!closest.has_value() || int1->dist < closest->dist) {
+                        closest = Intersect(*int1, actor, int1->item);
+                    }
                 }
             }
         }

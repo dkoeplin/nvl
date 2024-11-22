@@ -172,14 +172,13 @@ struct G1 final : World<3> {
             for (const Actor &actor : entities_) {
                 if (const auto *block = actor.dyn_cast<Block<3>>()) {
                     std::cout << block->bbox() << std::endl;
-                } else if (const auto *p = actor.dyn_cast<Player>()) {
-                    std::cout << "PLAYER: " << std::endl;
-                    for (const At<3, Part<3>> &part : p->parts()) {
-                        std::cout << "  " << part.bbox() << std::endl;
-                    }
                 }
             }
-            std::cout << "VIEW: " << view3d().offset << std::endl;
+            const auto *view3d = view_.dyn_cast<View3D>();
+            const Pos<3> offset = view3d->offset;
+            const Pos<3> target = view3d->project(100);
+            std::cout << "  Offset: " << offset << std::endl;
+            std::cout << "  Target: " << target << std::endl;
         };
         on_key_down[Key::N] = [this] { spawn_random_cube(); };
 

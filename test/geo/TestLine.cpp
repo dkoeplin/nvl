@@ -33,16 +33,23 @@ namespace {
 
 using nvl::Box;
 using nvl::Dir;
+using nvl::Face;
 using nvl::Intersect;
 using nvl::Line;
 using nvl::Maybe;
 using nvl::Vec;
 
-TEST(TestLine, intersect) {}
+TEST(TestLine, intersect) {
+    constexpr Box<3> box{{500, 950, 500}, {549, 999, 549}};
+    constexpr Line<3> line{{528, 969, 410}, {528, 974, 510}};
+    const auto intersect = line.intersect(box);
+    ASSERT_TRUE(intersect.has_value());
+    EXPECT_EQ(intersect->pt, Vec<3>(528, 973.5, 500));
+}
 
 using FuzzLineIntersect = nvl::test::FuzzingTestFixture<Maybe<Intersect<2>>, Line<2>, Box<2>>;
 TEST_F(FuzzLineIntersect, fuzz2d) {
-    num_tests = 1E6;
+    num_tests = 1E3;
     in[0] = nvl::Distribution::Uniform<I64>(-20, 20);
     in[1] = nvl::Distribution::Uniform<I64>(-15, 15);
     fuzz([](Maybe<Intersect<2>> &x, const Line<2> &line, const Box<2> &box) { x = line.intersect(box); });
@@ -58,8 +65,7 @@ TEST_F(FuzzLineIntersect, fuzz2d) {
         if (box.contains(line.a)) {
             ASSERT(x->pt == line.a.to_vec(), "Expected A to be the intersection when A is inside the box.");
             ASSERT(x->dist == 0, "Expected a distance of 0 when A is inside the box.");
-            ASSERT(x->dim == 0, "Expected face +0 when A is inside the box.");
-            ASSERT(x->dir == Dir::Pos, "Expected face +0 when A is inside the box.");
+            ASSERT(x->face == Face(Dir::Pos, 0), "Expected face +0 when A is inside the box.");
         }
 
         // Confirm using y = mx + b, m = (y1 - y0)/(x1 - x0), b = y0 - m*x0

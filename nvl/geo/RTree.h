@@ -420,6 +420,7 @@ public:
     pure Maybe<Intersect> first_where(const Line<N> &line, const std::function<Maybe<F64>(Intersect)> &dist) const {
         Maybe<Intersect> closest = None;
         Maybe<F64> distance = None;
+        // TODO: Feels like we can improve this. Can potentially get a lot of volume which would not intersect.
         for (auto item : operator[](Box<N>(line.a, line.b))) {
             if (auto intersection = line.intersect(bbox(item))) {
                 Intersect inter(*intersection, item);
