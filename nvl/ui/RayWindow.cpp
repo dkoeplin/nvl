@@ -113,6 +113,18 @@ void RayWindow::fill_cube(const Color &color, const Box<3> &cube) {
     DrawCube(pos, shape[0], shape[1], shape[2], raycolor(color));
 }
 
+void RayWindow::line(const Color &color, const Line<2> &line) {
+    DrawLine(line.a[0], line.a[1], line.b[0], line.b[1], raycolor(color));
+}
+
+void RayWindow::line(const Color &color, const Line<3> &line) {
+    Vector3 start{
+        .x = static_cast<float>(line.a[0]), .y = static_cast<float>(line.a[1]), .z = static_cast<float>(line.a[2])};
+    Vector3 end{
+        .x = static_cast<float>(line.b[0]), .y = static_cast<float>(line.b[1]), .z = static_cast<float>(line.b[2])};
+    DrawLine3D(start, end, raycolor(color));
+}
+
 void RayWindow::text(const Color &color, const Pos<2> &pos, I64 font_size, std::string_view text) {
     DrawText(text.data(), pos[0], pos[1], font_size, raycolor(color));
 }

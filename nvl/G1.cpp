@@ -305,6 +305,34 @@ struct PlayerControls final : Tool<3> {
     G1 *g1;
 };
 
+struct DebugScreen final : AbstractScreen {
+    DebugScreen(Window *window, G1 *world) : AbstractScreen(window), world_(world) {}
+
+    void draw() override {
+        const auto *view3d = world_->view().dyn_cast<View3D>();
+        const Pos<3> offset = view3d->offset;
+        const Pos<3> target = view3d->project(100);
+        const Line<3> line{offset, target};
+        const Actor player(world_->player);
+        const auto itx = world_->first_except(line, player);
+        std::string at = "N/A";
+        if (itx.has_value()) {
+            at = itx->actor.dyn_cast<Entity<3>>()->bbox().to_string();
+        }
+
+        window_->text(Color::kBlack, {10, 10}, 20, "FPS:  " + std::to_string(window_->fps()));
+        window_->text(Color::kBlack, {10, 40}, 20, "Offset: " + offset.to_string());
+        window_->text(Color::kBlack, {10, 70}, 20, "Target: " + target.to_string());
+        window_->text(Color::kBlack, {10, 100}, 20, "At:    " + at);
+        window_->text(Color::kBlack, {10, 130}, 20, "Angle: " + std::to_string(view3d->angle));
+        window_->text(Color::kBlack, {10, 160}, 20,
+                      "Alive: " + std::to_string(world_->num_awake()) + "/" + std::to_string(world_->num_alive()));
+    }
+    void tick() override {}
+
+    G1 *world_;
+};
+
 } // namespace nvl
 
 using nvl::Clock;
@@ -322,6 +350,7 @@ int main() {
     window.set_mouse_mode(Window::MouseMode::kViewport);
     auto *world = window.open<nvl::G1>();
     window.open<nvl::PlayerControls>(world);
+    window.open<nvl::DebugScreen>(world);
 
     Time prev_tick = Clock::now();
     while (!window.should_close()) {

@@ -84,7 +84,7 @@ public:
     pure Range<Actor> entities(const Pos<N> &pos) const { return entities_[pos]; }
     pure Range<Actor> entities(const Box<N> &box) const { return entities_[box]; }
 
-    pure Maybe<Intersect> first_except(const Line<N> &line, Actor actor) const;
+    pure Maybe<Intersect> first_except(const Line<N> &line, const Actor &actor) const;
     pure Maybe<Intersect> first(const Line<N> &line) const { return first_except(line, nullptr); }
 
     pure ViewOffset view() const { return view_; }
@@ -180,8 +180,6 @@ protected:
     Map<Actor, List<Message>> messages_;
 
     ViewOffset view_ = ViewOffset::zero<N>(); // Location of the camera in world coordinates
-    Duration draw_last_, draw_max_;           // Draw times (previous tick and max)
-    Duration tick_last_, tick_max_;           // Tick times (previous tick and max)
     U64 msgs_last_ = 0, msgs_max_ = 0;        // Message queue sizes (previous tick and max)
     bool hud_ = true;                         // True if HUD should be drawn over world view
     bool debug_ = true;                       // True if debug should be drawn over world view
@@ -189,9 +187,9 @@ protected:
 };
 
 template <U64 N>
-pure Maybe<typename World<N>::Intersect> World<N>::first_except(const Line<N> &line, Actor act) const {
+pure Maybe<typename World<N>::Intersect> World<N>::first_except(const Line<N> &line, const Actor &act) const {
     Maybe<Intersect> closest = None;
-    for (Actor actor : entities(Box<N>{line.a, line.b})) {
+    for (Actor actor : entities({line.a, line.b})) {
         if (actor == act)
             continue;
         auto *entity = actor.dyn_cast<Entity<N>>();
@@ -208,7 +206,6 @@ pure Maybe<typename World<N>::Intersect> World<N>::first_except(const Line<N> &l
 
 template <U64 N>
 void World<N>::tick() {
-    const Time start = Clock::now();
     msgs_last_ = 0;
     ticks_ += 1;
 
@@ -232,16 +229,11 @@ void World<N>::tick() {
     entities_.remove(died_.values());
     messages_.remove(died_.values());
     died_.clear();
-
-    tick_last_ = Clock::now() - start;
-    tick_max_ = max(tick_max_, tick_last_);
     msgs_max_ = std::max(msgs_max_, msgs_last_);
 }
 
 template <U64 N>
 void World<N>::draw() {
-    const Time start = Clock::now();
-
     window_->push_view(view_);
     if constexpr (N == 2) {
         const auto range = window_to_world(window_->bbox());
@@ -264,41 +256,6 @@ void World<N>::draw() {
         window_->line_box(crosshair_color, hline);
         window_->line_box(crosshair_color, vline);
     }
-
-    if (debug_) {
-        window_->text(Color::kBlack, {10, 10}, 20, "FPS: " + std::to_string(window_->fps()));
-        if constexpr (N == 2) {
-            const Pos<2> center = window_to_world(window_->center());
-            std::string hover = "None";
-            if (auto over = this->entities(center); !over.empty()) {
-                if (auto *entity = over.begin()->template dyn_cast<Entity<N>>()) {
-                    hover = entity->bbox().to_string();
-                }
-            }
-
-            window_->text(Color::kBlack, {10, 40}, 20, "Center: " + center.to_string());
-            window_->text(Color::kBlack, {10, 70}, 20, "Hover: " + hover);
-        } else if constexpr (N == 3) {
-            const auto *view3d = view_.dyn_cast<View3D>();
-            const auto target = view3d->project(100);
-
-            window_->text(Color::kBlack, {10, 40}, 20, "Look: " + target.to_string());
-            window_->text(Color::kBlack, {10, 70}, 20, "View: " + view3d->offset.to_string());
-            window_->text(Color::kBlack, {10, 100}, 20, "Pitch: " + std::to_string(view3d->pitch));
-            window_->text(Color::kBlack, {10, 130}, 20, "Angle: " + std::to_string(view3d->angle));
-        }
-        window_->text(Color::kBlack, {10, 160}, 20,
-                      "Alive: " + std::to_string(num_awake()) + "/" + std::to_string(num_alive()));
-        window_->text(Color::kBlack, {10, 190}, 20, "Tick(last): " + tick_last_.to_string());
-        window_->text(Color::kBlack, {10, 220}, 20, "Tick(max): " + tick_max_.to_string());
-        window_->text(Color::kBlack, {10, 250}, 20, "Draw(last): " + draw_last_.to_string());
-        window_->text(Color::kBlack, {10, 280}, 20, "Draw(max): " + draw_max_.to_string());
-        window_->text(Color::kBlack, {10, 310}, 20, "Msgs(last): " + std::to_string(msgs_last_));
-        window_->text(Color::kBlack, {10, 340}, 20, "Msgs(max): " + std::to_string(msgs_max_));
-    }
-
-    draw_last_ = Clock::now() - start;
-    draw_max_ = max(draw_max_, draw_last_);
 }
 
 template <U64 N>

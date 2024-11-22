@@ -6,6 +6,7 @@
 #include "nvl/data/List.h"
 #include "nvl/data/Set.h"
 #include "nvl/geo/Box.h"
+#include "nvl/geo/Line.h"
 #include "nvl/geo/Pos.h"
 #include "nvl/macros/Pure.h"
 #include "nvl/ui/Key.h"
@@ -60,8 +61,12 @@ public:
 
     virtual void line_box(const Color &color, const Box<2> &box) = 0;
     virtual void fill_box(const Color &color, const Box<2> &box) = 0;
+
     virtual void line_cube(const Color &color, const Box<3> &cube) = 0;
     virtual void fill_cube(const Color &color, const Box<3> &cube) = 0;
+
+    virtual void line(const Color &color, const Line<2> &line) = 0;
+    virtual void line(const Color &color, const Line<3> &line) = 0;
 
     /// Draws the given text with the top-left of the text at `pos`.
     virtual void text(const Color &color, const Pos<2> &pos, I64 font_size, std::string_view text) = 0;
