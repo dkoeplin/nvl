@@ -6,13 +6,19 @@
 
 namespace nvl {
 
+struct AbstractActor;
 struct Actor;
+struct Message;
 
-abstract struct AbstractMessage : Castable<Message, AbstractMessage, std::shared_ptr<AbstractMessage>>::BaseClass {
+abstract class AbstractMessage : Castable<Message, AbstractMessage, std::shared_ptr<AbstractMessage>>::BaseClass {
+public:
     class_tag(AbstractMessage);
-    explicit AbstractMessage(Actor src) : src(std::move(src)) {}
+    explicit AbstractMessage(AbstractActor *src) : src_(src) {}
 
-    Actor src;
+    pure Actor src() const;
+
+protected:
+    AbstractActor *src_;
 };
 
 struct Message final : Castable<Message, AbstractMessage, std::shared_ptr<AbstractMessage>> {

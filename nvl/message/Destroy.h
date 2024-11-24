@@ -13,7 +13,7 @@ struct Destroy final : AbstractMessage {
 
     enum Cause { kOutOfBounds, kRemoved };
 
-    explicit Destroy(const Actor &src, Cause cause) : AbstractMessage(src), cause(cause) {}
+    explicit Destroy(AbstractActor *src, Cause cause) : AbstractMessage(src), cause(cause) {}
 
     Cause cause;
 };

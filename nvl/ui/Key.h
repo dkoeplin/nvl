@@ -75,7 +75,7 @@ struct Key {
         CapsLock = 280,    // Key: Caps lock
         ScrollLock = 281,  // Key: Scroll down
         NumLock = 282,     // Key: Num lock
-        PrintScreen = 283, // Key: Print screen
+        PrintScreen = 283, // Key: Print ui
         Pause = 284,       // Key: Pause
         F1 = 290,          // Key: F1
         F2 = 291,          // Key: F2

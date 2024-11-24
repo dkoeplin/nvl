@@ -9,7 +9,7 @@ namespace nvl {
 template <U64 N>
 struct Hit final : AbstractMessage {
     class_tag(Hit<N>, AbstractMessage);
-    explicit Hit(const Actor &src, const Box<N> box, const I64 strength)
+    explicit Hit(AbstractActor *src, const Box<N> box, const I64 strength)
         : AbstractMessage(src), box(box), strength(strength) {}
 
     Box<N> box;

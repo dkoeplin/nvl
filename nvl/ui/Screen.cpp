@@ -44,9 +44,14 @@ List<InputEvent> AbstractScreen::feed_all(const List<InputEvent> &events) {
 
 void AbstractScreen::tick_all() {
     tick();
+    List<std::shared_ptr<AbstractScreen>> open;
     for (auto &child : children_) {
         child->tick_all();
+        if (!child->closed()) {
+            open.push_back(child);
+        }
     }
+    children_ = open;
 }
 
 void AbstractScreen::draw_all() {

@@ -62,13 +62,13 @@ public:
 
     pure Set<Actor> above() const;
 
-    /// Sends a message to the destination actor with this entity as the sender.
+    /// Sends a action to the destination actor with this entity as the sender.
     template <typename Msg, typename... Args>
     void send(const Actor dst, Args &&...args) {
         world_->template send<Msg>(self(), dst, std::forward<Args>(args)...);
     }
 
-    /// Sends a message to the destination actor(s) with this entity as the sender.
+    /// Sends a action to the destination actor(s) with this entity as the sender.
     template <typename Msg, typename... Args>
     void send(const Range<Actor> &dst, Args &&...args) {
         world_->template send<Msg>(self(), dst, std::forward<Args>(args)...);

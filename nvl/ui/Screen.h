@@ -6,6 +6,7 @@
 #include "nvl/data/SipHash.h"
 #include "nvl/geo/Pos.h"
 #include "nvl/macros/Abstract.h"
+#include "nvl/macros/Pure.h"
 #include "nvl/reflect/Castable.h"
 #include "nvl/ui/InputEvent.h"
 #include "nvl/ui/Key.h"
@@ -20,15 +21,21 @@ class Window;
 abstract class AbstractScreen : Castable<Screen, AbstractScreen, std::shared_ptr<Screen>>::BaseClass {
 public:
     class_tag(AbstractScreen);
+
     explicit AbstractScreen(Window *window) : window_(window) {}
 
     List<InputEvent> feed_all(const List<InputEvent> &events);
     void tick_all();
     void draw_all();
 
+    pure bool closed() const { return closed_; }
+
 protected:
     /// Mark the current input event being processed as propagated to other siblings and/or children.
     void propagate_event() { propagated_event_ = true; }
+
+    /// Mark this window as being closed. It will be deleted at the end of the completed tick.
+    void close() { closed_ = true; }
 
     virtual void tick() = 0;
     virtual void draw() = 0;
@@ -46,6 +53,7 @@ protected:
     List<std::shared_ptr<AbstractScreen>> children_;
     Window *window_;
     bool propagated_event_ = false;
+    bool closed_ = false;
 };
 
 struct Screen final : Castable<Screen, AbstractScreen, std::shared_ptr<AbstractScreen>> {

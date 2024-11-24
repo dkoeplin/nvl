@@ -40,7 +40,7 @@ using nvl::Maybe;
 using nvl::Vec;
 
 TEST(TestLine, intersect) {
-    constexpr Box<3> box{{500, 950, 500}, {549, 999, 549}};
+    constexpr Box<3> box{{500, 950, 500}, {550, 1000, 550}};
     constexpr Line<3> line{{528, 969, 410}, {528, 974, 510}};
     const auto intersect = line.intersect(box);
     ASSERT_TRUE(intersect.has_value());

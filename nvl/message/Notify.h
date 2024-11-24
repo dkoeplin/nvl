@@ -18,7 +18,7 @@ struct Notify final : AbstractMessage {
         kMoved,   // Notify recipient(s) that nearby source moved
         kOther
     };
-    explicit Notify(Actor src, const Cause cause) : AbstractMessage(std::move(src)), cause(cause) {}
+    explicit Notify(AbstractActor *src, const Cause cause) : AbstractMessage(src), cause(cause) {}
 
     Cause cause;
 };

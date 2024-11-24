@@ -229,7 +229,7 @@ public:
         return true;
     }
 
-    /// Returns true if `pt` is contained somewhere within this box.
+    /// Returns true if `pt` is contained within this box.
     pure bool contains(const Pos<N> &pt) const {
         for (U64 i = 0; i < N; ++i) {
             if (pt[i] < min[i] || pt[i] >= max[i]) {
@@ -239,7 +239,7 @@ public:
         return true;
     }
 
-    /// Returns true if `pt` is contained somewhere within this box.
+    /// Returns true if `pt` is contained within this box.
     pure bool contains(const Vec<N> &pt) const {
         for (U64 i = 0; i < N; ++i) {
             if (pt[i] < min[i] || pt[i] >= max[i]) {

@@ -19,7 +19,9 @@ public:
     template <typename R, typename... Args>
         requires std::is_same_v<Ptr, std::unique_ptr<T>> || std::is_same_v<Ptr, std::shared_ptr<T>>
     static Ref get(Args &&...args) {
-        return Ref(Ptr(new R(std::forward<Args>(args)...)));
+        R *inst = new R(std::forward<Args>(args)...);
+        Ptr ptr(inst);
+        return Ref(std::move(ptr));
     }
 
     Castable() = default;

@@ -106,16 +106,16 @@ public:
     }
 
     template <typename Msg, typename... Args>
-    void send(const Actor src, const Actor &dst, Args &&...args) {
-        const auto message = Message::get<Msg>(src, std::forward<Args>(args)...);
+    void send(Actor src, const Actor &dst, Args &&...args) {
+        const auto message = Message::get<Msg>(src.ptr(), std::forward<Args>(args)...);
         if (entities_.has(dst)) {
             messages_[dst].push_back(std::move(message));
         }
     }
 
     template <typename Msg, typename... Args>
-    void send(const Actor src, const Range<Actor> &dst, Args &&...args) {
-        const auto message = Message::get<Msg>(src, std::forward<Args>(args)...);
+    void send(Actor src, const Range<Actor> &dst, Args &&...args) {
+        const auto message = Message::get<Msg>(src.ptr(), std::forward<Args>(args)...);
         for (const Actor &actor : dst) {
             if (entities_.has(actor)) {
                 messages_[actor].push_back(message);
@@ -264,7 +264,7 @@ void World<N>::tick_entity(Set<Actor> &idled, Ref<Entity<N>> entity) {
     const Actor actor = entity->self();
     const Box<N> prev_bbox = entity->bbox();
     const auto messages_iter = messages_.find(actor);
-    // Making a copy here to allow clearing the message queue early (prior to running tick)
+    // Making a copy here to allow clearing the action queue early (prior to running tick)
     const List<Message> messages = messages_iter == messages_.end() ? kNoMessages : messages_iter->second;
     if (messages_iter != messages_.end()) {
         messages_.erase(messages_iter);

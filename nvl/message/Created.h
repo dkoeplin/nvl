@@ -10,7 +10,7 @@ namespace nvl {
  */
 struct Created final : AbstractMessage {
     class_tag(Created, AbstractMessage);
-    explicit Created(const Actor &src) : AbstractMessage(src) {}
+    using AbstractMessage::AbstractMessage;
 };
 
 } // namespace nvl
