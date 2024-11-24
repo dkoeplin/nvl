@@ -58,15 +58,33 @@ public:
 
     void bind(World<N> *world) { world_ = world; }
 
+    pure bool has_below() const;
+
+    pure Set<Actor> above() const;
+
+    /// Sends a message to the destination actor with this entity as the sender.
+    template <typename Msg, typename... Args>
+    void send(const Actor dst, Args &&...args) {
+        world_->template send<Msg>(self(), dst, std::forward<Args>(args)...);
+    }
+
+    /// Sends a message to the destination actor(s) with this entity as the sender.
+    template <typename Msg, typename... Args>
+    void send(const Range<Actor> &dst, Args &&...args) {
+        world_->template send<Msg>(self(), dst, std::forward<Args>(args)...);
+    }
+
+    /// Spawns a new actor in the world with this entity as the creator.
+    template <typename Type, typename... Args>
+    void spawn(Args &&...args) {
+        world_->template spawn_by<Type>(self(), std::forward<Args>(args)...);
+    }
+
 protected:
     friend struct Relative;
 
     using Component = typename Tree::ItemTree::Component;
     virtual Status broken(const List<Component> &components) = 0;
-
-    pure Set<Actor> above() const;
-
-    pure bool has_below() const;
 
     pure Pos<N> next_velocity() const;
 
@@ -74,21 +92,6 @@ protected:
     Status receive(const List<Message> &messages);
 
     Status hit(const List<Hit<N>> &hits);
-
-    template <typename Msg, typename... Args>
-    void send(const Actor dst, Args &&...args) {
-        world_->template send<Msg>(self(), dst, std::forward<Args>(args)...);
-    }
-
-    template <typename Msg, typename... Args>
-    void send(const Range<Actor> &dst, Args &&...args) {
-        world_->template send<Msg>(self(), dst, std::forward<Args>(args)...);
-    }
-
-    template <typename Type, typename... Args>
-    void spawn(Args &&...args) {
-        world_->template spawn_by<Type>(self(), std::forward<Args>(args)...);
-    }
 
     /// State
     Tree parts_;
@@ -154,8 +157,8 @@ Pos<N> Entity<N>::next_velocity() const {
                 for (Actor actor : world_->entities(trj)) {
                     if (auto *entity = actor.dyn_cast<Entity<N>>(); entity && entity != this) {
                         for (const At<N, Part<N>> &other : entity->parts(trj)) {
-                            v_next = (v >= 0) ? std::clamp<I64>(other.bbox().min[i] - 1 - x, 0, v_next)
-                                              : std::clamp<I64>(x - other.bbox().max[i] - 1, v_next, 0);
+                            v_next = (v >= 0) ? std::clamp<I64>(other.bbox().min[i] - x, 0, v_next)
+                                              : std::clamp<I64>(x - other.bbox().max[i], v_next, 0);
                         }
                     }
                 }

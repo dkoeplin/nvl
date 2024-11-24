@@ -17,6 +17,11 @@ namespace nvl {
 template <U64 N>
 struct Edge;
 
+/**
+ * @class Box
+ * @brief An N-dimensional volume from [min, max).
+ * @tparam N - The number of dimensions in this volume.
+ */
 template <U64 N>
 class Box {
 public:
@@ -26,14 +31,14 @@ public:
     /// Returns None otherwise.
     /// Used to detect cases e.g. where intersection results in an empty Box.
     static Maybe<Box> get(const Pos<N> &min, const Pos<N> &max) {
-        if (min.all_lte(max)) {
+        if (min.all_lt(max)) {
             return Box(min, max);
         }
         return None;
     }
 
     /// Returns a Box with only one point.
-    static Box unit(const Pos<N> &pt) { return Box(pt, pt); }
+    static Box unit(const Pos<N> &pt) { return Box(pt, pt + Pos<N>::ones); }
 
     struct pos_iterator final : AbstractIteratorCRTP<pos_iterator, Pos<N>> {
         class_tag(Box<N>::pos_iterator, AbstractIterator<Pos<N>>);
@@ -56,6 +61,8 @@ public:
                 ASSERT(step_[i] != 0, "Invalid iterator step size of 0");
                 ASSERT(step_[i] > 0, "TODO: Support negative step");
             }
+            if (pos_.has_value() && !box_.contains(*pos_))
+                pos_ = None;
         }
 
         const Pos<N> *ptr() override { return &pos_.value(); }
@@ -70,7 +77,7 @@ public:
                 auto &pos = pos_.value();
                 I64 i = N - 1;
                 pos[i] = pos[i] + step_[i];
-                while (i >= 0 && pos[i] > box_.max[i]) {
+                while (i >= 0 && pos[i] >= box_.max[i]) {
                     pos[i] = box_.min[i];
                     i -= 1;
                     if (i >= 0) {
@@ -93,7 +100,7 @@ public:
         template <View Type = View::kImmutable>
             requires(Type == View::kImmutable)
         static Iterator<Box<N>, Type> begin(const Box &box, const Pos<N> &shape = Pos<N>::fill(1)) {
-            return make_iterator<box_iterator, Type>(box, Box(box.min, box.min + shape - 1), shape);
+            return make_iterator<box_iterator, Type>(box, Box(box.min, box.min + shape), shape);
         }
         template <View Type = View::kImmutable>
             requires(Type == View::kImmutable)
@@ -108,6 +115,8 @@ public:
                 ASSERT(shape_[i] != 0, "Invalid iterator shape size of 0");
                 ASSERT(shape_[i] > 0, "TODO: Support negative step");
             }
+            if (current_.has_value() && !box_.overlaps(*current_))
+                current_ = None;
         }
 
         const Box *ptr() override { return &current_.value(); }
@@ -124,7 +133,7 @@ public:
                 current.max[i] += shape_[i];
                 while (i >= 0 && current.max[i] > box_.max[i]) {
                     current.min[i] = box_.min[i];
-                    current.max[i] = current.min[i] + shape_[i] - 1;
+                    current.max[i] = box_.min[i] + shape_[i];
                     i -= 1;
                     if (i >= 0) {
                         current.min[i] += shape_[i];
@@ -154,20 +163,27 @@ public:
     /// Returns the number of dimensions in this box.
     pure constexpr I64 rank() const { return N; }
 
-    pure Pos<N> shape() const { return max - min + 1; }
+    pure Pos<N> shape() const { return max - min; }
+
+    pure bool empty() const { return min == max; }
 
     pure Box with(const U64 dim, const I64 lo, const I64 hi) const {
         return Box(this->min.with(dim, lo), this->max.with(dim, hi));
     }
 
+    // TODO: Need to better define scaling by negatives here
+    //   Scaling by -1: [1,3) => [-3,-1)? [-2,0)?
+    //   Scaling by 2:  [1,3) => [2, 6)
+    //   Scaling by -2: [1,3) => [-6, -2)? [-4, 0)?
+
     /// Returns a new Box scaled by -1.
-    pure Box operator-() const { return Box(-min, -max); }
+    // pure Box operator-() const { return Box(-min, -max); }
 
     /// Returns a new Box scaled by the corresponding factors in `scale`.
-    pure Box operator*(const Pos<N> &scale) const { return Box(min * scale, max * scale); }
-
-    /// Returns a new Box scaled by the factor `scale` in every dimension.
-    pure Box operator*(const I64 scale) const { return Box(min * scale, max * scale); }
+    // pure Box operator*(const Pos<N> &scale) const { return Box(min * scale, max * scale); }
+    // pure Box operator*(const I64 scale) const { return Box(min * scale, max * scale); }
+    // void operator*=(const Pos<2> &rhs) { *this = Box(min * rhs, max * rhs); }
+    // void operator*=(const I64 &rhs) { *this = Box(min * rhs, max * rhs); }
 
     /// Returns a new Box shifted by `rhs`.
     pure Box operator+(const Pos<N> &rhs) const { return Box(min + rhs, max + rhs); }
@@ -177,10 +193,8 @@ public:
 
     void operator+=(const Pos<2> &rhs) { *this = Box(min + rhs, max + rhs); }
     void operator-=(const Pos<2> &rhs) { *this = Box(min - rhs, max - rhs); }
-    void operator*=(const Pos<2> &rhs) { *this = Box(min * rhs, max * rhs); }
-    void operator+=(const I64 &rhs) { *this = Box(min + rhs, max + rhs); }
     void operator-=(const I64 &rhs) { *this = Box(min - rhs, max - rhs); }
-    void operator*=(const I64 &rhs) { *this = Box(min * rhs, max * rhs); }
+    void operator+=(const I64 &rhs) { *this = Box(min + rhs, max + rhs); }
 
     /// Returns a new Box which is clamped to the given grid size.
     pure Box clamp(const Pos<N> &grid) const { return Box(min.grid_min(grid), max.grid_max(grid)); }
@@ -208,7 +222,7 @@ public:
     /// Returns true if there is any overlap between this Box and `rhs`.
     pure bool overlaps(const Box &rhs) const {
         for (U64 i = 0; i < N; ++i) {
-            if (min[i] > rhs.max[i] || max[i] < rhs.min[i]) {
+            if (min[i] >= rhs.max[i] || rhs.min[i] >= max[i]) {
                 return false;
             }
         }
@@ -218,7 +232,7 @@ public:
     /// Returns true if `pt` is contained somewhere within this box.
     pure bool contains(const Pos<N> &pt) const {
         for (U64 i = 0; i < N; ++i) {
-            if (pt[i] < min[i] || pt[i] > max[i]) {
+            if (pt[i] < min[i] || pt[i] >= max[i]) {
                 return false;
             }
         }
@@ -228,7 +242,7 @@ public:
     /// Returns true if `pt` is contained somewhere within this box.
     pure bool contains(const Vec<N> &pt) const {
         for (U64 i = 0; i < N; ++i) {
-            if (pt[i] < min[i] || pt[i] > max[i]) {
+            if (pt[i] < min[i] || pt[i] >= max[i]) {
                 return false;
             }
         }
@@ -279,6 +293,7 @@ public:
     pure Edge<N> edge(Dir dir, U64 dim, I64 width = 1, I64 dist = 1) const;
 
     /// Returns a new Box which is expanded by `size` in every direction/dimension.
+    /// e.g. [0,3) widened 3 => [-3,6)
     pure Box widened(const U64 size) const { return Box(min - Pos<N>::fill(size), max + Pos<N>::fill(size)); }
 
     pure std::string to_string() const {
@@ -305,8 +320,8 @@ private:
                     Pos<N> result_max;
                     for (U64 d = 0; d < N; ++d) {
                         if (i == d) {
-                            result_min[d] = (dir == Dir::Neg) ? min[d] : both.max[d] + 1;
-                            result_max[d] = (dir == Dir::Neg) ? both.min[d] - 1 : max[d];
+                            result_min[d] = (dir == Dir::Neg) ? min[d] : both.max[d];
+                            result_max[d] = (dir == Dir::Neg) ? both.min[d] : max[d];
                         } else if (d > i) {
                             result_min[d] = min[d];
                             result_max[d] = max[d];
@@ -335,7 +350,7 @@ struct Edge : Face {
     pure List<Edge> diff(const Box<N> &rhs) const {
         List<Edge> result;
         for (const Box<N> &b : box.diff(rhs)) {
-            result.emplace_back(dim, dir, b);
+            result.emplace_back(dir, dim, b);
         }
         return result;
     }
@@ -362,7 +377,7 @@ struct Edge : Face {
 };
 
 template <U64 N>
-constexpr Box<N> Box<N>::kUnitBox = Box(Pos<N>::fill(-1), Pos<N>::fill(1));
+constexpr Box<N> Box<N>::kUnitBox = Box(Pos<N>::fill(0), Pos<N>::fill(1));
 
 template <U64 N>
 List<Edge<N>> Box<N>::faces(const I64 width) const {
@@ -390,18 +405,18 @@ Edge<N> Box<N>::edge(const Dir dir, const U64 dim, const I64 width, const I64 di
     return Edge<N>(dir, dim, Box(edge_min, edge_max));
 }
 
-template <U64 N>
+/*template <U64 N>
 Box<N> operator*(I64 a, const Box<N> &b) {
     return b * a;
-}
+}*/
 template <U64 N>
 Box<N> operator+(I64 a, const Box<N> &b) {
     return b + a;
 }
-template <U64 N>
+/*template <U64 N>
 Box<N> operator-(I64 a, const Box<N> &b) {
     return -b + a;
-}
+}*/
 
 template <U64 N>
 std::ostream &operator<<(std::ostream &os, const Box<N> &box) {
@@ -410,7 +425,7 @@ std::ostream &operator<<(std::ostream &os, const Box<N> &box) {
 
 template <U64 N>
 std::ostream &operator<<(std::ostream &os, const Edge<N> &edge) {
-    return os << "Edge(" << edge.dim << ", " << edge.dir << ", " << edge.box << ")";
+    return os << "Edge(" << edge.dir << edge.dim << ", " << edge.box << ")";
 }
 
 /// Returns the minimal Box which includes all of both Box `a` and `b`.

@@ -15,14 +15,14 @@ using nvl::grid_min;
 /// For example, with a grid size of 10, the grids are [-20, -11], [-10, -1], [0, 9], [10, 19], [20, 29], and so on.
 
 TEST(TestGrid, grid_max) {
-    EXPECT_EQ(grid_max(0, 10), 9);
-    EXPECT_EQ(grid_max(10, 10), 19);
-    EXPECT_EQ(grid_max(-1, 10), -1);
-    EXPECT_EQ(grid_max(-3, 10), -1);
-    EXPECT_EQ(grid_max(-9, 10), -1);
-    EXPECT_EQ(grid_max(-10, 10), -1);
-    EXPECT_EQ(grid_max(-19, 10), -11);
-    EXPECT_EQ(grid_max(-20, 10), -11);
+    EXPECT_EQ(grid_max(0, 10), 0);
+    EXPECT_EQ(grid_max(10, 10), 10);
+    EXPECT_EQ(grid_max(-1, 10), 0);
+    EXPECT_EQ(grid_max(-3, 10), 0);
+    EXPECT_EQ(grid_max(-9, 10), 0);
+    EXPECT_EQ(grid_max(-10, 10), -10);
+    EXPECT_EQ(grid_max(-19, 10), -10);
+    EXPECT_EQ(grid_max(-20, 10), -20);
 }
 
 TEST(TestGrid, grid_min) {
@@ -56,8 +56,8 @@ TEST_F(TestGridFuzzer, fuzz_grid) {
         EXPECT_TRUE(min >= a - g);
         EXPECT_TRUE(a + g >= max);
         EXPECT_TRUE(min % g == 0);
-        EXPECT_TRUE((max + 1) % g == 0);
-        EXPECT_TRUE(max - min + 1 == g);
+        EXPECT_TRUE(max % g == 0);
+        EXPECT_TRUE(max - min == g || a % g == 0) << "a: " << a << ", g: " << g << ", max: " << max << ", min: " << min;
     });
 }
 

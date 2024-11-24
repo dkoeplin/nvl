@@ -150,8 +150,10 @@ TEST(TestPos, sub) {
 }
 
 TEST(TestPos, grid_max) {
-    EXPECT_EQ(Pos<2>(0, 10).grid_max({10, 10}), Pos<2>(9, 19));
-    EXPECT_EQ(Pos<2>(0, -10).grid_max({10, 10}), Pos<2>(9, -1));
+    EXPECT_EQ(Pos<2>(0, 9).grid_max({10, 10}), Pos<2>(0, 10));
+    EXPECT_EQ(Pos<2>(0, -9).grid_max({10, 10}), Pos<2>(0, 0));
+    EXPECT_EQ(Pos<2>(0, 10).grid_max({10, 10}), Pos<2>(0, 10));
+    EXPECT_EQ(Pos<2>(0, -10).grid_max({10, 10}), Pos<2>(0, -10));
 }
 
 TEST(TestPos, grid_min) {

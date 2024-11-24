@@ -92,7 +92,7 @@ struct PreorderWork {
     }
     Node *node;
     U64 depth;
-    Once<typename Box<N>::pos_iterator> pos_range;
+    Once<Pos<N>> pos_range;
 };
 
 } // namespace detail
@@ -395,14 +395,10 @@ public:
     RTree &move(const ItemRef &item, const Box<N> &prev) { return move(item, bbox(item), prev); }
 
     /// Returns a mutable range over all _possible_ points in the given volume, including those without Nodes.
-    Range<Point, View::kMutable> points_in(const Box<N> &box) {
-        return make_range<point_iterator, View::kMutable>(*this, box);
-    }
+    MRange<Point> points_in(const Box<N> &box) { return make_range<point_iterator, View::kMutable>(*this, box); }
 
     /// Returns a mutable range over all existing nodes in the given volume.
-    Range<Point, View::kMutable> entries_in(const Box<N> &box) {
-        return make_range<entry_iterator, View::kMutable>(*this, box);
-    }
+    MRange<Point> entries_in(const Box<N> &box) { return make_range<entry_iterator, View::kMutable>(*this, box); }
 
     /// Returns an iterable range over all unique stored items in the given volume.
     pure MRange<ItemRef> operator[](const Pos<N> &pos) { return operator[](Box<N>::unit(pos)); }
@@ -521,10 +517,11 @@ public:
             const U64 depth = current.depth;
             bool found_node = false;
             while (!found_node && current.pos_range.has_next()) {
-                const Pos<N> pos = *current.pos_range.begin();
-                ++current.pos_range.begin();
+                Once<Pos<N>> &iter = current.pos_range;
+                const Pos<N> pos = *iter;
+                ++iter;
                 if (auto *entry = node->get(pos)) {
-                    const Box<N> range(pos, pos + node->grid - 1);
+                    const Box<N> range(pos, pos + node->grid);
                     indented(depth) << "[" << node->id << "][" << range << "]:" << std::endl;
                     if (entry->kind == Node::Entry::kList) {
                         if (entry->list.empty()) {
@@ -574,9 +571,9 @@ private:
             } else {
                 points = item_box.clamp(grid_fill).box_iter(grid_fill);
             }
-            for (const Box<N> &range : points) {
-                if (range.overlaps(item_box)) {
-                    typename Node::Entry &entry = node->map.get_or_add(range.min, {});
+            for (const Box<N> &dest : points) {
+                if (dest.overlaps(item_box)) {
+                    typename Node::Entry &entry = node->map.get_or_add(dest.min, {});
                     entry.list.push_back(item);
                 }
             }
@@ -590,7 +587,7 @@ private:
         if (auto *entry = node->get(pos)) {
             if (entry->kind == Node::Entry::kList) {
                 if (should_increase_depth(entry->list.size(), node->grid)) {
-                    const Box<N> child_box(pos, pos + node->grid - 1);
+                    const Box<N> child_box(pos, pos + node->grid);
                     const I64 child_grid = node->grid / 2;
                     const typename Node::Parent parent{.node = node, .box = child_box};
                     entry->node = next_node(parent, child_grid, entry->list);
@@ -652,14 +649,14 @@ private:
             Garbage garbage(this);
             for (const Box<N> &removed : old_box.diff(new_box)) {
                 for (auto [node, pos] : entries_in(removed)) {
-                    if (!new_box.overlaps({pos, pos + node->grid - 1})) {
+                    if (!new_box.overlaps({pos, pos + node->grid})) {
                         remove(garbage, node, pos, ref);
                     }
                 }
             }
             for (const Box<N> &added : new_box.diff(old_box)) {
                 for (auto [node, pos] : points_in(added)) {
-                    if (!old_box.overlaps({pos, pos + node->grid - 1})) {
+                    if (!old_box.overlaps({pos, pos + node->grid})) {
                         node->map[pos].list.emplace_back(ref);
                         balance(node, pos);
                     }

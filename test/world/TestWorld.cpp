@@ -96,7 +96,7 @@ TEST(TestWorld, idle_when_not_moving) {
         for (U64 i = 0; i < 10; ++i) {
             world.tick();
         }
-        EXPECT_EQ(block->bbox().max[1], -1);
+        EXPECT_EQ(block->bbox().max[1], 0);
         EXPECT_EQ(world.num_awake(), 0);
         EXPECT_EQ(world.num_alive(), 2);
     }
@@ -161,35 +161,35 @@ TEST(TestWorld, break_block) {
     material->falls = false;
     NullWindow window;
     auto *world = window.open<World<2>>();
-    auto &block = *world->spawn<Block<2>>(Pos<2>::zero, Box<2>{{817, 846}, {1134, 1105}}, material);
-    block.tick({Message::get<Hit<2>>(nullptr, Box<2>{{1100, 1005}, {1140, 1045}}, 1)});
+    auto &block = *world->spawn<Block<2>>(Pos<2>::zero, Box<2>{{817, 846}, {1135, 1106}}, material);
+    block.tick({Message::get<Hit<2>>(nullptr, Box<2>{{1100, 1005}, {1141, 1046}}, 1)});
     EXPECT_EQ(world->num_alive(), 1);
-    block.tick({Message::get<Hit<2>>(nullptr, Box<2>{{1063, 1005}, {1103, 1045}}, 1)});
+    block.tick({Message::get<Hit<2>>(nullptr, Box<2>{{1063, 1005}, {1104, 1046}}, 1)});
     EXPECT_EQ(world->num_alive(), 1);
-    block.tick({Message::get<Hit<2>>(nullptr, Box<2>{{1024, 1005}, {1064, 1045}}, 1)});
+    block.tick({Message::get<Hit<2>>(nullptr, Box<2>{{1024, 1005}, {1065, 1046}}, 1)});
     EXPECT_EQ(world->num_alive(), 1);
 
     nvl::Set<Box<2>> boxes;
     for (const At<2, Part<2>> &part : block.parts()) {
         boxes.insert(part.bbox());
     }
-    EXPECT_THAT(boxes, UnorderedElementsAre(Box<2>{{817, 846}, {1023, 1105}}, Box<2>{{1024, 1046}, {1062, 1105}},
-                                            Box<2>{{1024, 846}, {1062, 1004}}, Box<2>{{1063, 1046}, {1099, 1105}},
-                                            Box<2>{{1063, 846}, {1099, 1004}}, Box<2>{{1100, 1046}, {1134, 1105}},
-                                            Box<2>{{1100, 846}, {1134, 1004}}));
+    EXPECT_THAT(boxes, UnorderedElementsAre(Box<2>{{817, 846}, {1024, 1106}}, Box<2>{{1024, 1046}, {1063, 1106}},
+                                            Box<2>{{1024, 846}, {1063, 1005}}, Box<2>{{1063, 1046}, {1100, 1106}},
+                                            Box<2>{{1063, 846}, {1100, 1005}}, Box<2>{{1100, 1046}, {1135, 1106}},
+                                            Box<2>{{1100, 846}, {1135, 1005}}));
 
-    block.tick({Message::get<Hit<2>>(nullptr, Box<2>{{987, 1006}, {1027, 1046}}, 1)});
+    block.tick({Message::get<Hit<2>>(nullptr, Box<2>{{987, 1006}, {1028, 1047}}, 1)});
     boxes.clear();
     for (auto actor : world->entities()) {
         for (const At<2, Part<2>> &part : actor.dyn_cast<Block<2>>()->parts()) {
             boxes.insert(part.bbox());
         }
     }
-    EXPECT_THAT(boxes, UnorderedElementsAre(Box<2>{{817, 846}, {986, 1105}}, Box<2>{{987, 1047}, {1023, 1105}},
-                                            Box<2>{{987, 846}, {1023, 1005}}, Box<2>{{1028, 1046}, {1062, 1105}},
-                                            Box<2>{{1024, 1047}, {1027, 1105}}, Box<2>{{1024, 846}, {1062, 1004}},
-                                            Box<2>{{1063, 1046}, {1099, 1105}}, Box<2>{{1063, 846}, {1099, 1004}},
-                                            Box<2>{{1100, 1046}, {1134, 1105}}, Box<2>{{1100, 846}, {1134, 1004}}));
+    EXPECT_THAT(boxes, UnorderedElementsAre(Box<2>{{817, 846}, {987, 1106}}, Box<2>{{987, 1047}, {1024, 1106}},
+                                            Box<2>{{987, 846}, {1024, 1006}}, Box<2>{{1028, 1046}, {1063, 1106}},
+                                            Box<2>{{1024, 1047}, {1028, 1106}}, Box<2>{{1024, 846}, {1063, 1005}},
+                                            Box<2>{{1063, 1046}, {1100, 1106}}, Box<2>{{1063, 846}, {1100, 1005}},
+                                            Box<2>{{1100, 1046}, {1135, 1106}}, Box<2>{{1100, 846}, {1135, 1005}}));
     EXPECT_EQ(world->num_alive(), 1);
 }
 
@@ -204,13 +204,13 @@ TEST(TestWorld, break_block2) {
     NullWindow window;
     auto *world = window.open<World<2>>();
     const List<Part<2>> parts{
-        Part<2>({{1024, 846}, {1062, 1004}}, material),  Part<2>({{1024, 1046}, {1062, 1105}}, material),
-        Part<2>({{817, 846}, {1023, 1105}}, material),   Part<2>({{1063, 846}, {1099, 1004}}, material),
-        Part<2>({{1063, 1046}, {1099, 1105}}, material), Part<2>({{1100, 846}, {1134, 1004}}, material),
-        Part<2>({{1100, 1046}, {1134, 1105}}, material),
+        Part<2>({{1024, 846}, {1063, 1005}}, material),  Part<2>({{1024, 1046}, {1063, 1106}}, material),
+        Part<2>({{817, 846}, {1024, 1106}}, material),   Part<2>({{1063, 846}, {1100, 1005}}, material),
+        Part<2>({{1063, 1046}, {1100, 1106}}, material), Part<2>({{1100, 846}, {1135, 1005}}, material),
+        Part<2>({{1100, 1046}, {1135, 1106}}, material),
     };
     auto &block = *world->spawn<Block<2>>(Pos<2>::zero, parts.range());
-    block.tick({Message::get<Hit<2>>(nullptr, Box<2>{{987, 1006}, {1027, 1046}}, 1)});
+    block.tick({Message::get<Hit<2>>(nullptr, Box<2>{{987, 1006}, {1028, 1047}}, 1)});
     EXPECT_EQ(world->num_alive(), 1);
 }
 
@@ -234,7 +234,7 @@ TEST_F(FuzzFall, fall2d) {
     fuzz([material, bulwark](Box<2> &end, const Pos<2> &loc, const Box<2> &shape, I64 y, I64 thickness) {
         NullWindow window;
         auto *world = window.open<World<2>>();
-        world->spawn<Block<2>>(Pos<2>(0, y), Box<2>({0, 0}, {999, thickness}), bulwark);
+        world->spawn<Block<2>>(Pos<2>(0, y), Box<2>({0, 0}, {1000, thickness}), bulwark);
         const auto *block = world->spawn<Block<2>>(loc, shape, material);
         for (int64_t i = 0; i < 1000 && world->num_awake() > 0; ++i) {
             world->tick();
@@ -245,9 +245,9 @@ TEST_F(FuzzFall, fall2d) {
     });
 
     verify([&](const Box<2> &end, const Pos<2> &loc, const Box<2> &shape, I64 y, I64 thickness) {
-        EXPECT_EQ(end.max[1], y - 1) << "Incorrect ending location! "
-                                     << "Box: " << end << " {loc: " << loc << ", shape: " << shape << ", y: " << y
-                                     << ", thickness: " << thickness << "}";
+        EXPECT_EQ(end.max[1], y) << "Incorrect ending location! "
+                                 << "Box: " << end << " {loc: " << loc << ", shape: " << shape << ", y: " << y
+                                 << ", thickness: " << thickness << "}";
     });
 }
 

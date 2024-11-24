@@ -29,22 +29,34 @@ using nvl::test::LabeledBox;
 template <typename T>
 concept HasID = requires(T a) { a.id(); };
 
+struct IDs {
+    pure bool operator==(const IDs &rhs) const { return box == rhs.box && ids == rhs.ids; }
+    pure bool operator!=(const IDs &rhs) const { return !(*this == rhs); }
+
+    Box<2> box;
+    Set<U64> ids;
+};
+
+std::ostream &operator<<(std::ostream &os, const IDs &ids) { return os << "{" << ids.box << ", " << ids.ids << "}"; }
+
 /// Returns a Map from the lowest level volume buckets to all IDs contained in that bucket.
 template <U64 N, typename Item, typename ItemRef, U64 kMaxEntries>
-pure Map<Box<N>, Set<U64>> collect_ids(RTree<N, Item, ItemRef, kMaxEntries> &tree)
+pure List<IDs> collect_ids(RTree<N, Item, ItemRef, kMaxEntries> &tree)
     requires HasID<Item>
 {
     using Node = typename RTree<N, Item, ItemRef>::Node;
-    Map<Box<N>, Set<U64>> ids;
+    List<IDs> list;
     for (const auto &[node, pos] : tree.entries_in(tree.get_bbox().value_or(Box<N>::kUnitBox))) {
         if (auto *entry = node->get(pos); entry && entry->kind == Node::Entry::kList) {
-            const Box<N> box(pos, pos + node->grid - 1);
+            const Box<N> box(pos, pos + node->grid);
+            Set<U64> ids;
             for (const auto &item : entry->list) {
-                ids[box].insert(item->id());
+                ids.insert(item->id());
             }
+            list.emplace_back(box, ids);
         }
     }
-    return ids;
+    return list;
 }
 
 TEST(TestRTree, create) {
@@ -68,24 +80,22 @@ TEST(TestRTree, divide) {
     EXPECT_EQ(tree.size(), 2);
     EXPECT_EQ(tree.nodes(), 1);
 
-    const Map<Box<2>, Set<U64>> expected{{Box<2>({0, 0}, {1023, 1023}), Set<U64>{0}},
-                                         {Box<2>({2048, 1024}, {3071, 2047}), Set<U64>{1}}};
-    EXPECT_EQ(collect_ids(tree), expected);
+    EXPECT_THAT(collect_ids(tree), UnorderedElementsAre(IDs{.box = {{0, 0}, {1024, 1024}}, .ids = {0}},
+                                                        IDs{.box = {{2048, 1024}, {3072, 2048}}, .ids = {1}}));
 }
 
 TEST(TestRTree, subdivide) {
     RTree<2, LabeledBox, Ref<LabeledBox>, /*max_entries*/ 2> tree;
-    const auto b0 = tree.emplace(0, Box<2>({0, 5}, {10, 20}));
-    const auto b1 = tree.emplace(1, Box<2>({10, 100}, {20, 120}));
-    const auto b2 = tree.emplace(2, Box<2>({100, 200}, {200, 200}));
+    const auto b0 = tree.emplace(0, Box<2>({0, 5}, {12, 22}));
+    const auto b1 = tree.emplace(1, Box<2>({10, 100}, {22, 122}));
+    const auto b2 = tree.emplace(2, Box<2>({100, 200}, {202, 202}));
 
     EXPECT_EQ(tree.size(), 3);  // Number of values
     EXPECT_EQ(tree.nodes(), 4); // Number of nodes
 
-    const Map<Box<2>, Set<U64>> expected{{Box<2>({0, 0}, {127, 127}), Set<U64>{0, 1}},
-                                         {Box<2>({0, 128}, {127, 255}), Set<U64>{2}},
-                                         {Box<2>({128, 128}, {255, 255}), Set<U64>{2}}};
-    EXPECT_EQ(collect_ids(tree), expected);
+    EXPECT_THAT(collect_ids(tree), UnorderedElementsAre(IDs{.box = {{0, 0}, {128, 128}}, .ids = {0, 1}},
+                                                        IDs{.box = {{0, 128}, {128, 256}}, .ids = {2}},
+                                                        IDs{.box = {{128, 128}, {256, 256}}, .ids = {2}}));
 
     // Check that we find all values when iterating over the bounding box, but each value is returned exactly once.
     const List<Ref<LabeledBox>> elements(tree[tree.bbox()]);
@@ -122,28 +132,28 @@ TEST(TestRTree, bracket_operator) {
 
 TEST(TestRTree, keep_buckets_after_subdivide) {
     Map<U64, Box<2>> box;
-    box[0] = Box<2>({512, 512}, {514, 514});
-    box[1] = Box<2>({0, 882}, {1512, 982}) + Pos<2>{0, 0};
-    box[2] = Box<2>({614, 762}, {762, 881}) + Pos<2>(0, 253);
-    box[3] = Box<2>({594, 701}, {715, 761}) + Pos<2>(0, 232);
-    box[4] = Box<2>({620, 641}, {684, 700}) + Pos<2>(0, 183);
-    box[5] = Box<2>({616, 592}, {686, 640}) + Pos<2>(0, 137);
-    box[6] = Box<2>({603, 536}, {680, 591}) + Pos<2>(0, 132);
-    box[7] = Box<2>({582, 474}, {662, 535}) + Pos<2>(0, 130);
-    box[8] = Box<2>({615, 416}, {672, 473}) + Pos<2>(0, 82);
-    box[9] = Box<2>({599, 375}, {647, 415}) + Pos<2>(0, 41);
+    box[0] = Box<2>({512, 512}, {515, 515});
+    box[1] = Box<2>({0, 882}, {1513, 983}) + Pos<2>{0, 0};
+    box[2] = Box<2>({614, 762}, {763, 882}) + Pos<2>(0, 253);
+    box[3] = Box<2>({594, 701}, {716, 762}) + Pos<2>(0, 232);
+    box[4] = Box<2>({620, 641}, {685, 701}) + Pos<2>(0, 183);
+    box[5] = Box<2>({616, 592}, {687, 641}) + Pos<2>(0, 137);
+    box[6] = Box<2>({603, 536}, {681, 592}) + Pos<2>(0, 132);
+    box[7] = Box<2>({582, 474}, {663, 536}) + Pos<2>(0, 130);
+    box[8] = Box<2>({615, 416}, {673, 474}) + Pos<2>(0, 82);
+    box[9] = Box<2>({599, 375}, {648, 416}) + Pos<2>(0, 41);
 
     RTree<2, LabeledBox, Ref<LabeledBox>, /*max_entries*/ 9> tree;
     for (auto &[id, x] : box) {
         tree.insert({id, x});
     }
 
-    const Map<Box<2>, Set<U64>> expected{{Box<2>({1024, 0}, {2047, 1023}), Set<U64>{1}},
-                                         {Box<2>({0, 1024}, {1023, 2047}), Set<U64>{2}},
-                                         {Box<2>({512, 512}, {1023, 1023}), Set<U64>{0, 1, 2, 3, 4, 5, 6, 7, 8}},
-                                         {Box<2>({0, 512}, {511, 1023}), Set<U64>{1}},
-                                         {Box<2>({512, 0}, {1023, 511}), Set<U64>{8, 9}}};
-    EXPECT_EQ(collect_ids(tree), expected);
+    EXPECT_THAT(collect_ids(tree),
+                UnorderedElementsAre(IDs{.box = {{1024, 0}, {2048, 1024}}, .ids = {1}},
+                                     IDs{.box = {{0, 1024}, {1024, 2048}}, .ids = {2}},
+                                     IDs{.box = {{512, 512}, {1024, 1024}}, .ids = {0, 1, 2, 3, 4, 5, 6, 7, 8}},
+                                     IDs{.box = {{0, 512}, {512, 1024}}, .ids = {1}},
+                                     IDs{.box = {{512, 0}, {1024, 512}}, .ids = {8, 9}}));
 }
 
 TEST(TestRTree, negative_buckets) {
@@ -151,10 +161,9 @@ TEST(TestRTree, negative_buckets) {
     tree.insert({0, Box<2>({0, 882}, {1512, 982})});
     tree.insert({1, Box<2>({346, -398}, {666, -202})});
 
-    const Map<Box<2>, Set<U64>> expected{{Box<2>({0, -1024}, {1023, -1}), Set<U64>{1}},
-                                         {Box<2>({0, 0}, {1023, 1023}), Set<U64>{0}},
-                                         {Box<2>({1024, 0}, {2047, 1023}), Set<U64>{0}}};
-    EXPECT_EQ(collect_ids(tree), expected);
+    EXPECT_THAT(collect_ids(tree), UnorderedElementsAre(IDs{.box = {{0, -1024}, {1024, 0}}, .ids = {1}},
+                                                        IDs{.box = {{0, 0}, {1024, 1024}}, .ids = {0}},
+                                                        IDs{.box = {{1024, 0}, {2048, 1024}}, .ids = {0}}));
 }
 
 TEST(TestRTree, fetch) {
@@ -197,10 +206,10 @@ TEST(TestRTree, components_individuals) {
 TEST(TestRTree, components_pairs) {
     using Comp = RTree<2, LabeledBox>::Component;
     RTree<2, LabeledBox> tree;
-    const Ref<LabeledBox> a = tree.emplace(1, Box<2>({0, 0}, {10, 10}));
-    const Ref<LabeledBox> b = tree.emplace(2, Box<2>({11, 0}, {19, 10}));
-    const Ref<LabeledBox> c = tree.emplace(3, Box<2>({35, 35}, {40, 40}));
-    const Ref<LabeledBox> d = tree.emplace(4, Box<2>({38, 41}, {48, 100}));
+    const Ref<LabeledBox> a = tree.emplace(1, Box<2>({0, 0}, {11, 11}));
+    const Ref<LabeledBox> b = tree.emplace(2, Box<2>({11, 0}, {20, 11}));
+    const Ref<LabeledBox> c = tree.emplace(3, Box<2>({35, 35}, {41, 41}));
+    const Ref<LabeledBox> d = tree.emplace(4, Box<2>({38, 41}, {49, 101}));
     EXPECT_THAT(tree.components(), UnorderedElementsAre(Comp{a, b}, Comp{c, d}));
 }
 

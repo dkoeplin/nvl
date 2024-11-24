@@ -11,29 +11,11 @@
 
 namespace nvl {
 
-struct Jump final : AbstractMessage {
-    class_tag(Jump, AbstractMessage);
-    explicit Jump(Actor src) : AbstractMessage(std::move(src)) {}
-};
-struct Strafe final : AbstractMessage {
-    class_tag(Strafe, AbstractMessage);
-    explicit Strafe(Actor src, const Dir dir) : AbstractMessage(std::move(src)), dir(dir) {}
-    Dir dir;
-};
-struct Move final : AbstractMessage {
-    class_tag(Move, AbstractMessage) explicit Move(Actor src, const Dir dir)
-        : AbstractMessage(std::move(src)), dir(dir) {}
-    Dir dir;
-};
-struct Brake final : AbstractMessage {
-    class_tag(Brake, AbstractMessage);
-    explicit Brake(Actor src) : AbstractMessage(std::move(src)) {}
-};
-
-struct Teleport final : AbstractMessage {
-    class_tag(Teleport, AbstractMessage);
-    explicit Teleport(Actor src, const Pos<3> &dst) : AbstractMessage(std::move(src)), dst(dst) {}
-    Pos<3> dst;
+struct Player;
+struct Action : AbstractMessage {
+    class_tag(Action, AbstractMessage);
+    using AbstractMessage::AbstractMessage;
+    virtual Status act(Player &player) const = 0;
 };
 
 struct Player final : Entity<3> {
@@ -50,39 +32,16 @@ struct Player final : Entity<3> {
         parts_.emplace(Box<3>({-10, 10, -10}, {10, 30, 10}), material);
     }
 
+    Pos<3> &x() { return parts_.loc; }
+    Pos<3> &a() { return accel_; }
+    Pos<3> &v() { return velocity_; }
+
+    World<3> *world() const { return world_; }
+
     Status receive(const Message &message) override {
-        if (message.isa<Jump>() && has_below() && velocity_[1] == 0) {
-            velocity_[1] = -30;
-            return Status::kMove;
+        if (auto *action = message.dyn_cast<Action>()) {
+            return action->act(*this);
         }
-        if (message.isa<Brake>()) {
-            const I64 v0 = velocity_[0];
-            const I64 v2 = velocity_[2];
-            velocity_[0] = v0 > 0 ? std::max<I64>(v0 - 2, 0) : std::min<I64>(v0 + 2, 0);
-            velocity_[2] = v2 > 0 ? std::max<I64>(v2 - 2, 0) : std::min<I64>(v2 + 2, 0);
-            return Status::kMove;
-        }
-        const auto *view = world_->view().dyn_cast<View3D>();
-
-        if (const auto strafe = message.dyn_cast<Strafe>()) {
-            const float delta_x = std::round(strafe->dir * 2 * std::cos((view->angle - 90) * kDeg2Rad));
-            const float delta_z = std::round(strafe->dir * 2 * std::sin((view->angle - 90) * kDeg2Rad));
-            velocity_[0] = std::clamp<I64>(velocity_[0] + delta_x, -kMaxVelocity, kMaxVelocity);
-            velocity_[2] = std::clamp<I64>(velocity_[2] + delta_z, -kMaxVelocity, kMaxVelocity);
-            return Status::kMove;
-        }
-        if (const auto move = message.dyn_cast<Move>()) {
-            const float delta_x = std::round(move->dir * 2 * std::cos(view->angle * kDeg2Rad));
-            const float delta_z = std::round(move->dir * 2 * std::sin(view->angle * kDeg2Rad));
-            velocity_[0] = std::clamp<I64>(velocity_[0] + delta_x, -kMaxVelocity, kMaxVelocity);
-            velocity_[2] = std::clamp<I64>(velocity_[2] + delta_z, -kMaxVelocity, kMaxVelocity);
-            return Status::kMove;
-        }
-        if (const auto *teleport = message.dyn_cast<Teleport>()) {
-            parts_.loc = teleport->dst;
-            return Status::kMove;
-        }
-
         return Entity::receive(message);
     }
 
@@ -95,30 +54,95 @@ struct Player final : Entity<3> {
         // }
     }
 
-    Status tick(const List<Message> &messages) override {
-        if (digging) {
-            const auto now = world_->ticks();
-            const auto time = last_dig.has_value() ? now - *last_dig : kDigTicks;
-            if (time >= kDigTicks) {
-                const auto *view = world_->view().dyn_cast<View3D>();
-                const Pos<3> &start = view->offset;
-                const Pos<3> end = view->project(kDigDist);
-                const Line sight(start, end);
-                if (auto itx = world_->first_except(sight, self())) {
-                    const Pos<3> pt = Pos<3>::round(itx->pt);
-                    const Box<3> dig_box(pt - 5, pt + 5);
-                    send<Hit<3>>(itx->actor, dig_box, 1);
-                    last_dig = Some(now);
-                }
-            }
-        }
-        return Entity::tick(messages);
-    }
+    Status tick(const List<Message> &messages) override { return Entity::tick(messages); }
 
     Status broken(const List<Component> &) override { return Status::kNone; }
 
-    Maybe<I64> last_dig = None;
-    bool digging = false;
+    U64 last_dig = 0;
+};
+
+struct Brake final : Action {
+    class_tag(Brake, Action);
+    explicit Brake(Actor src) : Action(std::move(src)) {}
+    Status act(Player &player) const override {
+        const I64 v0 = player.v()[0];
+        const I64 v2 = player.v()[2];
+        player.v()[0] = v0 > 0 ? std::max<I64>(v0 - 2, 0) : std::min<I64>(v0 + 2, 0);
+        player.v()[2] = v2 > 0 ? std::max<I64>(v2 - 2, 0) : std::min<I64>(v2 + 2, 0);
+        return Status::kMove;
+    }
+};
+
+struct Dig final : Action {
+    class_tag(Dig, Action);
+    using Action::Action;
+    Status act(Player &player) const override {
+        const World<3> *world = player.world();
+        const U64 now = world->ticks();
+        if (now >= player.last_dig + Player::kDigTicks) {
+            const auto *view = world->view().dyn_cast<View3D>();
+            const Pos<3> &start = view->offset;
+            const Pos<3> end = view->project(Player::kDigDist);
+            const Line sight(start, end);
+            if (const auto itx = world->first_except(sight, player.self())) {
+                const Pos<3> pt = Pos<3>::round(itx->pt);
+                const Box<3> dig_box(pt - 5, pt + 5);
+                player.send<Hit<3>>(itx->actor, dig_box, 1);
+                player.last_dig = now;
+            }
+        }
+        return Status::kNone;
+    }
+};
+
+struct Jump final : Action {
+    class_tag(Jump, Action);
+    explicit Jump(Actor src) : Action(std::move(src)) {}
+    Status act(Player &player) const override {
+        if (player.has_below() && player.v()[1] == 0) {
+            player.v()[1] = -30;
+            return Status::kMove;
+        }
+        return Status::kNone;
+    }
+};
+
+struct Strafe final : Action {
+    class_tag(Strafe, Action);
+    explicit Strafe(Actor src, const Dir dir) : Action(std::move(src)), dir(dir) {}
+    Status act(Player &player) const override {
+        const auto *view = player.world()->view().dyn_cast<View3D>();
+        const I64 delta_x = std::round(dir * 2 * std::cos((view->angle - 90) * kDeg2Rad));
+        const I64 delta_z = std::round(dir * 2 * std::sin((view->angle - 90) * kDeg2Rad));
+        player.v()[0] = std::clamp<I64>(player.v()[0] + delta_x, -Player::kMaxVelocity, Player::kMaxVelocity);
+        player.v()[2] = std::clamp<I64>(player.v()[2] + delta_z, -Player::kMaxVelocity, Player::kMaxVelocity);
+        return Status::kMove;
+    }
+    Dir dir;
+};
+
+struct Move final : Action {
+    class_tag(Move, Action);
+    explicit Move(Actor src, const Dir dir) : Action(std::move(src)), dir(dir) {}
+    Status act(Player &player) const override {
+        const auto *view = player.world()->view().dyn_cast<View3D>();
+        const I64 delta_x = std::round(dir * 2 * std::cos(view->angle * kDeg2Rad));
+        const I64 delta_z = std::round(dir * 2 * std::sin(view->angle * kDeg2Rad));
+        player.v()[0] = std::clamp<I64>(player.v()[0] + delta_x, -Player::kMaxVelocity, Player::kMaxVelocity);
+        player.v()[2] = std::clamp<I64>(player.v()[2] + delta_z, -Player::kMaxVelocity, Player::kMaxVelocity);
+        return Status::kMove;
+    }
+    Dir dir;
+};
+
+struct Teleport final : Action {
+    class_tag(Teleport, Action);
+    explicit Teleport(Actor src, const Pos<3> &dst) : Action(std::move(src)), dst(dst) {}
+    Status act(Player &player) const override {
+        player.x() = dst;
+        return Status::kMove;
+    }
+    Pos<3> dst;
 };
 
 static const std::vector kColors = {
@@ -130,6 +154,8 @@ static const std::vector kColors = {
 
 struct G1 final : World<3> {
     class_tag(G1, World<3>);
+
+    static constexpr U64 kViewDistance = 10000;
 
     std::vector<Material> materials;
 
@@ -150,6 +176,7 @@ struct G1 final : World<3> {
         view3d().offset = start;
         view3d().angle = 90;
         view3d().pitch = 10;
+        view3d().dist = kViewDistance;
 
         const std::vector colors{Color::kRed, Color::kGreen, Color::kBlue};
         I64 x = 500;
@@ -272,14 +299,14 @@ struct G1 final : World<3> {
 };
 
 struct PlayerControls final : Tool<3> {
-    explicit PlayerControls(Window *window, G1 *world) : Tool(window, world), g1(world) {
-        on_mouse_down[Mouse::Left] = [this] { g1->player->digging = true; };
-        on_mouse_up[Mouse::Left] = [this] { g1->player->digging = false; };
-    }
+    explicit PlayerControls(Window *window, G1 *world) : Tool(window, world), g1(world) {}
     void tick() override {
         Actor player(g1->player);
         if (window_->pressed(Key::Space)) {
             world_->send<Jump>(nullptr, player);
+        }
+        if (window_->down(Mouse::Left)) {
+            world_->send<Dig>(nullptr, player);
         }
         bool no_strafe = false, no_move = false;
         if (window_->pressed(Key::A)) {
@@ -310,12 +337,11 @@ struct DebugScreen final : AbstractScreen {
     void draw() override {
         const auto *view3d = world_->view().dyn_cast<View3D>();
         const Pos<3> offset = view3d->offset;
-        const Pos<3> target = view3d->project(100);
+        const Pos<3> target = view3d->project();
         const Line<3> line{offset, target};
         const Actor player(world_->player);
-        const auto itx = world_->first_except(line, player);
         std::string at = "N/A";
-        if (itx.has_value()) {
+        if (const auto itx = world_->first_except(line, player)) {
             at = itx->actor.dyn_cast<Entity<3>>()->bbox().to_string();
         }
 
