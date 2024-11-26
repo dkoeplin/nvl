@@ -3,6 +3,7 @@
 #include "a2/entity/Player.h"
 #include "a2/ui/DeathScreen.h"
 #include "a2/ui/DebugScreen.h"
+#include "a2/ui/PauseScreen.h"
 #include "nvl/entity/Block.h"
 #include "nvl/material/Bulwark.h"
 #include "nvl/material/Material.h"
@@ -19,7 +20,7 @@ const std::vector kColors = {
 };
 } // namespace
 
-WorldA2::WorldA2(Window *window) : World<3>(window, {.gravity_accel = 3, .maximum_y = 3000}) {
+WorldA2::WorldA2(AbstractScreen *parent) : World<3>(parent, {.gravity_accel = 3, .maximum_y = 3000}) {
     window_->set_background(Color::kSkyBlue);
 
     for (const auto &color : kColors) {
@@ -53,12 +54,16 @@ WorldA2::WorldA2(Window *window) : World<3>(window, {.gravity_accel = 3, .maximu
         x += 100;
     }
 
-    on_key_down[Key::P] = [this] { window_->open<DebugScreen>(this); };
+    on_key_down[Key::P] = [this] {
+        paused = true;
+        window_->open<PauseScreen>(this);
+    };
     on_key_down[Key::N] = [this] { spawn_random_cube(); };
 }
 
 void WorldA2::remove(const Actor &actor) {
     if (actor.isa<Player>()) {
+        paused = true;
         window_->open<DeathScreen>(this);
     } else {
         World::remove(actor);
@@ -82,6 +87,8 @@ void WorldA2::spawn_random_cube() {
 }
 
 void WorldA2::tick() {
+    return_if(paused);
+
     const auto prev_player_loc = player->loc();
     World::tick();
 

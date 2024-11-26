@@ -12,8 +12,19 @@ class Castable {
 public:
     struct BaseClass {
         virtual ~BaseClass() = default;
-        Ref self() const { return Ref(Ptr(static_cast<const T *>(this))); }
-        Ref self() { return Ref(Ptr(static_cast<T *>(this))); }
+        Ref self() const {
+            T *inst = static_cast<const T *>(this);
+            Ptr ptr(inst);
+            return Ref(ptr);
+        }
+        Ref self() {
+            T *inst = static_cast<T *>(this);
+            Ptr ptr(inst);
+            return Ref(ptr);
+        }
+    };
+    struct Hash {
+        U64 operator()(const Ref &ref) const { return sip_hash(ref.ptr()); }
     };
 
     template <typename R, typename... Args>

@@ -9,9 +9,7 @@ namespace nvl::test {
 class TensorWindow final : public Window {
 public:
     explicit TensorWindow(const std::string &title, Pos<2> shape);
-    void draw() override;
-    void tick() override;
-    void feed() override;
+    void predraw() override;
 
     void line_box(const Color &color, const Box<2> &box) override;
     void fill_box(const Color &color, const Box<2> &box) override;
@@ -34,7 +32,13 @@ public:
 
     template <typename Event, typename... Args>
     void send_event(Args &&...args) {
-        events_.push_back(InputEvent::get<Event>(std::forward<Args>(args)...));
+        pending_events_.push_back(InputEvent::get<Event>(std::forward<Args>(args)...));
+    }
+
+    List<InputEvent> detect_events() override {
+        List<InputEvent> result = pending_events_;
+        pending_events_.clear();
+        return result;
     }
 
     pure const Tensor<2, Color> &tensor() const { return tensor_; }
@@ -42,7 +46,7 @@ public:
 private:
     std::string title_;
     Tensor<2, Color> tensor_;
-    List<InputEvent> events_;
+    List<InputEvent> pending_events_;
 };
 
 inline void print_10x10_tensor(const Tensor<2, Color> &tensor) {

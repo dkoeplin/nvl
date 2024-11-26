@@ -7,25 +7,9 @@ namespace nvl::test {
 TensorWindow::TensorWindow(const std::string &title, Pos<2> shape)
     : Window(title, shape), title_(title), tensor_(shape, Color::kWhite) {}
 
-void TensorWindow::tick() {
-    for (auto &child : children_) {
-        child->tick_all();
-    }
-}
-
-void TensorWindow::feed() {
-    for (auto iter = children_.begin(); iter != children_.end() && !events_.empty(); ++iter) {
-        events_ = (*iter)->feed_all(events_);
-    }
-    events_.clear();
-}
-
-void TensorWindow::draw() {
+void TensorWindow::predraw() {
     for (Color &pixel : tensor_) {
         pixel = Color::kWhite;
-    }
-    for (auto &child : children_) {
-        child->draw_all();
     }
 }
 

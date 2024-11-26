@@ -26,17 +26,17 @@ RayWindow::RayWindow(const std::string &title, Pos<2> shape) : Window(title, sha
 
 RayWindow::~RayWindow() { CloseWindow(); }
 
-void RayWindow::draw() {
+void RayWindow::predraw() {
     BeginDrawing();
     ClearBackground(raycolor(background_));
-    for (auto &child : children_) {
-        child->draw_all();
-    }
-    // If SetTargetFPS is used, this sleeps
+}
+
+void RayWindow::postdraw() {
+    // NOTE: If SetTargetFPS is used, this sleeps
     EndDrawing();
 }
 
-void RayWindow::feed() {
+List<InputEvent> RayWindow::detect_events() {
     List<InputEvent> events;
     while (auto key = GetKeyPressed()) {
         pressed_keys_.emplace(static_cast<Key::Value>(key));
@@ -77,10 +77,7 @@ void RayWindow::feed() {
     if (prev_mouse_ != curr_mouse_ && prev_mouse_.has_value() && curr_mouse_.has_value()) {
         events.push_back(InputEvent::get<MouseMove>(pressed_mouse_));
     }
-
-    for (auto iter = children_.begin(); iter != children_.end() && !events.empty(); ++iter) {
-        events = (*iter)->feed_all(events);
-    }
+    return events;
 }
 
 void RayWindow::line_box(const Color &color, const Box<2> &box) {

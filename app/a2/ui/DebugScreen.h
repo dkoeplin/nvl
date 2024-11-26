@@ -9,7 +9,7 @@ namespace a2 {
 class DebugScreen final : public AbstractScreen {
 public:
     class_tag(DebugScreen, AbstractScreen);
-    explicit DebugScreen(Window *window, WorldA2 *world);
+    explicit DebugScreen(AbstractScreen *parent, WorldA2 *world);
 
 protected:
     void draw() override;

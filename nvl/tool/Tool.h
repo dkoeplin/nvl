@@ -15,7 +15,7 @@ template <U64 N>
 abstract class Tool : public AbstractScreen {
 public:
     class_tag(Tool, AbstractScreen);
-    explicit Tool(Window *window, World<N> *world) : AbstractScreen(window), world_(world) {}
+    explicit Tool(AbstractScreen *parent, World<N> *world) : AbstractScreen(parent), world_(world) {}
 
 protected:
     World<N> *world_;

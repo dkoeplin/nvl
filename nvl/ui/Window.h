@@ -18,26 +18,20 @@ namespace nvl {
 
 struct Color;
 
-class Window {
+class Window : public AbstractScreen {
 public:
+    class_tag(Window, AbstractScreen);
+
     enum class MouseMode {
         kViewport, // Invisible mouse, always centered.
         kStandard, // Visible mouse, moved by user.
     };
 
     explicit Window(const std::string &title, Pos<2> shape);
-    virtual ~Window() = default;
 
-    void tick_all();
-
-    virtual void feed() = 0;
-    virtual void draw() = 0;
-
-    template <typename T, typename... Args>
-    T *open(Args &&...args) {
-        children_.push_back(Screen::get<T>(this, std::forward<Args>(args)...));
-        return children_.back().dyn_cast<T>();
-    }
+    void draw() final;
+    void tick() final;
+    void react() final;
 
     /// Returns the current mouse position in window coordinates.
     pure Pos<2> mouse_coord() const { return curr_mouse_.has_value() ? *curr_mouse_ : center(); }
@@ -105,11 +99,13 @@ public:
     void set_background(const Color &color) { background_ = color; }
 
 protected:
-    friend class Offset;
-
+    virtual List<InputEvent> detect_events() = 0;
     virtual void set_view_offset(const ViewOffset &offset) = 0;
     virtual void end_view_offset(const ViewOffset &offset) = 0;
-    virtual void tick() = 0;
+
+    /// Called before/after drawing all child screens.
+    virtual void predraw() {}
+    virtual void postdraw() {}
 
     Set<Key> pressed_keys_;
     Set<Mouse> pressed_mouse_;
@@ -117,7 +113,6 @@ protected:
     Maybe<Pos<2>> prev_mouse_ = None;
     Pos<2> scroll_ = Pos<2>::zero;
 
-    List<Screen> children_;
     List<ViewOffset> views_;
 
     MouseMode mouse_mode_ = MouseMode::kStandard;

@@ -17,18 +17,18 @@ template <U64 N>
 class ToolBelt final : public AbstractScreen {
 public:
     class_tag(ToolBelt, AbstractScreen);
-    explicit ToolBelt(Window *window, World<N> *world) : AbstractScreen(window), world_(world) {
+    explicit ToolBelt(AbstractScreen *parent, World<N> *world) : AbstractScreen(parent), world_(world) {
         tools_ = {
-            Screen::get<BlockCreator>(window, world), // Creator
-            Screen::get<BlockBreaker>(window, world), // Breaker
-            Screen::get<BlockRemover>(window, world)  // Remover
+            Screen::get<BlockCreator>(parent, world), // Creator
+            Screen::get<BlockBreaker>(parent, world), // Breaker
+            Screen::get<BlockRemover>(parent, world)  // Remover
         };
 
-        children_.push_back(tools_[0].shared_ptr());
+        children_.push_back(tools_[0]);
 
         on_key_down[Key::B] = [this] {
             index_ = (index_ + 1) % tools_.size();
-            children_[0] = tools_[index_].shared_ptr();
+            children_[0] = tools_[index_];
             cooldown_ = 60;
         };
     }

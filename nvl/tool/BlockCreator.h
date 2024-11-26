@@ -16,7 +16,7 @@ namespace nvl {
 class BlockCreator final : public Tool<2> {
 public:
     class_tag(BlockCreator, Tool<2>);
-    explicit BlockCreator(Window *window, World<2> *world) : Tool(window, world) {
+    explicit BlockCreator(AbstractScreen *parent, World<2> *world) : Tool(parent, world) {
         on_mouse_down[Mouse::Left] = [this] {
             const auto color = world_->random.uniform<Color>(0, 255);
             const auto material = Material::get<TestMaterial>(color);

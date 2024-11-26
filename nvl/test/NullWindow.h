@@ -7,9 +7,7 @@ namespace nvl::test {
 class NullWindow final : public Window {
 public:
     NullWindow() : Window("null", {0, 0}) {}
-    void draw() override {}
-    void tick() override {}
-    void feed() override {}
+    List<InputEvent> detect_events() override { return {}; }
     void line_box(const Color &, const Box<2> &) override {}
     void fill_box(const Color &, const Box<2> &) override {}
     void line_cube(const Color &, const Box<3> &) override {}

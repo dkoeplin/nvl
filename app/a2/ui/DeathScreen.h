@@ -12,7 +12,7 @@ struct WorldA2;
 class DeathScreen final : public AbstractScreen {
 public:
     class_tag(DeathScreen, AbstractScreen);
-    explicit DeathScreen(Window *window, WorldA2 *world);
+    explicit DeathScreen(AbstractScreen *parent, WorldA2 *world);
 
 protected:
     void draw() override;

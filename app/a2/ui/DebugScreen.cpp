@@ -9,7 +9,7 @@
 
 namespace a2 {
 
-DebugScreen::DebugScreen(Window *window, WorldA2 *world) : AbstractScreen(window), world_(world) {
+DebugScreen::DebugScreen(AbstractScreen *parent, WorldA2 *world) : AbstractScreen(parent), world_(world) {
     on_key_down[Key::L] = [this] {
         for (const Actor &actor : world_->entities()) {
             if (const auto *block = actor.dyn_cast<Block<3>>()) {

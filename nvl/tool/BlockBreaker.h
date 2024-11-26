@@ -10,7 +10,7 @@ namespace nvl {
 class BlockBreaker final : public Tool<2> {
 public:
     class_tag(BlockBreaker, Tool<2>);
-    explicit BlockBreaker(Window *window, World<2> *world) : Tool(window, world) {
+    explicit BlockBreaker(AbstractScreen *parent, World<2> *world) : Tool(parent, world) {
         on_mouse_down[Mouse::Left] = on_mouse_move[{Mouse::Left}] = [this] {
             const Pos<2> pt = world_->window_to_world(window_->center());
             const Box<2> box(pt - radius_, pt + radius_);

@@ -63,8 +63,10 @@ bool compare_tensors(std::ostream &os, const Tensor<N, T> &a, const Tensor<N, T>
         if (a[i] != b[i]) {
             os << "Mismatch at " << i << ": " << a[i] << " != " << b[i] << std::endl;
             mismatches += 1;
-            if (mismatches >= max_mismatches)
+            if (mismatches >= max_mismatches) {
+                os << "(Hit maximum number of mismatches: " << max_mismatches << ")" << std::endl;
                 return false;
+            }
         }
     }
     return mismatches == 0;

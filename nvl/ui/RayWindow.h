@@ -8,8 +8,10 @@ class RayWindow : public Window {
 public:
     explicit RayWindow(const std::string &title, Pos<2> shape);
     ~RayWindow() override;
-    void draw() override;
-    void feed() override;
+    List<InputEvent> detect_events() override;
+
+    void predraw() override;
+    void postdraw() override;
 
     void line_box(const Color &color, const Box<2> &box) override;
     void fill_box(const Color &color, const Box<2> &box) override;
@@ -31,9 +33,6 @@ public:
     pure I64 height() const override;
     pure I64 width() const override;
     pure I64 fps() const override;
-
-protected:
-    void tick() override {}
 };
 
 } // namespace nvl

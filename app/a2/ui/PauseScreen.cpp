@@ -1,11 +1,15 @@
 #include "a2/ui/PauseScreen.h"
 
+#include "a2/world/WorldA2.h"
 #include "nvl/ui/Window.h"
 
 namespace a2 {
 
-PauseScreen::PauseScreen(Window *window) : AbstractScreen(window) {
-    on_key_down[Key::Any] = [this] { close(); };
+PauseScreen::PauseScreen(AbstractScreen *parent, WorldA2 *world) : AbstractScreen(parent), world_(world) {
+    on_key_down[Key::Any] = [this] {
+        world_->paused = false;
+        close();
+    };
 }
 
 void PauseScreen::draw() {
@@ -19,6 +23,9 @@ void PauseScreen::draw() {
     window_->centered_text(Color::kBlack, pos, 30, "Press Any Key to Resume");
 }
 
-void PauseScreen::tick() { glow.advance(); }
+void PauseScreen::tick() {
+    std::cout << "PAUSE SCREEN TICK" << std::endl;
+    glow.advance();
+}
 
 } // namespace a2

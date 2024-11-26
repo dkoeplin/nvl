@@ -9,7 +9,7 @@
 
 namespace a2 {
 
-DeathScreen::DeathScreen(Window *window, WorldA2 *world) : AbstractScreen(window), world_(world) {
+DeathScreen::DeathScreen(AbstractScreen *parent, WorldA2 *world) : AbstractScreen(parent), world_(world) {
     on_key_down[Key::Any] = [this] {
         if (ticks > Player::kRespawnTicks) {
             auto &view = world_->view3d();
@@ -17,6 +17,7 @@ DeathScreen::DeathScreen(Window *window, WorldA2 *world) : AbstractScreen(window
             world_->send<Teleport>(nullptr, Actor(player), player->spawn);
             view.angle = 90;
             view.pitch = 10;
+            world_->paused = false;
             close();
         }
     };

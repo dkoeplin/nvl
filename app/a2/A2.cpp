@@ -18,13 +18,20 @@ int main() {
     window.open<PlayerControls>(world);
     window.open<DebugScreen>(world);
 
+    // constexpr I64 kNanosPerDraw = 1e8;
+
     Time prev_tick = Clock::now();
+    // Time prev_draw = Clock::now();
     while (!window.should_close()) {
-        if (const Time now = Clock::now(); Duration(now - prev_tick) >= world->kNanosPerTick) {
+        const Time now = Clock::now();
+        if (Duration(now - prev_tick) >= world->kNanosPerTick) {
             prev_tick = now;
-            window.tick_all();
+            window.tick();
         }
-        window.feed();
+        window.react();
+        // if (Duration(now - prev_draw) >= kNanosPerDraw) {
+        //     prev_draw = now;
         window.draw();
+        //}
     }
 }

@@ -59,8 +59,8 @@ public:
     pure static bool is_up(const U64 dim, const Dir dir) { return dim == kVerticalDim && dir == Dir::Neg; }
     pure static bool is_down(const U64 dim, const Dir dir) { return dim == kVerticalDim && dir == Dir::Pos; }
 
-    explicit World(Window *window, Params params = {})
-        : AbstractScreen(window), kMillisPerTick(params.ms_per_tick), kNanosPerTick(params.ms_per_tick * 1e6),
+    explicit World(AbstractScreen *parent, Params params = {})
+        : AbstractScreen(parent), kMillisPerTick(params.ms_per_tick), kNanosPerTick(params.ms_per_tick * 1e6),
           kPixelsPerMeter(params.pixels_per_meter),
           kGravityAccel(params.gravity_accel * kPixelsPerMeter * kMillisPerTick * kMillisPerTick / 1e6),
           kMaxVelocity(params.terminal_velocity * kMillisPerTick * kPixelsPerMeter / 1e3),

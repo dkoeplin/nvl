@@ -13,8 +13,7 @@ set(CMAKE_CXX_FLAGS " \
 -Wshadow \
 -Werror \
 -fsanitize=address\
-"
-)
+")
 
 add_library(nvl SHARED
         nvl/actor/Actor.h

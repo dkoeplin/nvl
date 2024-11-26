@@ -11,7 +11,7 @@ namespace nvl {
 class BlockRemover final : public Tool<2> {
 public:
     class_tag(BlockRemover, Tool<2>);
-    explicit BlockRemover(Window *window, World<2> *world) : Tool(window, world) {
+    explicit BlockRemover(AbstractScreen *parent, World<2> *world) : Tool(parent, world) {
         // Same action for dragging and moving
         on_mouse_move[{Mouse::Any}] = on_mouse_move[{}] = [this] {
             const Pos<2> pt = world_->window_to_world(window_->center());

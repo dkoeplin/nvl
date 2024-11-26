@@ -1,8 +1,8 @@
 #pragma once
 
 #include "nvl/entity/Entity.h"
-#include "nvl/world/World.h"
 #include "nvl/reflect/ClassTag.h"
+#include "nvl/world/World.h"
 
 namespace a2 {
 
@@ -15,7 +15,7 @@ struct WorldA2 final : World<3> {
 
     static constexpr U64 kViewDistance = 10000;
 
-    explicit WorldA2(Window *window);
+    explicit WorldA2(AbstractScreen *parent);
 
     void remove(const Actor &actor) override;
 
@@ -29,6 +29,7 @@ struct WorldA2 final : World<3> {
     Player *player;
     U64 prev_generated = 0;
     U64 ticks_per_gen = 50;
+    bool paused = false;
 
     std::vector<Material> materials;
 };
