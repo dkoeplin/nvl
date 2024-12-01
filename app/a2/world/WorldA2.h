@@ -1,6 +1,7 @@
 #pragma once
 
 #include "nvl/entity/Entity.h"
+#include "nvl/macros/Literals.h"
 #include "nvl/reflect/ClassTag.h"
 #include "nvl/world/World.h"
 
@@ -12,8 +13,6 @@ struct Player;
 
 struct WorldA2 final : World<3> {
     class_tag(WorldA2, World<3>);
-
-    static constexpr U64 kViewDistance = 10000;
 
     explicit WorldA2(AbstractScreen *parent);
 

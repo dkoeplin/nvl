@@ -20,43 +20,44 @@ const std::vector kColors = {
 };
 } // namespace
 
-WorldA2::WorldA2(AbstractScreen *parent) : World<3>(parent, {.gravity_accel = 3, .maximum_y = 3000}) {
+WorldA2::WorldA2(AbstractScreen *parent) : World<3>(parent, {.gravity_accel = 3, .maximum_y = 10}) {
     window_->set_background(Color::kSkyBlue);
+    paused = true;
+    open<PauseScreen>(this);
 
     for (const auto &color : kColors) {
         materials.push_back(Material::get<TestMaterial>(color));
     }
 
     const Material bulwark = Material::get<Bulwark>(Color::kDarkGreen);
-    constexpr Box<3> base({0, 0, 0}, {2000, 50, 2000});
-    spawn<Block<3>>(Pos<3>{0, 1000, 0}, base, bulwark);
+    spawn<Block<3>>(Pos<3>{-5, 0, -5}, Pos<3>{10, 1, 10}, bulwark);
 
-    constexpr Pos<3> start{500, 950, 300};
+    constexpr Pos<3> start{0, -2, 0};
     player = spawn<Player>(start);
     view3d().offset = start;
     view3d().angle = 90;
     view3d().pitch = 10;
-    view3d().dist = kViewDistance;
+    view3d().dist = Player::kViewDistance;
 
     const std::vector colors{Color::kRed, Color::kGreen, Color::kBlue};
-    I64 x = 500;
-    constexpr Pos<3> shape{50, 50, 50};
+    I64 x = -2500;
+    constexpr Pos<3> shape{1_m, 1_m, 1_m};
     for (const auto &color : colors) {
-        const Pos<3> loc{x, 950, 500};
+        const Pos<3> loc{x, -2_m, -100_mm};
         spawn<Block<3>>(loc, shape, Material::get<TestMaterial>(color));
-        x += 100;
+        x += 2_m;
     }
     const std::vector colors2{Color::kYellow, Color::kOrange, Color::kPurple};
-    x = 500;
+    x = -2500_mm;
     for (const auto &color : colors2) {
-        const Pos<3> loc{x, 850, 500};
+        const Pos<3> loc{x, -3_m, -100_mm};
         spawn<Block<3>>(loc, shape, Material::get<TestMaterial>(color));
-        x += 100;
+        x += 2_m;
     }
 
     on_key_down[Key::P] = [this] {
         paused = true;
-        window_->open<PauseScreen>(this);
+        open<PauseScreen>(this);
     };
     on_key_down[Key::N] = [this] { spawn_random_cube(); };
 }
@@ -71,18 +72,17 @@ void WorldA2::remove(const Actor &actor) {
 }
 
 void WorldA2::spawn_random_cube() {
-    const auto slots = ceil_div(1000, 50);
-    const auto left = random.uniform<I64, I64>(-4, slots + 4);
-    const auto back = random.uniform<I64, I64>(-4, slots + 4);
-    const auto width = random.uniform<I64, I64>(1, 5);
-    const auto height = random.uniform<I64, I64>(1, 5);
-    const auto depth = random.uniform<I64, I64>(1, 5);
-    const auto top = std::min<I64>(0, entities_.bbox().min[1]) - height * 50 - 200;
+    const auto left = random.uniform<I64, I64>(-1_km, 1_km);
+    const auto back = random.uniform<I64, I64>(-1_km, 1_km);
+    const auto width = random.uniform<I64, I64>(10_mm, 5_m);
+    const auto height = random.uniform<I64, I64>(10_mm, 5_m);
+    const auto depth = random.uniform<I64, I64>(10_mm, 5_m);
+    const auto top = std::min<I64>(0, entities_.bbox().min[1]) - height - 2_m;
     const auto color_idx = random.uniform<U64, U64>(0, materials.size() - 1);
     const auto material = materials.at(color_idx);
-    const Pos<3> pos{left * 50, top, back * 50};
-    const Box<3> box{{0, 0, 0}, {width * 50, height * 50, depth * 50}};
-    spawn<Block<3>>(pos, box, material);
+    const Pos<3> pos{left, top, back};
+    const Pos<3> shape{width, height, depth};
+    spawn<Block<3>>(pos, shape, material);
     prev_generated = ticks();
 }
 

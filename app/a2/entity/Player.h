@@ -1,6 +1,7 @@
 #pragma once
 
 #include "nvl/entity/Entity.h"
+#include "nvl/macros/Literals.h"
 
 namespace a2 {
 
@@ -11,8 +12,9 @@ struct Player final : Entity<3> {
 
     static constexpr I64 kMaxVelocity = 10;
     static constexpr I64 kDigTicks = 5;
-    static constexpr I64 kDigDist = 100;
-    static constexpr I64 kDigRadius = 5;
+    static constexpr I64 kDigDist = 3_m;
+    static constexpr I64 kDigRadius = 500_mm;
+    static constexpr U64 kViewDistance = 10_m;
     static constexpr U64 kRespawnTicks = 100;
 
     explicit Player(const Pos<3> &loc);

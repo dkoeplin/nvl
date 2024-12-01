@@ -7,10 +7,14 @@ namespace a2 {
 
 Status Move::act(Player &player) const {
     const auto *view = player.world()->view().dyn_cast<View3D>();
-    const I64 delta_x = std::round(dir * 2 * std::cos(view->angle * kDeg2Rad));
-    const I64 delta_z = std::round(dir * 2 * std::sin(view->angle * kDeg2Rad));
-    player.v()[0] = std::clamp<I64>(player.v()[0] + delta_x, -Player::kMaxVelocity, Player::kMaxVelocity);
-    player.v()[2] = std::clamp<I64>(player.v()[2] + delta_z, -Player::kMaxVelocity, Player::kMaxVelocity);
+    Vec<3> v = player.v().to_vec();
+    v[0] += dir * 2 * std::cos(view->angle * kDeg2Rad);
+    v[2] += dir * 2 * std::sin(view->angle * kDeg2Rad);
+    if (v.magnitude() > Player::kMaxVelocity) {
+        v *= Player::kMaxVelocity / v.magnitude();
+    }
+    player.v()[0] = std::round(v[0]);
+    player.v()[2] = std::round(v[2]);
     return Status::kMove;
 }
 

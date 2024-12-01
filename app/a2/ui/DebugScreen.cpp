@@ -18,7 +18,7 @@ DebugScreen::DebugScreen(AbstractScreen *parent, WorldA2 *world) : AbstractScree
         }
         const auto &view3d = world_->view3d();
         const Pos<3> offset = view3d.offset;
-        const Pos<3> target = view3d.project(100);
+        const Pos<3> target = view3d.project();
         std::cout << "  Offset: " << offset << std::endl;
         std::cout << "  Target: " << target << std::endl;
     };
@@ -40,7 +40,8 @@ void DebugScreen::draw() {
     window_->text(Color::kBlack, {10, 70}, 20, "Target: " + target.to_string());
     window_->text(Color::kBlack, {10, 100}, 20, "At:    " + at);
     window_->text(Color::kBlack, {10, 130}, 20, "Angle: " + std::to_string(view3d.angle));
-    window_->text(Color::kBlack, {10, 160}, 20,
+    window_->text(Color::kBlack, {10, 160}, 20, "Pitch: " + std::to_string(view3d.pitch));
+    window_->text(Color::kBlack, {10, 190}, 20,
                   "Alive: " + std::to_string(world_->num_awake()) + "/" + std::to_string(world_->num_alive()));
 }
 

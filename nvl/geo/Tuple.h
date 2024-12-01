@@ -7,6 +7,7 @@
 #include "nvl/data/SipHash.h"
 #include "nvl/macros/Aliases.h"
 #include "nvl/macros/Assert.h"
+#include "nvl/math/Grid.h"
 #include "nvl/reflect/ClassTag.h"
 
 namespace nvl {
@@ -46,7 +47,7 @@ public:
         const Tuple &vec_;
     };
 
-    /// Returns a Tuple of rank `N` where all elements are `value`.
+    /// Returns an instance of rank `N` where all elements are `value`.
     static constexpr Concrete fill(const T value) {
         Concrete result;
         for (U64 i = 0; i < N; ++i) {
@@ -55,7 +56,7 @@ public:
         return result;
     }
 
-    /// Returns a Tuple of rank `N` where all elements are zero except the one at `i`, which is `x`.
+    /// Returns an instance of rank `N` where all elements are zero except the one at `i`, which is `x`.
     static constexpr Concrete unit(const U64 i, const T x = 1) {
         ASSERT(i < N, "Index " << i << " is out of bounds [" << 0 << ", " << N << ")");
         Concrete result = fill(0);
@@ -63,10 +64,10 @@ public:
         return result;
     }
 
-    /// Returns a Tuple of rank `N` where all elements are zero.
+    /// An instance of rank `N` where all elements are zero.
     static const Concrete zero;
 
-    /// Returns a Tuple of rank `N` where all elements are one.
+    /// An instance of rank `N` where all elements are one.
     static const Concrete ones;
 
     /// Returns a Tuple of rank `N` with uninitialized elements.
@@ -88,7 +89,7 @@ public:
         requires(N == 5)
         : indices_{a, b, c, d, e} {}
 
-    /// Implicitly converts this Tuple to a single element. Only valid for rank 1.
+    /// Implicitly converts this instance to a single element. Only valid for rank 1.
     explicit operator T() const {
         static_assert(N == 1, "Cannot convert Tuple of rank > 1 to integer.");
         return indices_[0];
@@ -99,7 +100,7 @@ public:
     pure Iterator<T> begin() const { return iterator::template begin<View::kImmutable>(*this); }
     pure Iterator<T> end() const { return iterator::template end<View::kImmutable>(*this); }
 
-    /// Returns the rank of this Tuple.
+    /// Returns the rank of this instance.
     pure constexpr U64 rank() const { return N; }
 
     /// Returns the element at `i` or None if `i` is out of bounds.
@@ -113,13 +114,14 @@ public:
         ASSERT(i < N, "Index " << i << " is out of bounds [" << 0 << ", " << N << ")");
         return indices_[i];
     }
+
     /// Returns a reference to the element at `i`, asserting that `i` is within bounds.
     pure constexpr T &operator[](const U64 i) {
         ASSERT(i < N, "Index " << i << " is out of bounds [" << 0 << ", " << N << ")");
         return indices_[i];
     }
 
-    /// Returns a copy of this Tuple with the element at `i` changed to `v`.
+    /// Returns a copy with the element at `i` changed to `v`.
     pure Concrete with(const U64 i, const T v) const {
         ASSERT(i < N, "Index " << i << " is out of bounds [" << 0 << ", " << N << ")");
         Concrete result = *static_cast<const Concrete *>(this);
@@ -127,7 +129,7 @@ public:
         return result;
     }
 
-    /// Returns a copy of this Tuple with every element negated.
+    /// Returns a copy with every element negated.
     pure Concrete operator-() const {
         Concrete result = *static_cast<const Concrete *>(this);
         for (I64 &x : result.indices_) {
@@ -136,7 +138,7 @@ public:
         return result;
     }
 
-    /// Returns a new Tuple with the result of element-wise multiplication.
+    /// Returns a new instance with the result of element-wise multiplication.
     pure Concrete operator*(const Concrete &rhs) const {
         Concrete result;
         for (U64 i = 0; i < N; ++i) {
@@ -145,7 +147,7 @@ public:
         return result;
     }
 
-    /// Returns a new Tuple with the result of element-wise division.
+    /// Returns a new instance with the result of element-wise division.
     pure Concrete operator/(const Concrete &rhs) const {
         Concrete result;
         for (U64 i = 0; i < N; ++i) {
@@ -154,7 +156,7 @@ public:
         return result;
     }
 
-    /// Returns a new Tuple with the result of element-wise addition.
+    /// Returns a new instance with the result of element-wise addition.
     pure Concrete operator+(const Concrete &rhs) const {
         Concrete result;
         for (U64 i = 0; i < N; ++i) {
@@ -163,7 +165,7 @@ public:
         return result;
     }
 
-    /// Returns a new Tuple with the result of element-wise subtraction.
+    /// Returns a new instance with the result of element-wise subtraction.
     pure Concrete operator-(const Concrete &rhs) const {
         Concrete result;
         for (U64 i = 0; i < N; ++i) {
@@ -172,7 +174,7 @@ public:
         return result;
     }
 
-    /// Returns a new Tuple with the result of element-wise multiplication.
+    /// Returns a new instance with the result of element-wise multiplication.
     pure Concrete operator*(const T rhs) const {
         Concrete result = *static_cast<const Concrete *>(this);
         for (I64 &x : result.indices_) {
@@ -181,7 +183,7 @@ public:
         return result;
     }
 
-    /// Returns a new Tuple with the result of element-wise division.
+    /// Returns a new instance with the result of element-wise division.
     pure Concrete operator/(const T rhs) const {
         Concrete result = *static_cast<const Concrete *>(this);
         for (I64 &x : result.indices_) {
@@ -190,7 +192,7 @@ public:
         return result;
     }
 
-    /// Returns a new Tuple with the result of element-wise addition.
+    /// Returns a new instance with the result of element-wise addition.
     pure Concrete operator+(const T rhs) const {
         Concrete result = *static_cast<const Concrete *>(this);
         for (I64 &x : result.indices_) {
@@ -199,7 +201,7 @@ public:
         return result;
     }
 
-    /// Returns a new Tuple with the result of element-wise subtraction.
+    /// Returns a new instance with the result of element-wise subtraction.
     pure Concrete operator-(const T rhs) const {
         Concrete result = *static_cast<const Concrete *>(this);
         for (I64 &x : result.indices_) {
@@ -208,7 +210,7 @@ public:
         return result;
     }
 
-    /// Returns true if the two Tuple instances have identical elements.
+    /// Returns true if the two instances have identical elements.
     pure bool operator==(const Concrete &rhs) const {
         for (U64 i = 0; i < N; ++i) {
             if (indices_[i] != rhs.indices_[i]) {
@@ -218,7 +220,7 @@ public:
         return true;
     }
 
-    /// Returns true if the two Tuple instances do not have identical elements.
+    /// Returns true if the two instances do not have identical elements.
     pure bool operator!=(const Concrete &rhs) const { return !(*this == rhs); }
 
     /// Returns true if every element is strictly less than the corresponding element in `rhs`.
@@ -246,6 +248,50 @@ public:
 
     /// Returns true if every element is greater than or equal to the corresponding element in `rhs`.
     pure bool all_gte(const Concrete &rhs) const { return rhs.all_lte(*static_cast<const Concrete *>(this)); }
+
+    /// Returns a new instance with the result of element-wise clamping to the given grid.
+    /// Elements are rounded up to the grid in each dimension.
+    pure Concrete grid_max(const Concrete &grid) const {
+        Concrete result;
+        for (U64 i = 0; i < N; i++) {
+            result[i] = nvl::grid_max(this->indices_[i], grid[i]);
+        }
+        return result;
+    }
+
+    pure Concrete grid_max(const I64 grid) const {
+        Concrete result;
+        for (U64 i = 0; i < N; i++) {
+            result[i] = nvl::grid_max(this->indices_[i], grid);
+        }
+        return result;
+    }
+
+    /// Returns a new instance with the result of element-wise clamping to the given grid.
+    /// Elements are rounded down to the grid in each dimension.
+    pure Concrete grid_min(const Concrete &grid) const {
+        Concrete result;
+        for (U64 i = 0; i < N; i++) {
+            result[i] = nvl::grid_min(this->indices_[i], grid[i]);
+        }
+        return result;
+    }
+
+    pure Concrete grid_min(const I64 grid) const {
+        Concrete result;
+        for (U64 i = 0; i < N; i++) {
+            result[i] = nvl::grid_min(this->indices_[i], grid);
+        }
+        return result;
+    }
+
+    pure T manhattan_dist(const Concrete &rhs) const {
+        T result = 0;
+        for (U64 i = 0; i < N; ++i) {
+            result += std::abs(this->indices_[i] - rhs.indices_[i]);
+        }
+        return result;
+    }
 
     pure F64 dist(const Concrete &rhs) const {
         F64 result = 0;
