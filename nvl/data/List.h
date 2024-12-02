@@ -27,6 +27,7 @@ public:
         explicit iterator(typename parent::const_iterator iter) : parent::const_iterator(iter) {}
         void increment() override { parent::const_iterator::operator++(); }
         pure const Value *ptr() override { return &parent::const_iterator::operator*(); }
+        pure U64 operator-(const iterator &rhs) const override { return this->base() - rhs.base(); }
         pure bool operator==(const iterator &rhs) const override { return this->base() == rhs.base(); }
     };
 
@@ -44,6 +45,7 @@ public:
             : parent::const_reverse_iterator(iter) {}
         void increment() override { parent::const_reverse_iterator::operator++(); }
         pure const Value *ptr() override { return &parent::const_reverse_iterator::operator*(); }
+        pure U64 operator-(const reverse_iterator &rhs) const override { return this->base() - rhs.base(); }
         pure bool operator==(const reverse_iterator &rhs) const override { return this->base() == rhs.base(); }
     };
 

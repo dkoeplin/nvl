@@ -1,7 +1,9 @@
 #pragma once
 
+#include "nvl/macros/Assert.h"
 #include "nvl/macros/Pure.h"
 #include "nvl/macros/ReturnIf.h"
+#include "nvl/macros/Unreachable.h"
 #include "nvl/reflect/Castable.h"
 
 namespace nvl {
@@ -29,6 +31,7 @@ struct AbstractIterator {
     // HACK: These are returned as const pointers, but creation of a mutable Iterator will cast away the const.
     pure virtual const Value *ptr() = 0;
 
+    pure virtual U64 diff(const AbstractIterator &rhs) const = 0;
     pure virtual bool equals(const AbstractIterator &rhs) const = 0;
 };
 
@@ -41,7 +44,14 @@ struct AbstractIteratorCRTP : AbstractIterator<Value> {
         auto *b = dyn_cast<Concrete>(&rhs);
         return b && *this == *b;
     }
+    pure virtual U64 operator-(const Concrete &rhs) const { UNREACHABLE; }
     pure virtual bool operator==(const Concrete &rhs) const = 0;
+
+    pure U64 diff(const AbstractIterator<Value> &rhs) const final {
+        auto *b = dyn_cast<Concrete>(&rhs);
+        ASSERT(b, "Cannot compute diff between differing iterator types.");
+        return *this - *b;
+    }
 };
 
 /**
@@ -89,6 +99,8 @@ struct Iterator {
         ptr_->increment();
         return prev;
     }
+
+    pure U64 operator-(const Iterator &rhs) const { return ptr_->diff(*rhs.ptr_); }
 
     pure bool operator==(const Iterator &rhs) const {
         return_if(ptr_ == nullptr || rhs.ptr_ == nullptr, ptr_ == rhs.ptr_);
