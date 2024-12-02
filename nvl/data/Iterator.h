@@ -44,7 +44,7 @@ struct AbstractIteratorCRTP : AbstractIterator<Value> {
         auto *b = dyn_cast<Concrete>(&rhs);
         return b && *this == *b;
     }
-    pure virtual U64 operator-(const Concrete &rhs) const { UNREACHABLE; }
+    pure virtual U64 operator-(const Concrete &) const { UNREACHABLE; }
     pure virtual bool operator==(const Concrete &rhs) const = 0;
 
     pure U64 diff(const AbstractIterator<Value> &rhs) const final {
