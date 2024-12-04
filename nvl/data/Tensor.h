@@ -25,7 +25,7 @@ public:
     pure Iterator<T> begin() const { return data_.begin(); }
     pure Iterator<T> end() const { return data_.end(); }
 
-    pure Range<Idx> indices() const { return Volume<N, I64>(Idx::zero, shape_ - 1).indices(); }
+    pure Range<Idx> indices() const { return Volume<N, I64>(Idx::zero, shape_).indices(); }
 
     pure expand bool has(Idx indices) const { return indices.all_gte(Idx::zero) && indices.all_lt(shape_); }
 
