@@ -32,6 +32,7 @@ add_library(nvl SHARED
         nvl/data/Set.h
         nvl/data/SipHash.cpp
         nvl/data/SipHash.h
+        nvl/data/Tensor.cpp
         nvl/data/Tensor.h
         nvl/data/UnionFind.h
         nvl/entity/Entity.h
