@@ -1,9 +1,9 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "nvl/geo/Box.h"
 #include "nvl/geo/BRTree.h"
-#include "nvl/geo/Pos.h"
+#include "nvl/geo/Tuple.h"
+#include "nvl/geo/Volume.h"
 #include "nvl/math/Random.h"
 #include "nvl/test/Fuzzing.h"
 #include "nvl/test/LabeledBox.h"
@@ -14,13 +14,13 @@ struct nvl::RandomGen<nvl::Box<N>> {
     pure Box<N> uniform(Random &random, const I min, const I max) const {
         const auto a = random.uniform<Pos<N>, I>(min, max);
         const auto b = random.uniform<Pos<N>, I>(min, max);
-        return Box(a, b);
+        return Box<2>(a, b);
     }
     template <typename I>
     pure Box<N> normal(Random &random, const I mean, const I stddev) const {
         const auto a = random.normal<Pos<N>, I>(mean, stddev);
         const auto b = random.normal<Pos<N>, I>(mean, stddev);
-        return Box(a, b);
+        return Box<2>(a, b);
     }
 };
 
@@ -39,9 +39,9 @@ using nvl::Ref;
 using nvl::Set;
 using nvl::test::LabeledBox;
 
-Set<At<2, Edge<2>>> view(List<Edge<2>> &list, const Pos<2> &offset) {
-    Set<At<2, Edge<2>>> set;
-    for (Edge<2> &item : list) {
+Set<At<2, Edge<2, I64>>> view(List<Edge<2, I64>> &list, const Pos<2> &offset) {
+    Set<At<2, Edge<2, I64>>> set;
+    for (Edge<2, I64> &item : list) {
         set.emplace(item, offset);
     }
     return set;
@@ -78,7 +78,7 @@ TEST(TestBRTree, move) {
 TEST(TestBRTree, edges) {
     BRTree<2, LabeledBox> tree;
     const auto box = tree.emplace(1, Box<2>({0, 0}, {32, 32}));
-    List<Edge<2>> edges = box->bbox().edges();
+    List<Edge<2, I64>> edges = box->bbox().edges();
 
     EXPECT_EQ(tree.edge_rtree().size(), 4);
 

@@ -5,8 +5,8 @@
 #include "nvl/actor/Actor.h"
 #include "nvl/data/Map.h"
 #include "nvl/data/Set.h"
-#include "nvl/geo/Box.h"
 #include "nvl/geo/RTree.h"
+#include "nvl/geo/Volume.h"
 #include "nvl/math/Random.h"
 #include "nvl/message/Created.h"
 #include "nvl/message/Destroy.h"
@@ -81,8 +81,8 @@ public:
     }
 
     pure Range<Actor> entities() const { return entities_.items(); }
-    pure Range<Actor> entities(const Pos<N> &pos) const { return entities_[pos]; }
     pure Range<Actor> entities(const Box<N> &box) const { return entities_[box]; }
+    pure Range<Actor> entities(const Pos<N> &pos) const { return entities_[pos]; }
 
     pure Maybe<Intersect> first_except(const Line<N> &line, const Actor &actor) const;
     pure Maybe<Intersect> first(const Line<N> &line) const { return first_except(line, nullptr); }
@@ -189,7 +189,7 @@ protected:
 template <U64 N>
 pure Maybe<typename World<N>::Intersect> World<N>::first_except(const Line<N> &line, const Actor &act) const {
     Maybe<Intersect> closest = None;
-    for (Actor actor : entities({line.a, line.b})) {
+    for (Actor actor : entities({floor(line.a), ceil(line.b)})) {
         if (auto *entity = actor.dyn_cast<Entity<N>>(); entity && actor != act) {
             if (auto int0 = line.intersect(entity->bbox())) {
                 if (auto int1 = entity->first(line)) {

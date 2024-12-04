@@ -36,11 +36,10 @@ add_library(nvl SHARED
         nvl/data/UnionFind.h
         nvl/entity/Entity.h
         nvl/geo/At.h
-        nvl/geo/Box.h
+        nvl/geo/Volume.h
         nvl/geo/BRTree.h
         nvl/geo/Dir.h
         nvl/geo/HasBBox.h
-        nvl/geo/Pos.h
         nvl/geo/RTree.h
         nvl/geo/Tuple.h
         nvl/io/HasPrint.h

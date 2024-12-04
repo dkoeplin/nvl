@@ -5,9 +5,9 @@
 #include "Color.h"
 #include "nvl/data/List.h"
 #include "nvl/data/Set.h"
-#include "nvl/geo/Box.h"
 #include "nvl/geo/Line.h"
-#include "nvl/geo/Pos.h"
+#include "nvl/geo/Tuple.h"
+#include "nvl/geo/Volume.h"
 #include "nvl/macros/Pure.h"
 #include "nvl/ui/Key.h"
 #include "nvl/ui/Mouse.h"
@@ -34,15 +34,15 @@ public:
     void react() final;
 
     /// Returns the current mouse position in window coordinates.
-    pure Pos<2> mouse_coord() const { return curr_mouse_.has_value() ? *curr_mouse_ : center(); }
+    pure Pos<2> mouse_coord() const { return curr_mouse_.has_value() ? *curr_mouse_ : Pos<2>::zero; }
 
     /// Returns the delta between current and previous mouse position, in window coordinates.
     pure Pos<2> mouse_delta() const {
         return (curr_mouse_.has_value() && prev_mouse_.has_value()) ? *curr_mouse_ - *prev_mouse_ : Pos<2>::zero;
     }
 
-    pure I64 scroll_x() const { return scroll_[0]; }
-    pure I64 scroll_y() const { return scroll_[1]; }
+    pure F64 scroll_x() const { return scroll_[0]; }
+    pure F64 scroll_y() const { return scroll_[1]; }
 
     pure const Set<Key> &pressed_keys() const { return pressed_keys_; }
     pure const Set<Mouse> &pressed_mouse() const { return pressed_mouse_; }
@@ -53,20 +53,28 @@ public:
     pure bool pressed(const Key key) const { return pressed_keys_.has(key); }
     pure bool down(const Mouse mouse) const { return pressed_mouse_.has(mouse); }
 
+    ////// 2D Drawing
+
+    /// Draws a box in the given coordinates.
     virtual void line_box(const Color &color, const Box<2> &box) = 0;
     virtual void fill_box(const Color &color, const Box<2> &box) = 0;
 
-    virtual void line_cube(const Color &color, const Box<3> &cube) = 0;
-    virtual void fill_cube(const Color &color, const Box<3> &cube) = 0;
-
+    /// Draws a line at the given coordinates
     virtual void line(const Color &color, const Line<2> &line) = 0;
-    virtual void line(const Color &color, const Line<3> &line) = 0;
 
     /// Draws the given text with the top-left of the text at `pos`.
     virtual void text(const Color &color, const Pos<2> &pos, I64 font_size, std::string_view text) = 0;
 
     /// Draws the given text with the center of the text at `pos`.
     virtual void centered_text(const Color &color, const Pos<2> &pos, I64 font_size, std::string_view text) = 0;
+
+    ////// 3D Drawing
+
+    /// Draws a cube at the given coordinates.
+    virtual void line_cube(const Color &color, const Box<3> &cube) = 0;
+    virtual void fill_cube(const Color &color, const Box<3> &cube) = 0;
+
+    virtual void line(const Color &color, const Line<3> &line) = 0;
 
     void push_view(const ViewOffset &offset);
     void pop_view();
@@ -109,9 +117,9 @@ protected:
 
     Set<Key> pressed_keys_;
     Set<Mouse> pressed_mouse_;
-    Maybe<Pos<2>> curr_mouse_ = None;
-    Maybe<Pos<2>> prev_mouse_ = None;
-    Pos<2> scroll_ = Pos<2>::zero;
+    Maybe<Tuple<2, I64>> curr_mouse_ = None;
+    Maybe<Tuple<2, I64>> prev_mouse_ = None;
+    Vec<2> scroll_ = Vec<2>::zero;
 
     List<ViewOffset> views_;
 

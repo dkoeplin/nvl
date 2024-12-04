@@ -1,7 +1,6 @@
 #pragma once
 
 #include "nvl/entity/Entity.h"
-#include "nvl/macros/Literals.h"
 
 namespace a2 {
 
@@ -10,12 +9,13 @@ using namespace nvl;
 struct Player final : Entity<3> {
     class_tag(Player, Entity<3>);
 
-    static constexpr I64 kMaxVelocity = 10;
-    static constexpr I64 kDigTicks = 5;
-    static constexpr I64 kDigDist = 3_m;
-    static constexpr I64 kDigRadius = 500_mm;
-    static constexpr U64 kViewDistance = 10_m;
+    static constexpr F64 kMaxVelocity = 10;
+    static constexpr F64 kDigDist = 3;
+    static constexpr F64 kDigRadius = 5;
+    static constexpr F64 kViewDistance = 100;
+
     static constexpr U64 kRespawnTicks = 100;
+    static constexpr U64 kDigTicks = 5;
 
     explicit Player(const Pos<3> &loc);
 
@@ -23,7 +23,7 @@ struct Player final : Entity<3> {
     Pos<3> &a() { return accel_; }
     Pos<3> &v() { return velocity_; }
 
-    World<3> *world() const { return world_; }
+    pure World<3> *world() const { return world_; }
 
     Status receive(const Message &message) override;
     void draw(Window *, const Color &) const override;

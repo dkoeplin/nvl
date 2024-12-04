@@ -2,9 +2,9 @@
 
 #include "nvl/data/Iterator.h"
 #include "nvl/geo/At.h"
-#include "nvl/geo/Box.h"
 #include "nvl/geo/HasBBox.h"
 #include "nvl/geo/RTree.h"
+#include "nvl/geo/Volume.h"
 #include "nvl/macros/Aliases.h"
 
 namespace nvl {
@@ -15,8 +15,9 @@ template <U64 N, typename Item, typename ItemRef = Ref<Item>, U64 kMaxEntries = 
           U64 kGridExpMax = 10>
 class BRTreeEdges {
 protected:
+    using Edge = nvl::Edge<N, I64>;
     using ItemTree = RTree<N, Item, ItemRef, kMaxEntries, kGridExpMin, kGridExpMax>;
-    using EdgeTree = RTree<N, Edge<N>, Ref<Edge<N>>, kMaxEntries, kGridExpMin, kGridExpMax>;
+    using EdgeTree = RTree<N, Edge, Ref<Edge>, kMaxEntries, kGridExpMin, kGridExpMax>;
     static Box<N> bbox(const ItemRef &item) { return static_cast<const Item *>(item.ptr())->bbox(); }
 
     BRTreeEdges() = default;
@@ -35,13 +36,13 @@ protected:
 
             // Recompute edges across all values
             for (const ItemRef &item : items_) {
-                for (const Edge<N> &edge : bbox(item).edges()) {
+                for (const auto &edge : bbox(item).edges()) {
                     List<Box<N>> overlap;
                     for (const ItemRef &b : items_[edge.bbox()]) {
                         overlap.push_back(bbox(b));
                     }
                     Range<Box<N>> overlap_range = overlap.range();
-                    for (const Edge<N> &remain : edge.diff(overlap_range)) {
+                    for (const Edge &remain : edge.diff(overlap_range)) {
                         edges_.insert(remain);
                     }
                 }
@@ -74,9 +75,10 @@ template <U64 N, typename Item, typename ItemRef = Ref<Item>, U64 kMaxEntries = 
     requires trait::HasBBox<Item>
 class BRTree : detail::BRTreeEdges<N, Item, ItemRef, kMaxEntries, kGridExpMin, kGridExpMax> {
 public:
+    using Edge = nvl::Edge<N, I64>;
     using Parent = detail::BRTreeEdges<N, Item, ItemRef, kMaxEntries, kGridExpMin, kGridExpMax>;
     using ItemTree = RTree<N, Item, ItemRef, kMaxEntries, kGridExpMin, kGridExpMax>;
-    using EdgeTree = RTree<N, Edge<N>, Ref<Edge<N>>, kMaxEntries, kGridExpMin, kGridExpMax>;
+    using EdgeTree = RTree<N, Edge, Ref<Edge>, kMaxEntries, kGridExpMin, kGridExpMax>;
     using Intersect = typename ItemTree::Intersect;
 
     /// Provides an iterator which returns a View of each Item when dereferenced.
@@ -177,18 +179,20 @@ public:
 
     using window_iterator = view_iterator<Item, ItemRef>;
     using item_iterator = view_iterator<Item, ItemRef>;
-    using edge_iterator = view_iterator<Edge<N>, Ref<Edge<N>>>;
+    using edge_iterator = view_iterator<Edge, Ref<Edge>>;
 
     /// Returns an unordered Range for iteration over all values in this tree in the given volume.
     /// Items are returned as View<N, Item>, where the view is with respect to this tree's global offset.
-    pure MRange<At<N, Item>> operator[](const Pos<N> &pos) { return operator[](Box<N>::unit(pos)); }
     pure MRange<At<N, Item>> operator[](const Box<N> &box) {
         return make_mrange<window_iterator>(this->items_[box - loc], loc);
     }
-    pure Range<At<N, Item>> operator[](const Pos<N> &pos) const { return operator[](Box<N>::unit(pos)); }
     pure Range<At<N, Item>> operator[](const Box<N> &box) const {
         return make_mrange<window_iterator>(this->items_[box - loc], loc);
     }
+
+    /// Returns an iterable range over all unique stored items at the given point.
+    pure MRange<At<N, Item>> operator[](const Pos<N> &pt) { return operator[](Box<N>::unit(pt)); }
+    pure Range<At<N, Item>> operator[](const Pos<N> &pt) const { return operator[](Box<N>::unit(pt)); }
 
     /// Returns the closest item which intersects with the line segment according to the distance function.
     pure Maybe<Intersect> first_where(const Line<N> &line, const std::function<Maybe<F64>(Intersect)> &dist) const {
@@ -205,7 +209,7 @@ public:
 
     /// Returns an unordered Range for iteration over all edges in this tree.
     /// Edges are returned as View<N, Edge<N>>, where the view is with respect to this tree's global offset.
-    pure Range<At<N, Edge<N>>> edges() const {
+    pure Range<At<N, Edge>> edges() const {
         const auto &edges = edge_rtree();
         auto iterator = edges.items();
         return make_range<edge_iterator>(iterator, loc);
@@ -220,17 +224,18 @@ public:
         pure List<Component> components() { return tree.items_.components(); }
 
         /// Returns an iterable range over all items in this tree in the given area relative to the tree's offset.
-        pure MRange<ItemRef> operator[](const Pos<N> &pos) { return tree.items_[pos]; }
         pure MRange<ItemRef> operator[](const Box<N> &box) { return tree.items_[box]; }
-        pure Range<ItemRef> operator[](const Pos<N> &pos) const { return tree.items_[pos]; }
         pure Range<ItemRef> operator[](const Box<N> &box) const { return tree.items_[box]; }
+
+        pure MRange<ItemRef> operator[](const Pos<N> &pos) { return tree.items_[pos]; }
+        pure Range<ItemRef> operator[](const Pos<N> &pos) const { return tree.items_[pos]; }
 
         /// Provides a view to the items contained in this tree relative to the tree's offset.
         pure MRange<ItemRef> items() { return tree.items_.items(); }
         pure Range<ItemRef> items() const { return tree.items_.items(); }
 
         /// Provides a view to the edges contained in this tree relative to the tree's offset.
-        pure Range<Ref<Edge<N>>> edges() const { return tree.get_edges().items(); }
+        pure Range<Ref<Edge>> edges() const { return tree.get_edges().items(); }
 
         BRTree &tree;
     } relative = Relative(*this);

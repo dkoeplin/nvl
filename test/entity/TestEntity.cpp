@@ -2,8 +2,8 @@
 
 #include "nvl/entity/Block.h"
 #include "nvl/entity/Entity.h"
-#include "nvl/geo/Box.h"
-#include "nvl/geo/Pos.h"
+#include "nvl/geo/Tuple.h"
+#include "nvl/geo/Volume.h"
 #include "nvl/material/TestMaterial.h"
 #include "nvl/message/Hit.h"
 

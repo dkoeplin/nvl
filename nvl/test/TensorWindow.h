@@ -8,7 +8,7 @@ namespace nvl::test {
 
 class TensorWindow final : public Window {
 public:
-    explicit TensorWindow(const std::string &title, Pos<2> shape);
+    explicit TensorWindow(const std::string &title, Tuple<2, I64> shape);
     void predraw() override;
 
     void line_box(const Color &color, const Box<2> &box) override;

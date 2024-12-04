@@ -54,7 +54,7 @@ List<InputEvent> RayWindow::detect_events() {
     }
 
     const auto [scroll_x, scroll_y] = GetMouseWheelMoveV();
-    scroll_ = {static_cast<I64>(scroll_x), static_cast<I64>(scroll_y)};
+    scroll_ = {scroll_x, scroll_y};
     if (scroll_x != 0) {
         events.push_back(InputEvent::get<MouseScroll>(Scroll::kHorizontal));
     }
@@ -81,32 +81,34 @@ List<InputEvent> RayWindow::detect_events() {
 }
 
 void RayWindow::line_box(const Color &color, const Box<2> &box) {
-    const Pos<2> shape = box.shape();
+    const Tuple<2, I64> shape = box.shape();
     DrawRectangleLines(box.min[0], box.min[1], shape[0], shape[1], raycolor(color));
 }
 
 void RayWindow::fill_box(const Color &color, const Box<2> &box) {
-    const Pos<2> shape = box.shape();
+    const Tuple<2, I64> shape = box.shape();
     DrawRectangle(box.min[0], box.min[1], shape[0], shape[1], raycolor(color));
 }
 
 void RayWindow::line_cube(const Color &color, const Box<3> &cube) {
-    const Pos<3> shape = cube.shape();
+    const Vec<3> min = real(cube.min);
+    const Vec<3> shape = real(cube.shape());
     // Cube position is the _center_ position for raylib
     Vector3 pos;
-    pos.x = static_cast<float>(cube.min[0]) + static_cast<float>(shape[0]) / 2;
-    pos.y = static_cast<float>(cube.min[1]) + static_cast<float>(shape[1]) / 2;
-    pos.z = static_cast<float>(cube.min[2]) + static_cast<float>(shape[2]) / 2;
+    pos.x = static_cast<float>(min[0] + shape[0] / 2);
+    pos.y = static_cast<float>(min[1] + shape[1] / 2);
+    pos.z = static_cast<float>(min[2] + shape[2] / 2);
     DrawCubeWires(pos, shape[0], shape[1], shape[2], raycolor(color));
 }
 
 void RayWindow::fill_cube(const Color &color, const Box<3> &cube) {
-    const Pos<3> shape = cube.shape();
+    const Vec<3> min = real(cube.min);
+    const Vec<3> shape = real(cube.shape());
     // Cube position is the _center_ position for raylib
     Vector3 pos;
-    pos.x = static_cast<float>(cube.min[0]) + static_cast<float>(shape[0]) / 2;
-    pos.y = static_cast<float>(cube.min[1]) + static_cast<float>(shape[1]) / 2;
-    pos.z = static_cast<float>(cube.min[2]) + static_cast<float>(shape[2]) / 2;
+    pos.x = static_cast<float>(min[0] + shape[0] / 2);
+    pos.y = static_cast<float>(min[1] + shape[1] / 2);
+    pos.z = static_cast<float>(min[2] + shape[2] / 2);
     DrawCube(pos, shape[0], shape[1], shape[2], raycolor(color));
 }
 
@@ -115,9 +117,9 @@ void RayWindow::line(const Color &color, const Line<2> &line) {
 }
 
 void RayWindow::line(const Color &color, const Line<3> &line) {
-    Vector3 start{
+    const Vector3 start{
         .x = static_cast<float>(line.a[0]), .y = static_cast<float>(line.a[1]), .z = static_cast<float>(line.a[2])};
-    Vector3 end{
+    const Vector3 end{
         .x = static_cast<float>(line.b[0]), .y = static_cast<float>(line.b[1]), .z = static_cast<float>(line.b[2])};
     DrawLine3D(start, end, raycolor(color));
 }

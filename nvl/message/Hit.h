@@ -1,6 +1,6 @@
 #pragma once
 
-#include "nvl/geo/Box.h"
+#include "nvl/geo/Volume.h"
 #include "nvl/macros/Aliases.h"
 #include "nvl/message/Message.h"
 

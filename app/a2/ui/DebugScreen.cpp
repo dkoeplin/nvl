@@ -5,7 +5,7 @@
 #include "nvl/actor/Actor.h"
 #include "nvl/entity/Block.h"
 #include "nvl/geo/Line.h"
-#include "nvl/geo/Pos.h"
+#include "nvl/geo/Tuple.h"
 
 namespace a2 {
 
@@ -18,7 +18,7 @@ DebugScreen::DebugScreen(AbstractScreen *parent, WorldA2 *world) : AbstractScree
         }
         const auto &view3d = world_->view3d();
         const Pos<3> offset = view3d.offset;
-        const Pos<3> target = view3d.project();
+        const Vec<3> target = view3d.project();
         std::cout << "  Offset: " << offset << std::endl;
         std::cout << "  Target: " << target << std::endl;
     };
@@ -26,8 +26,8 @@ DebugScreen::DebugScreen(AbstractScreen *parent, WorldA2 *world) : AbstractScree
 
 void DebugScreen::draw() {
     const auto &view3d = world_->view3d();
-    const Pos<3> offset = view3d.offset;
-    const Pos<3> target = view3d.project();
+    const Vec<3> offset = real(view3d.offset);
+    const Vec<3> target = view3d.project();
     const Line<3> line{offset, target};
     const Actor player(world_->player);
     std::string at = "N/A";

@@ -4,7 +4,7 @@
 #include "nvl/actor/Part.h"
 #include "nvl/actor/Status.h"
 #include "nvl/geo/BRTree.h"
-#include "nvl/geo/Pos.h"
+#include "nvl/geo/Tuple.h"
 #include "nvl/macros/Abstract.h"
 #include "nvl/macros/Aliases.h"
 #include "nvl/message/Destroy.h"
@@ -22,11 +22,13 @@ public:
     static constexpr U64 kMaxEntries = 10;
     static constexpr U64 kGridExpMin = 2;
     static constexpr U64 kGridExpMax = 10;
-    using Tree = BRTree<N, Part<N>, Ref<Part<N>>, kMaxEntries, kGridExpMin, kGridExpMax>;
+    using Part = nvl::Part<N>;
+    using Edge = nvl::Edge<N, I64>;
+    using Tree = BRTree<N, Part, Ref<Part>, kMaxEntries, kGridExpMin, kGridExpMax>;
     using Intersect = typename Tree::Intersect;
 
-    explicit Entity(Pos<N> loc, Range<Ref<Part<N>>> parts = {}) : parts_(loc, parts) {}
-    explicit Entity(Pos<N> loc, Range<Part<N>> parts) : parts_(loc, parts) {}
+    explicit Entity(Pos<N> loc, Range<Ref<Part>> parts = {}) : parts_(loc, parts) {}
+    explicit Entity(Pos<N> loc, Range<Part> parts) : parts_(loc, parts) {}
 
     pure Pos<N> loc() const { return parts_.loc; }
     pure Box<N> bbox() const { return parts_.bbox(); }
@@ -34,24 +36,24 @@ public:
     pure const Pos<N> &velocity() const { return velocity_; }
     pure const Pos<N> &accel() const { return accel_; }
 
-    pure Range<At<N, Edge<N>>> edges() const { return parts_.edges(); }
-    pure Range<At<N, Part<N>>> parts() const { return parts_.items(); }
-    pure Range<At<N, Part<N>>> parts(const Box<N> &box) const { return parts_[box]; }
-    pure Range<At<N, Part<N>>> parts(const Pos<N> &pos) const { return parts_[pos]; }
+    pure Range<At<N, Edge>> edges() const { return parts_.edges(); }
+    pure Range<At<N, Part>> parts() const { return parts_.items(); }
+    pure Range<At<N, Part>> parts(const Box<N> &box) const { return parts_[box]; }
+    pure Range<At<N, Part>> parts(const Pos<N> &pos) const { return parts_[pos]; }
 
     pure Maybe<Intersect> first(const Line<N> &line) const;
 
     struct Relative {
         explicit Relative(Entity &entity) : entity(entity) {}
-        pure Range<Ref<Part<N>>> parts() const { return entity.parts_.relative.items(); }
-        pure Range<Ref<Part<N>>> parts(const Box<N> &box) const { return entity.parts_.relative[box]; }
-        pure Range<Ref<Part<N>>> parts(const Pos<N> &pos) const { return entity.parts_.relative[pos]; }
-        pure Range<Ref<Edge<N>>> edges() const { return entity.parts_.relative.edges(); }
+        pure Range<Ref<Part>> parts() const { return entity.parts_.relative.items(); }
+        pure Range<Ref<Part>> parts(const Box<N> &box) const { return entity.parts_.relative[box]; }
+        pure Range<Ref<Part>> parts(const Pos<N> &pos) const { return entity.parts_.relative[pos]; }
+        pure Range<Ref<Edge>> edges() const { return entity.parts_.relative.edges(); }
         Entity &entity;
     } relative = Relative(*this);
 
     pure virtual bool falls() const {
-        return relative.parts().all([](const Ref<Part<N>> part) { return part->material->falls; });
+        return relative.parts().all([](const Ref<Part> part) { return part->material->falls; });
     }
 
     Status tick(const List<Message> &messages) override;
@@ -110,7 +112,7 @@ pure Maybe<typename Entity<N>::Intersect> Entity<N>::first(const Line<N> &line) 
 template <U64 N>
 Set<Actor> Entity<N>::above() const {
     Set<Actor> above;
-    for (const At<N, Edge<N>> &edge : parts_.edges()) {
+    for (const At<N, Edge> &edge : parts_.edges()) {
         if (World<N>::is_up(edge->dim, edge->dir)) {
             const Box<N> box = edge.bbox();
             for (const Actor &actor : world_->entities(box)) {
@@ -128,7 +130,7 @@ Set<Actor> Entity<N>::above() const {
 
 template <U64 N>
 bool Entity<N>::has_below() const {
-    for (const At<N, Edge<N>> &edge : parts_.edges()) {
+    for (const At<N, Edge> &edge : parts_.edges()) {
         if (World<N>::is_down(edge->dim, edge->dir)) {
             const Box<N> box = edge.bbox();
             for (const Actor &actor : world_->entities(box)) {
@@ -150,13 +152,13 @@ Pos<N> Entity<N>::next_velocity() const {
         const I64 a = accel[i];
         I64 v_next = std::clamp(v + a, -world_->kMaxVelocity, world_->kMaxVelocity);
         if (v != 0 || a != 0) {
-            for (const At<N, Part<N>> &part : parts()) {
+            for (const At<N, Part> &part : parts()) {
                 const Box<N> box = part.bbox();
                 const I64 x = (v >= 0) ? box.max[i] : box.min[i];
                 const Box<N> trj = box.with(i, x, x + v_next);
                 for (Actor actor : world_->entities(trj)) {
                     if (auto *entity = actor.dyn_cast<Entity<N>>(); entity && entity != this) {
-                        for (const At<N, Part<N>> &other : entity->parts(trj)) {
+                        for (const At<N, Part> &other : entity->parts(trj)) {
                             v_next = (v >= 0) ? std::clamp<I64>(other.bbox().min[i] - x, 0, v_next)
                                               : std::clamp<I64>(x - other.bbox().max[i], v_next, 0);
                         }
@@ -205,9 +207,9 @@ Status Entity<N>::hit(const List<Hit<N>> &hits) {
     bool was_hit = false;
     for (const Hit<N> &hit : hits) {
         const Box<N> local_box = hit.box - parts_.loc;
-        const List<Ref<Part<N>>> hit_parts(relative.parts(local_box));
+        const List<Ref<Part>> hit_parts(relative.parts(local_box));
         was_hit = was_hit || !hit_parts.empty();
-        for (const Ref<Part<N>> &part : hit_parts) {
+        for (const Ref<Part> &part : hit_parts) {
             const Box<N> area = part->bbox().widened(1);
             neighbors.insert(world_->entities(area));
             if (part->health > hit.strength) {

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "nvl/geo/Face.h"
-#include "nvl/geo/Vec.h"
+#include "nvl/geo/Tuple.h"
 #include "nvl/macros/Aliases.h"
 
 namespace nvl {

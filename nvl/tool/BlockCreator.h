@@ -2,8 +2,8 @@
 
 #include "nvl/actor/Actor.h"
 #include "nvl/entity/Block.h"
-#include "nvl/geo/Box.h"
-#include "nvl/geo/Pos.h"
+#include "nvl/geo/Tuple.h"
+#include "nvl/geo/Volume.h"
 #include "nvl/material/Material.h"
 #include "nvl/material/TestMaterial.h"
 #include "nvl/tool/Tool.h"
@@ -21,12 +21,12 @@ public:
             const auto color = world_->random.uniform<Color>(0, 255);
             const auto material = Material::get<TestMaterial>(color);
             init_ = world_->window_to_world(window_->center());
-            pending_ = std::make_unique<Block<2>>(Pos<2>::zero, Box(init_, init_), material);
+            pending_ = std::make_unique<Block<2>>(Pos<2>::zero, Box<2>(init_, init_), material);
         };
         on_mouse_move[{Mouse::Left}] = [this] {
             if (pending_) {
                 const Pos<2> pt = world_->window_to_world(window_->center());
-                const Box box(init_, pt);
+                const Box<2> box(init_, pt);
                 if (world_->entities(box).empty()) {
                     pending_ = std::make_unique<Block<2>>(Pos<2>::zero, box, pending_->material());
                 }

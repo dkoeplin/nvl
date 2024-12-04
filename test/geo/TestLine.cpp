@@ -1,10 +1,9 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "nvl/geo/Box.h"
 #include "nvl/geo/Line.h"
-#include "nvl/geo/Pos.h"
-#include "nvl/geo/Vec.h"
+#include "nvl/geo/Tuple.h"
+#include "nvl/geo/Volume.h"
 #include "nvl/math/Distribution.h"
 #include "nvl/math/Random.h"
 #include "nvl/test/Fuzzing.h"
@@ -17,13 +16,13 @@ struct nvl::RandomGen<Box<N>> {
     pure Box<N> uniform(Random &random, const I min, const I max) const {
         const auto a = random.uniform<Pos<N>, I>(min, max);
         const auto b = random.uniform<Pos<N>, I>(min, max);
-        return Box(a, b);
+        return Box<N>(a, b);
     }
     template <typename I>
     pure Box<N> normal(Random &random, const I mean, const I stddev) const {
         const auto a = random.normal<Pos<N>, I>(mean, stddev);
         const auto b = random.normal<Pos<N>, I>(mean, stddev);
-        return Box(a, b);
+        return Box<N>(a, b);
     }
 };
 
@@ -50,7 +49,7 @@ TEST(TestLine, intersect) {
 using FuzzLineIntersect = nvl::test::FuzzingTestFixture<Maybe<Intersect<2>>, Line<2>, Box<2>>;
 TEST_F(FuzzLineIntersect, fuzz2d) {
     num_tests = 1E3;
-    in[0] = nvl::Distribution::Uniform<I64>(-20, 20);
+    in[0] = nvl::Distribution::Uniform<F64>(-20, 20);
     in[1] = nvl::Distribution::Uniform<I64>(-15, 15);
     fuzz([](Maybe<Intersect<2>> &x, const Line<2> &line, const Box<2> &box) { x = line.intersect(box); });
 
@@ -63,7 +62,7 @@ TEST_F(FuzzLineIntersect, fuzz2d) {
         }
         std::cout << std::endl;*/
         if (box.contains(line.a)) {
-            ASSERT(x->pt == line.a.to_vec(), "Expected A to be the intersection when A is inside the box.");
+            ASSERT(x->pt == line.a, "Expected A to be the intersection when A is inside the box.");
             ASSERT(x->dist == 0, "Expected a distance of 0 when A is inside the box.");
             ASSERT(x->face == Face(Dir::Pos, 0), "Expected face +0 when A is inside the box.");
         }

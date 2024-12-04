@@ -11,16 +11,16 @@ namespace nvl {
 
 struct Jump final : AbstractMessage {
     class_tag(Jump, AbstractMessage);
-    explicit Jump(Actor src) : AbstractMessage(std::move(src)) {}
+    explicit Jump(AbstractActor *src) : AbstractMessage(src) {}
 };
 struct Move final : AbstractMessage {
     class_tag(Move, AbstractMessage);
-    explicit Move(Actor src, const Dir dir) : AbstractMessage(std::move(src)), dir(dir) {}
+    explicit Move(AbstractActor *src, const Dir dir) : AbstractMessage(src), dir(dir) {}
     Dir dir;
 };
 struct Brake final : AbstractMessage {
     class_tag(Brake, AbstractMessage);
-    explicit Brake(Actor src) : AbstractMessage(std::move(src)) {}
+    explicit Brake(AbstractActor *src) : AbstractMessage(src) {}
 };
 
 struct Player final : Entity<2> {
@@ -46,7 +46,7 @@ struct Player final : Entity<2> {
     }
 
     void draw(Window *window, const Color &scale) const override {
-        for (const At<2, Part<2>> &part : this->parts()) {
+        for (const At<2, Part> &part : this->parts()) {
             const auto color = part->material->color.highlight(scale);
             window->fill_box(color, part.bbox());
         }
@@ -88,16 +88,16 @@ struct Player final : Entity<2> {
 struct A1 final : World<2> {
     class_tag(A1, World<2>);
 
-    explicit A1(Window *window) : World(window, {.gravity_accel = 3}) {
+    explicit A1(AbstractScreen *window) : World(window, {.gravity_accel = 3}) {
         const Material bulwark = Material::get<Bulwark>();
-        const Pos<2> min = {0, window->height() - 50};
-        const Pos<2> max = {window->width(), window->height()};
+        const Pos<2> min = {0, window_->height() - 50};
+        const Pos<2> max = {window_->width(), window_->height()};
         const Box<2> base(min, max);
         spawn<Block<2>>(Pos<2>::zero, base, bulwark);
 
-        const Pos<2> start{window->center()[0], min[1] - 100};
+        const Pos<2> start{window_->center()[0], min[1] - 100};
         player = spawn<Player>(start);
-        view_ = ViewOffset::at(start - window->shape() / 2);
+        view_ = ViewOffset::at(start - window_->shape() / 2);
 
         on_key_down[Key::P] = [this] { paused = (paused > 0) ? 0 : 255; };
     }
@@ -150,7 +150,7 @@ struct A1 final : World<2> {
 };
 
 struct PlayerControls final : Tool<2> {
-    explicit PlayerControls(Window *window, A1 *world) : Tool(window, world), g0(world) {
+    explicit PlayerControls(AbstractScreen *window, A1 *world) : Tool(window, world), g0(world) {
         on_key_down[Key::J] = [this] { g0->player->digging = true; };
         on_key_up[Key::J] = [this] { g0->player->digging = false; };
     }
@@ -193,9 +193,9 @@ int main() {
     while (!window.should_close()) {
         if (const Time now = Clock::now(); Duration(now - prev_tick) >= world->kNanosPerTick) {
             prev_tick = now;
-            window.tick_all();
+            window.tick();
         }
-        window.feed();
+        window.react();
         window.draw();
     }
 }

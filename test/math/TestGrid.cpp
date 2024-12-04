@@ -37,8 +37,8 @@ TEST(TestGrid, grid_min) {
 }
 
 using Output = std::pair<I64, I64>;
-using TestGridFuzzer = nvl::test::FuzzingTestFixture<Output, I64, I64>;
-TEST_F(TestGridFuzzer, fuzz_grid) {
+using TestGridFuzzerI64 = nvl::test::FuzzingTestFixture<Output, I64, I64>;
+TEST_F(TestGridFuzzerI64, fuzz_grid_i64) {
     num_tests = 1E4;
     in[0] = nvl::Distribution::Uniform<I64>(-10000, 10000);
     in[1] = nvl::Distribution::Uniform<I64>(1, 1000);

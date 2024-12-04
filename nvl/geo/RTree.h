@@ -10,10 +10,10 @@
 #include "nvl/data/Ref.h"
 #include "nvl/data/Set.h"
 #include "nvl/data/UnionFind.h"
-#include "nvl/geo/Box.h"
 #include "nvl/geo/HasBBox.h"
 #include "nvl/geo/Line.h"
-#include "nvl/geo/Pos.h"
+#include "nvl/geo/Tuple.h"
+#include "nvl/geo/Volume.h"
 #include "nvl/io/IO.h"
 #include "nvl/macros/Abstract.h"
 #include "nvl/macros/Aliases.h"
@@ -52,7 +52,7 @@ struct Node {
 
     pure Entry *get(const Pos<N> &pos) const { return map.get(pos.grid_min(grid)); }
 
-    pure Range<Pos<N>> pos_iter(const Box<N> &vol) const { return vol.clamp(grid).pos_iter(Pos<N>::fill(grid)); }
+    pure Range<Pos<N>> indices(const Box<N> &vol) const { return vol.clamp(grid).indices(Pos<N>::fill(grid)); }
 
     U64 id = -1;
     Maybe<Parent> parent;
@@ -84,11 +84,11 @@ struct PreorderWork {
         ASSERT(node->parent.has_value(), "No parent defined for node #" << node->id);
         const Box<N> &node_range = node->parent->box;
         indented(depth - 1) << ">>[" << node->id << "] @ " << node->grid << std::endl;
-        pos_range = node_range.pos_iter(node->grid).once();
+        pos_range = node_range.indices(node->grid).once();
     }
     PreorderWork(Node *node, const Box<N> &bounds) : node(node), depth(0) {
         indented(depth) << "[" << node->id << "] @ " << node->grid << std::endl;
-        pos_range = bounds.clamp(node->grid).pos_iter(node->grid).once();
+        pos_range = bounds.clamp(node->grid).indices(node->grid).once();
     }
     Node *node;
     U64 depth;
@@ -214,7 +214,7 @@ public:
         }
 
         bool advance_node(Work &current) {
-            current.pair_range = current.node->pos_iter(current.vol).once();
+            current.pair_range = current.node->indices(current.vol).once();
             return visit_next_pair(current);
         }
 
@@ -401,11 +401,12 @@ public:
     MRange<Point> entries_in(const Box<N> &box) { return make_range<entry_iterator, View::kMutable>(*this, box); }
 
     /// Returns an iterable range over all unique stored items in the given volume.
-    pure MRange<ItemRef> operator[](const Pos<N> &pos) { return operator[](Box<N>::unit(pos)); }
     pure MRange<ItemRef> operator[](const Box<N> &box) { return make_mrange<window_iterator>(*this, box); }
-
-    pure Range<ItemRef> operator[](const Pos<N> &pos) const { return operator[](Box<N>::unit(pos)); }
     pure Range<ItemRef> operator[](const Box<N> &box) const { return make_range<window_iterator>(*this, box); }
+
+    /// Returns an iterable range over all unique stored items at the given point.
+    pure MRange<ItemRef> operator[](const Pos<N> &pt) { return operator[](Box<N>::unit(pt)); }
+    pure Range<ItemRef> operator[](const Pos<N> &pt) const { return operator[](Box<N>::unit(pt)); }
 
     struct Intersect : nvl::Intersect<N> {
         explicit Intersect(const nvl::Intersect<N> &init, ItemRef ref) : nvl::Intersect<N>(init), item(ref) {}
@@ -417,7 +418,7 @@ public:
         Maybe<Intersect> closest = None;
         Maybe<F64> distance = None;
         // TODO: Feels like we can improve this. Can potentially get a lot of volume which would not intersect.
-        for (auto item : operator[](Box<N>(line.a, line.b))) {
+        for (auto item : (*this)[{floor(line.a), ceil(line.b)}]) {
             if (auto intersection = line.intersect(bbox(item))) {
                 Intersect inter(*intersection, item);
                 if (auto len = dist(inter); len && (!distance.has_value() || *len < *distance)) {
@@ -448,7 +449,7 @@ public:
         for (const std::unique_ptr<Item> &a : items_.values()) {
             ItemRef a_ref(a.get());
             bool had_neighbors = false;
-            for (const Edge<N> &edge : a->bbox().edges()) {
+            for (const auto &edge : a->bbox().edges()) {
                 for (const ItemRef &b : (*this)[edge.bbox()]) {
                     had_neighbors = true;
                     components.add(a_ref, b); // Adds neighboring boxes to the same component
@@ -467,9 +468,9 @@ public:
         return result;
     }
 
-    /// Returns the current bounding box for this tree.
-    pure const Box<N> &bbox() const { return bbox_.has_value() ? bbox_.value() : Box<N>::kUnitBox; }
-    pure Maybe<Box<N>> get_bbox() const { return bbox_; }
+    /// Returns the current bounding box for this tree, if defined.
+    /// Returns an empty box otherwise.
+    pure Box<N> bbox() const { return bbox_; }
 
     /// Returns the shape of the bounding box for this tree.
     pure Pos<N> shape() const { return bbox().shape(); }
@@ -499,13 +500,13 @@ public:
         items_.clear();
         node_id_ = 0;
         item_id_ = 0;
-        bbox_ = None;
+        bbox_ = Box<N>::kEmpty;
         root_ = next_node(None, grid_max, {});
     }
 
     /// Dumps a string representation of this tree to stdout.
     void dump() const {
-        const auto bounds = bbox_.value_or(Box<N>::unit(Pos<N>::fill(1)));
+        const auto bounds = bbox();
         std::cout << "[[RTree with bounds " << bounds << "]]" << std::endl;
 
         List<PreorderWork> worklist;
@@ -566,10 +567,10 @@ private:
             Range<Box<N>> points; // empty iterable to start with
             if (parent.has_value()) {
                 if (const Maybe<Box<N>> intersection = item_box.intersect(parent->box)) {
-                    points = intersection->clamp(grid_fill).box_iter(grid_fill);
+                    points = intersection->clamp(grid_fill).volumes(grid_fill);
                 }
             } else {
-                points = item_box.clamp(grid_fill).box_iter(grid_fill);
+                points = item_box.clamp(grid_fill).volumes(grid_fill);
             }
             for (const Box<N> &dest : points) {
                 if (dest.overlaps(item_box)) {
@@ -643,7 +644,7 @@ private:
     }
 
     RTree &move(const ItemRef &item, const Box<N> &new_box, const Box<N> &old_box) {
-        bbox_ = bbox_ ? bounding_box(*bbox_, new_box) : new_box;
+        bbox_ = bounding_box(bbox_, new_box);
         if (auto pair = get_item(item)) {
             auto [_, ref] = *pair;
             Garbage garbage(this);
@@ -674,7 +675,7 @@ private:
     }
 
     ItemRef insert_over(const Item &item, const Box<N> &box) {
-        bbox_ = bbox_ ? bounding_box(*bbox_, box) : box;
+        bbox_ = bounding_box(bbox_, box);
         const U64 id = ++item_id_;
         auto &unique = items_[id] = std::make_unique<Item>(item); // Copy constructor
         ItemRef ref(unique.get());
@@ -684,7 +685,7 @@ private:
     }
 
     ItemRef take_over(std::unique_ptr<Item> item, const Box<N> &box) {
-        bbox_ = bbox_ ? bounding_box(*bbox_, box) : box;
+        bbox_ = bounding_box(bbox_, box);
         const U64 id = ++item_id_;
         auto &unique = items_[id] = std::move(item);
         ItemRef ref(unique.get());
@@ -697,7 +698,7 @@ private:
     ItemRef emplace_over(Args &&...args) {
         const U64 id = ++item_id_;
         auto &unique = items_[id] = std::move(std::make_unique<T>(std::forward<Args>(args)...));
-        bbox_ = bbox_ ? bounding_box(*bbox_, unique->bbox()) : unique->bbox();
+        bbox_ = bounding_box(bbox_, unique->bbox());
         ItemRef ref(unique.get());
         item_ids_[ref] = id;
         populate_over(ref, unique->bbox());
@@ -718,7 +719,7 @@ private:
         return *this;
     }
 
-    Maybe<Box<N>> bbox_ = None;
+    Box<N> bbox_ = Box<N>::kEmpty;
     U64 node_id_ = 0;
     U64 item_id_ = 0;
 

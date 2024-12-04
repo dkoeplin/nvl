@@ -12,13 +12,13 @@ struct nvl::RandomGen<nvl::Box<N>> {
     pure Box<N> uniform(Random &random, const I min, const I max) const {
         const auto a = random.uniform<Pos<N>, I>(min, max);
         const auto b = random.uniform<Pos<N>, I>(min, max);
-        return Box(a, b);
+        return Box<N>(a, b);
     }
     template <typename I>
     pure Box<N> normal(Random &random, const I mean, const I stddev) const {
         const auto a = random.normal<Pos<N>, I>(mean, stddev);
         const auto b = random.normal<Pos<N>, I>(mean, stddev);
-        return Box(a, b);
+        return Box<N>(a, b);
     }
 };
 
@@ -46,7 +46,7 @@ TEST(TestWindow, draw) {
     window.draw();
 
     Tensor<2, Color> expected({10, 10}, Color::kWhite);
-    for (const Pos<2> i : box.pos_iter()) {
+    for (const Pos<2> i : box.indices()) {
         expected[i] = Color::kBlack;
     }
     EXPECT_TRUE(nvl::compare_tensors(std::cout, window.tensor(), expected));
@@ -81,7 +81,7 @@ TEST_F(FuzzDraw, draw2d) {
     verify([&](const Tensor<2, Color> &tensor, const Pos<2> &offset, const Pos<2> &loc, const Box<2> &box) {
         Tensor<2, Color> expected({10, 10}, Color::kWhite);
         const Box<2> expected_box = box + loc - offset;
-        for (const Pos<2> i : expected_box.pos_iter()) {
+        for (const Pos<2> i : expected_box.indices()) {
             if (expected.has(i)) {
                 expected[i] = Color::kBlack;
             }

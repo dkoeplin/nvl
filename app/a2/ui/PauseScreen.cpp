@@ -18,7 +18,7 @@ void PauseScreen::draw() {
     pos[1] += 80;
 
     const Color color = Color::kBlack.highlight(glow);
-    window_->fill_box(color, Box({0, 0}, window_->shape()));
+    window_->fill_box(color, Box<2>({0, 0}, window_->shape()));
     window_->centered_text(Color::kBlack, window_->center(), 50, "PAUSED");
     window_->centered_text(Color::kBlack, pos, 30, "Press Any Key to Resume");
 }

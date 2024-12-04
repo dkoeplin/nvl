@@ -1,6 +1,6 @@
 #include "nvl/test/TensorWindow.h"
 
-#include "nvl/geo/Box.h"
+#include "nvl/geo/Volume.h"
 
 namespace nvl::test {
 
@@ -18,8 +18,8 @@ void TensorWindow::line_box(const Color &color, const Box<2> &box) {
     if (!views_.empty() && views_.back().isa<View2D>()) {
         view = views_.get_back()->dyn_cast<View2D>()->offset;
     }
-    for (const Edge<2> side : (box - view).faces()) {
-        for (const Pos<2> i : side.box.pos_iter()) {
+    for (const auto &side : (box - view).faces()) {
+        for (const Tuple<2, I64> i : side.box.indices()) {
             if (tensor_.has(i)) {
                 tensor_[i] = color;
             }
@@ -32,7 +32,7 @@ void TensorWindow::fill_box(const Color &color, const Box<2> &box) {
     if (!views_.empty() && views_.back().isa<View2D>()) {
         view = views_.get_back()->dyn_cast<View2D>()->offset;
     }
-    for (const Pos<2> i : (box - view).pos_iter()) {
+    for (const Tuple<2, I64> i : (box - view).indices()) {
         if (tensor_.has(i)) {
             tensor_[i] = color;
         }

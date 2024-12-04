@@ -1,8 +1,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "nvl/geo/Box.h"
-#include "nvl/geo/Pos.h"
+#include "nvl/geo/Tuple.h"
+#include "nvl/geo/Volume.h"
 #include "nvl/math/Distribution.h"
 #include "nvl/math/Random.h"
 #include "nvl/test/Fuzzing.h"
@@ -15,13 +15,13 @@ struct nvl::RandomGen<Box<N>> {
     pure Box<N> uniform(Random &random, const I min, const I max) const {
         const auto a = random.uniform<Pos<N>, I>(min, max);
         const auto b = random.uniform<Pos<N>, I>(min, max);
-        return Box(a, b);
+        return Box<N>(a, b);
     }
     template <typename I>
     pure Box<N> normal(Random &random, const I mean, const I stddev) const {
         const auto a = random.normal<Pos<N>, I>(mean, stddev);
         const auto b = random.normal<Pos<N>, I>(mean, stddev);
-        return Box(a, b);
+        return Box<N>(a, b);
     }
 };
 
@@ -76,33 +76,33 @@ TEST(TestBox, sub) {
     EXPECT_EQ(a - 4, Box<2>({-2, -1}, {3, 4}));
 }
 
-TEST(TestBox, pos_iter) {
+TEST(TestBox, indices) {
     constexpr auto a = Box<2>({2, 4}, {5, 9});
-    const auto iter0 = a.pos_iter();
+    const auto iter0 = a.indices();
     const List<Pos<2>> list0(iter0.begin(), iter0.end());
     const List<Pos<2>> expected0{{2, 4}, {2, 5}, {2, 6}, {2, 7}, {2, 8},  // {2, *}
                                  {3, 4}, {3, 5}, {3, 6}, {3, 7}, {3, 8},  // {3, *}
                                  {4, 4}, {4, 5}, {4, 6}, {4, 7}, {4, 8}}; // {4, *}
     EXPECT_EQ(list0, expected0);
 
-    const auto iter1 = a.pos_iter(/*step*/ 2);
+    const auto iter1 = a.indices(/*step*/ 2);
     const List<Pos<2>> list1(iter1.begin(), iter1.end());
     const List<Pos<2>> expected1{{2, 4}, {2, 6}, {2, 8}, {4, 4}, {4, 6}, {4, 8}};
     EXPECT_EQ(list1, expected1);
 
-    const auto iter2 = a.pos_iter({1, 2});
+    const auto iter2 = a.indices({1, 2});
     const List<Pos<2>> list2(iter2.begin(), iter2.end());
     const List<Pos<2>> expected2{{2, 4}, {2, 6}, {2, 8}, {3, 4}, {3, 6}, {3, 8}, {4, 4}, {4, 6}, {4, 8}};
     EXPECT_THAT(list2, expected2);
 
-    EXPECT_DEATH({ std::cout << a.pos_iter({0, 2}); }, "Invalid iterator step size of 0");
-    EXPECT_DEATH({ std::cout << a.pos_iter({-1, 2}); }, "TODO: Support negative step");
+    EXPECT_DEATH({ std::cout << a.indices({0, 2}); }, "Invalid iterator step size of 0");
+    EXPECT_DEATH({ std::cout << a.indices({-1, 2}); }, "TODO: Support negative step");
 }
 
-TEST(TestBox, box_iter) {
+TEST(TestBox, volumes) {
     constexpr Box<2> a({2, 2}, {7, 9}); // shape is 5x7
 
-    const auto iter0 = a.box_iter({2, 2});
+    const auto iter0 = a.volumes({2, 2});
     const List<Box<2>> list0(iter0.begin(), iter0.end());
     const List<Box<2>> expected0{
         Box<2>({2, 2}, {4, 4}), // row 0:1, col 0:1
@@ -114,7 +114,7 @@ TEST(TestBox, box_iter) {
     };
     EXPECT_EQ(list0, expected0);
 
-    const auto iter1 = a.box_iter({1, 3});
+    const auto iter1 = a.volumes({1, 3});
     const List<Box<2>> list1(iter1.begin(), iter1.end());
     const List<Box<2>> expected1{
         Box<2>({2, 2}, {3, 5}), // row 0, col 0:2
@@ -130,11 +130,11 @@ TEST(TestBox, box_iter) {
     };
     EXPECT_EQ(list1, expected1);
 
-    EXPECT_DEATH({ std::cout << a.box_iter({0, 2}); }, "Invalid iterator shape size of 0");
-    EXPECT_DEATH({ std::cout << a.box_iter({-1, 2}); }, "TODO: Support negative step");
+    EXPECT_DEATH({ std::cout << a.volumes({0, 2}); }, "Invalid iterator shape size of 0");
+    EXPECT_DEATH({ std::cout << a.volumes({-1, 2}); }, "TODO: Support negative step");
 
     constexpr Box<2> b{{128, 128}, {256, 256}};
-    const auto iter2 = b.box_iter(128);
+    const auto iter2 = b.volumes(128);
     const List<Box<2>> list2(iter2.begin(), iter2.end());
     const List<Box<2>> expected2{Box<2>{{128, 128}, {256, 256}}};
     EXPECT_EQ(list2, expected2);
@@ -161,10 +161,10 @@ TEST(TestBox, clamp) {
 */
 TEST(TestBox, edges) {
     constexpr Box<2> box({3, 3}, {5, 5});
-    EXPECT_THAT(box.edges(), UnorderedElementsAre(Edge<2>(Dir::Neg, 0, Box<2>({2, 3}, {2, 5})),
-                                                  Edge<2>(Dir::Pos, 0, Box<2>({6, 3}, {6, 5})),
-                                                  Edge<2>(Dir::Neg, 1, Box<2>({3, 2}, {5, 2})),
-                                                  Edge<2>(Dir::Pos, 1, Box<2>({3, 6}, {5, 6}))));
+    EXPECT_THAT(box.edges(), UnorderedElementsAre(Edge<2, I64>(Dir::Neg, 0, Box<2>({2, 3}, {2, 5})),
+                                                  Edge<2, I64>(Dir::Pos, 0, Box<2>({6, 3}, {6, 5})),
+                                                  Edge<2, I64>(Dir::Neg, 1, Box<2>({3, 2}, {5, 2})),
+                                                  Edge<2, I64>(Dir::Pos, 1, Box<2>({3, 6}, {5, 6}))));
 }
 
 TEST(TestBox, overlaps) {

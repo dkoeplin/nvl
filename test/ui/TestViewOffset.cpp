@@ -38,10 +38,13 @@ TEST(TestViewOffset, view3d_project) {
     view.offset = Pos<3>::zero;
     view.pitch = 45;
     view.angle = 45;
-    const float x = std::round(100 * cos(PI / 4) * cos(PI / 4));
-    const float y = std::round(100 * sin(PI / 4));
-    const float z = std::round(100 * cos(PI / 4) * sin(PI / 4));
-    EXPECT_THAT(view.project(100), ElementsAre(x, y, z));
+    const F64 x = 100 * cos(PI / 4) * cos(PI / 4);
+    const F64 y = 100 * sin(PI / 4);
+    const F64 z = 100 * cos(PI / 4) * sin(PI / 4);
+    const auto p = view.project(100);
+    EXPECT_NEAR(p[0], x, 0.01 * x);
+    EXPECT_NEAR(p[1], y, 0.01 * y);
+    EXPECT_NEAR(p[2], z, 0.01 * z);
 }
 
 } // namespace

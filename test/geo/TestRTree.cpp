@@ -1,9 +1,9 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "nvl/geo/Box.h"
-#include "nvl/geo/Pos.h"
 #include "nvl/geo/RTree.h"
+#include "nvl/geo/Tuple.h"
+#include "nvl/geo/Volume.h"
 #include "nvl/math/Distribution.h"
 #include "nvl/math/Random.h"
 #include "nvl/test/Fuzzing.h"
@@ -46,7 +46,7 @@ pure List<IDs> collect_ids(RTree<N, Item, ItemRef, kMaxEntries> &tree)
 {
     using Node = typename RTree<N, Item, ItemRef>::Node;
     List<IDs> list;
-    for (const auto &[node, pos] : tree.entries_in(tree.get_bbox().value_or(Box<N>::kUnitBox))) {
+    for (const auto &[node, pos] : tree.entries_in(tree.bbox())) {
         if (auto *entry = node->get(pos); entry && entry->kind == Node::Entry::kList) {
             const Box<N> box(pos, pos + node->grid);
             Set<U64> ids;
@@ -64,6 +64,7 @@ TEST(TestRTree, create) {
     tree.insert({0, {{0, 5}, {5, 10}}});
     EXPECT_EQ(tree.size(), 1);
     EXPECT_EQ(tree.nodes(), 1);
+    tree.dump();
 }
 
 TEST(TestRTree, create_high_loc) {
@@ -71,6 +72,7 @@ TEST(TestRTree, create_high_loc) {
     tree.emplace(0, Box<2>({10000, 10000}, {10005, 10005}));
     EXPECT_EQ(tree.size(), 1);
     EXPECT_EQ(tree.nodes(), 1);
+    tree.dump();
 }
 
 TEST(TestRTree, divide) {
@@ -82,6 +84,7 @@ TEST(TestRTree, divide) {
 
     EXPECT_THAT(collect_ids(tree), UnorderedElementsAre(IDs{.box = {{0, 0}, {1024, 1024}}, .ids = {0}},
                                                         IDs{.box = {{2048, 1024}, {3072, 2048}}, .ids = {1}}));
+    tree.dump();
 }
 
 TEST(TestRTree, subdivide) {
@@ -256,12 +259,12 @@ TEST_F(FuzzMove, move2d) {
 
     fuzz([](bool &passed, const Pos<2> &shape, const Pos<2> &loc, const Pos<2> &loc2) {
         RTree<2, LabeledBox> tree;
-        const Box original(loc, loc + shape);
+        const Box<2> original(loc, loc + shape);
         auto lbox = tree.emplace(0, original);
         // std::cout << "Moved box with shape " << shape << " from " << loc << " to " << loc2 << std::endl;
         lbox->moveto(loc2);
         tree.move(lbox, original);
-        const Box updated = lbox->bbox();
+        const Box<2> updated = lbox->bbox();
         // std::cout << "  Original: " << original << std::endl;
         // std::cout << "  Updated:  " << updated << std::endl;
         for (Box<2> b : original.diff(updated)) {

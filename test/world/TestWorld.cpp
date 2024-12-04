@@ -18,13 +18,13 @@ struct nvl::RandomGen<nvl::Box<N>> {
     pure Box<N> uniform(Random &random, const I min, const I max) const {
         const auto a = random.uniform<Pos<N>, I>(min, max);
         const auto b = random.uniform<Pos<N>, I>(min, max);
-        return Box(a, b);
+        return Box<N>(a, b);
     }
     template <typename I>
     pure Box<N> normal(Random &random, const I mean, const I stddev) const {
         const auto a = random.normal<Pos<N>, I>(mean, stddev);
         const auto b = random.normal<Pos<N>, I>(mean, stddev);
-        return Box(a, b);
+        return Box<N>(a, b);
     }
 };
 

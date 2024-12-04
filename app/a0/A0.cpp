@@ -41,9 +41,9 @@ int main() {
     while (!window.should_close()) {
         if (const Time now = Clock::now(); Duration(now - prev_tick) >= world->kNanosPerTick) {
             prev_tick = now;
-            window.tick_all();
+            window.tick();
         }
-        window.feed();
+        window.react();
         window.draw();
     }
 }

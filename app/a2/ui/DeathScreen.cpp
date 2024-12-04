@@ -4,7 +4,7 @@
 #include "a2/entity/Player.h"
 #include "a2/world/WorldA2.h"
 #include "nvl/actor/Actor.h"
-#include "nvl/geo/Box.h"
+#include "nvl/geo/Volume.h"
 #include "nvl/ui/Window.h"
 
 namespace a2 {
@@ -29,7 +29,7 @@ void DeathScreen::draw() {
     pos[1] += 80;
 
     const Color color = Color::kRed.highlight(glow);
-    window_->fill_box(color, Box({0, 0}, window_->shape()));
+    window_->fill_box(color, Box<2>({0, 0}, window_->shape()));
     window_->centered_text(Color::kRed, center, 50, "OH NO YOU DIED");
     if (ticks >= Player::kRespawnTicks) {
         window_->centered_text(Color::kBlack, pos, 30, "Press Any Key to Respawn");

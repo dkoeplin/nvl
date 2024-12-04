@@ -2,7 +2,8 @@
 #include <gtest/gtest.h>
 
 #include "nvl/data/Map.h"
-#include "nvl/geo/Pos.h"
+#include "nvl/data/Maybe.h"
+#include "nvl/geo/Tuple.h"
 
 namespace {
 

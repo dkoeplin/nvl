@@ -1,7 +1,7 @@
 #pragma once
 
-#include "nvl/geo/Box.h"
-#include "nvl/geo/Pos.h"
+#include "nvl/geo/Tuple.h"
+#include "nvl/geo/Volume.h"
 #include "nvl/macros/Aliases.h"
 #include "nvl/macros/Pure.h"
 
@@ -19,7 +19,7 @@ public:
     pure const Box<2> &bbox() const { return box_; }
 
     void move(const Pos<2> delta) { box_ += delta; }
-    void moveto(const Pos<2> pos) { box_ = Box(pos, pos + box_.shape()); }
+    void moveto(const Pos<2> pos) { box_ = Box<2>(pos, pos + box_.shape()); }
 
 private:
     U64 id_;

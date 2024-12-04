@@ -2,7 +2,7 @@
 
 namespace nvl {
 
-Window::Window(const std::string &, Pos<2>) : AbstractScreen(nullptr) { window_ = this; }
+Window::Window(const std::string &, Tuple<2, I64>) : AbstractScreen(nullptr) { window_ = this; }
 
 void Window::draw() {
     predraw();

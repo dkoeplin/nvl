@@ -11,10 +11,8 @@ namespace nvl {
 
 /// Returns the closest integer grid maximum to `a` for a grid with size of `g`.
 pure expand I64 grid_max(const I64 a, const I64 g) { return ((a < 0 ? a : (a + g - 1)) / g) * g; }
-pure expand F64 grid_max(const F64 a, const F64 g) { return std::floor((a < 0 ? a : (a + g - 1)) / g) * g; }
 
 /// Returns the closest integer grid minimum to `a` for a grid with size of `b`.
 pure expand I64 grid_min(const I64 a, const I64 g) { return ((a < 0 ? (a - g + 1) : a) / g) * g; }
-pure expand F64 grid_min(const F64 a, const F64 g) { return std::ceil((a < 0 ? (a - g + 1) : a) / g) * g; }
 
 } // namespace nvl

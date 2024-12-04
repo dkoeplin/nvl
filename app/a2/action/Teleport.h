@@ -2,7 +2,7 @@
 
 #include "a2/action/PlayerAction.h"
 #include "nvl/actor/Actor.h"
-#include "nvl/geo/Pos.h"
+#include "nvl/geo/Tuple.h"
 
 namespace a2 {
 

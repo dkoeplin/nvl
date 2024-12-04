@@ -1,9 +1,8 @@
 #pragma once
 
-#include "nvl/geo/Box.h"
 #include "nvl/geo/Intersect.h"
-#include "nvl/geo/Pos.h"
-#include "nvl/geo/Vec.h"
+#include "nvl/geo/Tuple.h"
+#include "nvl/geo/Volume.h"
 #include "nvl/macros/Aliases.h"
 #include "nvl/macros/Pure.h"
 
@@ -17,7 +16,7 @@ namespace nvl {
 template <U64 N>
 struct Line {
     constexpr Line() = default;
-    constexpr Line(const Pos<N> &x, const Pos<N> &y) : a(x), b(y) {}
+    constexpr Line(const Vec<N> &x, const Vec<N> &y) : a(x), b(y) {}
 
     /// Returns the point closest to `a` which overlaps with the given box, if one exists.
     pure Maybe<Intersect<N>> intersect(const Box<N> &box) const;
@@ -30,8 +29,8 @@ struct Line {
         return ss << "Line{" << a << ", " << b << "}";
     }
 
-    Pos<N> a;
-    Pos<N> b;
+    Vec<N> a;
+    Vec<N> b;
 };
 
 // General equation for an ND line is:
@@ -42,8 +41,8 @@ struct Line {
 //   y = m*(x2 - x0) + y0
 template <U64 N>
 Maybe<Intersect<N>> intersect(const Line<N> &line, const Box<N> &box) {
-    const Vec<N> a = line.a.to_vec();
-    const Vec<N> b = line.b.to_vec();
+    const Vec<N> &a = line.a;
+    const Vec<N> &b = line.b;
     if (box.contains(a)) {
         Intersect<N> result;
         result.pt = a;
@@ -56,7 +55,7 @@ Maybe<Intersect<N>> intersect(const Line<N> &line, const Box<N> &box) {
     // Iterate over faces of the box
     // If the line intersects with the box, and the point a is outside the box,
     // the closest point to a should be on one of the faces of the box.
-    for (const Edge<N> &edge : box.faces()) {
+    for (const auto &edge : box.faces()) {
         // A face is an N-dimensional surface where one of the dimensions (d) has a fixed value.
         const Box<N> &f = edge.bbox();
         const U64 d = edge.dim;

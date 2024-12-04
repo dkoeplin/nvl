@@ -18,7 +18,7 @@ namespace nvl {
  * @tparam N - Number of elements in this tuple.
  * @tparam T - Type of elements.
  */
-template <U64 N, typename T, typename Concrete>
+template <U64 N, typename T>
 class Tuple {
 public:
     using value_type = T;
@@ -48,8 +48,8 @@ public:
     };
 
     /// Returns an instance of rank `N` where all elements are `value`.
-    static constexpr Concrete fill(const T value) {
-        Concrete result;
+    static constexpr Tuple fill(const T value) {
+        Tuple result;
         for (U64 i = 0; i < N; ++i) {
             result[i] = value;
         }
@@ -57,18 +57,18 @@ public:
     }
 
     /// Returns an instance of rank `N` where all elements are zero except the one at `i`, which is `x`.
-    static constexpr Concrete unit(const U64 i, const T x = 1) {
+    static constexpr Tuple unit(const U64 i, const T x = 1) {
         ASSERT(i < N, "Index " << i << " is out of bounds [" << 0 << ", " << N << ")");
-        Concrete result = fill(0);
+        Tuple result = fill(0);
         result[i] = x;
         return result;
     }
 
     /// An instance of rank `N` where all elements are zero.
-    static const Concrete zero;
+    static const Tuple zero;
 
     /// An instance of rank `N` where all elements are one.
-    static const Concrete ones;
+    static const Tuple ones;
 
     /// Returns a Tuple of rank `N` with uninitialized elements.
     explicit constexpr Tuple() = default;
@@ -110,7 +110,7 @@ public:
     pure T get_or(const U64 i, const T v) const { return i < N ? indices_[i] : v; }
 
     /// Returns the element at `i`, asserting that `i` is within bounds.
-    pure constexpr I64 operator[](const U64 i) const {
+    pure constexpr T operator[](const U64 i) const {
         ASSERT(i < N, "Index " << i << " is out of bounds [" << 0 << ", " << N << ")");
         return indices_[i];
     }
@@ -122,25 +122,25 @@ public:
     }
 
     /// Returns a copy with the element at `i` changed to `v`.
-    pure Concrete with(const U64 i, const T v) const {
+    pure Tuple with(const U64 i, const T v) const {
         ASSERT(i < N, "Index " << i << " is out of bounds [" << 0 << ", " << N << ")");
-        Concrete result = *static_cast<const Concrete *>(this);
+        Tuple result = *this;
         result.indices_[i] = v;
         return result;
     }
 
     /// Returns a copy with every element negated.
-    pure Concrete operator-() const {
-        Concrete result = *static_cast<const Concrete *>(this);
-        for (I64 &x : result.indices_) {
+    pure Tuple operator-() const {
+        Tuple result = *this;
+        for (T &x : result.indices_) {
             x = -x;
         }
         return result;
     }
 
     /// Returns a new instance with the result of element-wise multiplication.
-    pure Concrete operator*(const Concrete &rhs) const {
-        Concrete result;
+    pure Tuple operator*(const Tuple &rhs) const {
+        Tuple result;
         for (U64 i = 0; i < N; ++i) {
             result[i] = indices_[i] * rhs.indices_[i];
         }
@@ -148,8 +148,8 @@ public:
     }
 
     /// Returns a new instance with the result of element-wise division.
-    pure Concrete operator/(const Concrete &rhs) const {
-        Concrete result;
+    pure Tuple operator/(const Tuple &rhs) const {
+        Tuple result;
         for (U64 i = 0; i < N; ++i) {
             result[i] = indices_[i] / rhs.indices_[i];
         }
@@ -157,8 +157,8 @@ public:
     }
 
     /// Returns a new instance with the result of element-wise addition.
-    pure Concrete operator+(const Concrete &rhs) const {
-        Concrete result;
+    pure Tuple operator+(const Tuple &rhs) const {
+        Tuple result;
         for (U64 i = 0; i < N; ++i) {
             result[i] = indices_[i] + rhs.indices_[i];
         }
@@ -166,8 +166,8 @@ public:
     }
 
     /// Returns a new instance with the result of element-wise subtraction.
-    pure Concrete operator-(const Concrete &rhs) const {
-        Concrete result;
+    pure Tuple operator-(const Tuple &rhs) const {
+        Tuple result;
         for (U64 i = 0; i < N; ++i) {
             result[i] = indices_[i] - rhs.indices_[i];
         }
@@ -175,43 +175,43 @@ public:
     }
 
     /// Returns a new instance with the result of element-wise multiplication.
-    pure Concrete operator*(const T rhs) const {
-        Concrete result = *static_cast<const Concrete *>(this);
-        for (I64 &x : result.indices_) {
+    pure Tuple operator*(const T rhs) const {
+        Tuple result = *this;
+        for (T &x : result.indices_) {
             x *= rhs;
         }
         return result;
     }
 
     /// Returns a new instance with the result of element-wise division.
-    pure Concrete operator/(const T rhs) const {
-        Concrete result = *static_cast<const Concrete *>(this);
-        for (I64 &x : result.indices_) {
+    pure Tuple operator/(const T rhs) const {
+        Tuple result = *this;
+        for (T &x : result.indices_) {
             x /= rhs;
         }
         return result;
     }
 
     /// Returns a new instance with the result of element-wise addition.
-    pure Concrete operator+(const T rhs) const {
-        Concrete result = *static_cast<const Concrete *>(this);
-        for (I64 &x : result.indices_) {
+    pure Tuple operator+(const T rhs) const {
+        Tuple result = *this;
+        for (T &x : result.indices_) {
             x += rhs;
         }
         return result;
     }
 
     /// Returns a new instance with the result of element-wise subtraction.
-    pure Concrete operator-(const T rhs) const {
-        Concrete result = *static_cast<const Concrete *>(this);
-        for (I64 &x : result.indices_) {
+    pure Tuple operator-(const T rhs) const {
+        Tuple result = *this;
+        for (T &x : result.indices_) {
             x -= rhs;
         }
         return result;
     }
 
     /// Returns true if the two instances have identical elements.
-    pure bool operator==(const Concrete &rhs) const {
+    pure bool operator==(const Tuple &rhs) const {
         for (U64 i = 0; i < N; ++i) {
             if (indices_[i] != rhs.indices_[i]) {
                 return false;
@@ -221,10 +221,10 @@ public:
     }
 
     /// Returns true if the two instances do not have identical elements.
-    pure bool operator!=(const Concrete &rhs) const { return !(*this == rhs); }
+    pure bool operator!=(const Tuple &rhs) const { return !(*this == rhs); }
 
     /// Returns true if every element is strictly less than the corresponding element in `rhs`.
-    pure bool all_lt(const Concrete &rhs) const {
+    pure bool all_lt(const Tuple &rhs) const {
         for (U64 i = 0; i < N; ++i) {
             if (indices_[i] >= rhs.indices_[i]) {
                 return false;
@@ -234,7 +234,7 @@ public:
     }
 
     /// Returns true if every element is less than or equal to the corresponding element in `rhs`.
-    pure bool all_lte(const Concrete &rhs) const {
+    pure bool all_lte(const Tuple &rhs) const {
         for (U64 i = 0; i < N; ++i) {
             if (indices_[i] > rhs.indices_[i]) {
                 return false;
@@ -244,23 +244,23 @@ public:
     }
 
     /// Returns true if every element is greater than the corresponding element in `rhs`.
-    pure bool all_gt(const Concrete &rhs) const { return rhs.all_lt(*static_cast<const Concrete *>(this)); }
+    pure bool all_gt(const Tuple &rhs) const { return rhs.all_lt(*static_cast<const Tuple *>(this)); }
 
     /// Returns true if every element is greater than or equal to the corresponding element in `rhs`.
-    pure bool all_gte(const Concrete &rhs) const { return rhs.all_lte(*static_cast<const Concrete *>(this)); }
+    pure bool all_gte(const Tuple &rhs) const { return rhs.all_lte(*static_cast<const Tuple *>(this)); }
 
     /// Returns a new instance with the result of element-wise clamping to the given grid.
     /// Elements are rounded up to the grid in each dimension.
-    pure Concrete grid_max(const Concrete &grid) const {
-        Concrete result;
+    pure Tuple grid_max(const Tuple &grid) const {
+        Tuple result;
         for (U64 i = 0; i < N; i++) {
             result[i] = nvl::grid_max(this->indices_[i], grid[i]);
         }
         return result;
     }
 
-    pure Concrete grid_max(const I64 grid) const {
-        Concrete result;
+    pure Tuple grid_max(const T grid) const {
+        Tuple result;
         for (U64 i = 0; i < N; i++) {
             result[i] = nvl::grid_max(this->indices_[i], grid);
         }
@@ -269,23 +269,23 @@ public:
 
     /// Returns a new instance with the result of element-wise clamping to the given grid.
     /// Elements are rounded down to the grid in each dimension.
-    pure Concrete grid_min(const Concrete &grid) const {
-        Concrete result;
+    pure Tuple grid_min(const Tuple &grid) const {
+        Tuple result;
         for (U64 i = 0; i < N; i++) {
             result[i] = nvl::grid_min(this->indices_[i], grid[i]);
         }
         return result;
     }
 
-    pure Concrete grid_min(const I64 grid) const {
-        Concrete result;
+    pure Tuple grid_min(const T grid) const {
+        Tuple result;
         for (U64 i = 0; i < N; i++) {
             result[i] = nvl::grid_min(this->indices_[i], grid);
         }
         return result;
     }
 
-    pure T manhattan_dist(const Concrete &rhs) const {
+    pure T manhattan_dist(const Tuple &rhs) const {
         T result = 0;
         for (U64 i = 0; i < N; ++i) {
             result += std::abs(this->indices_[i] - rhs.indices_[i]);
@@ -293,7 +293,7 @@ public:
         return result;
     }
 
-    pure F64 dist(const Concrete &rhs) const {
+    pure F64 dist(const Tuple &rhs) const {
         F64 result = 0;
         for (U64 i = 0; i < N; ++i) {
             const F64 diff = static_cast<F64>(indices_[i]) - rhs.indices_[i];
@@ -324,8 +324,8 @@ public:
         return sum;
     }
 
-    pure Concrete strides() const {
-        Concrete result;
+    pure Tuple strides() const {
+        Tuple result;
         result[N - 1] = 1;
         for (I64 i = N - 2; i >= 0; --i) {
             result[i] = result[i + 1] * indices_[i + 1];
@@ -333,53 +333,53 @@ public:
         return result;
     }
 
-    Concrete &operator*=(const Concrete &rhs) {
+    Tuple &operator*=(const Tuple &rhs) {
         for (U64 i = 0; i < N; ++i) {
             indices_[i] *= rhs.indices_[i];
         }
-        return *static_cast<Concrete *>(this);
+        return *static_cast<Tuple *>(this);
     }
-    Concrete &operator/=(const Concrete &rhs) {
+    Tuple &operator/=(const Tuple &rhs) {
         for (U64 i = 0; i < N; ++i) {
             indices_[i] /= rhs.indices_[i];
         }
-        return *static_cast<Concrete *>(this);
+        return *static_cast<Tuple *>(this);
     }
-    Concrete &operator+=(const Concrete &rhs) {
+    Tuple &operator+=(const Tuple &rhs) {
         for (U64 i = 0; i < N; ++i) {
             indices_[i] += rhs.indices_[i];
         }
-        return *static_cast<Concrete *>(this);
+        return *static_cast<Tuple *>(this);
     }
-    Concrete &operator-=(const Concrete &rhs) {
+    Tuple &operator-=(const Tuple &rhs) {
         for (U64 i = 0; i < N; ++i) {
             indices_[i] -= rhs.indices_[i];
         }
-        return *static_cast<Concrete *>(this);
+        return *static_cast<Tuple *>(this);
     }
-    Concrete &operator*=(const T rhs) {
+    Tuple &operator*=(const T rhs) {
         for (T &x : indices_) {
             x *= rhs;
         }
-        return *static_cast<Concrete *>(this);
+        return *this;
     }
-    Concrete &operator/=(const T rhs) {
+    Tuple &operator/=(const T rhs) {
         for (T &x : indices_) {
             x /= rhs;
         }
-        return *static_cast<Concrete *>(this);
+        return *this;
     }
-    Concrete &operator+=(const T rhs) {
+    Tuple &operator+=(const T rhs) {
         for (T &x : indices_) {
             x += rhs;
         }
-        return *static_cast<Concrete *>(this);
+        return *this;
     }
-    Concrete &operator-=(const T rhs) {
+    Tuple &operator-=(const T rhs) {
         for (T &x : indices_) {
             x -= rhs;
         }
-        return *static_cast<Concrete *>(this);
+        return *this;
     }
 
     pure std::string to_string() const {
@@ -397,55 +397,97 @@ protected:
     T indices_[N];
 };
 
-template <U64 N, typename T, typename Concrete>
-const Concrete Tuple<N, T, Concrete>::zero = Tuple::fill(0);
+template <U64 N>
+using Vec = Tuple<N, F64>;
 
-template <U64 N, typename T, typename Concrete>
-const Concrete Tuple<N, T, Concrete>::ones = Tuple::fill(1);
+template <U64 N>
+using Pos = Tuple<N, I64>;
 
-template <U64 N, typename T, typename Concrete>
-Concrete min(const Tuple<N, T, Concrete> &a, const Tuple<N, T, Concrete> &b) {
-    Concrete result;
+template <U64 N, typename T>
+const Tuple<N, T> Tuple<N, T>::zero = Tuple::fill(0);
+
+template <U64 N, typename T>
+const Tuple<N, T> Tuple<N, T>::ones = Tuple::fill(1);
+
+template <U64 N, typename T>
+Tuple<N, T> min(const Tuple<N, T> &a, const Tuple<N, T> &b) {
+    Tuple<N, T> result;
     for (U64 i = 0; i < N; ++i) {
         result[i] = std::min(a[i], b[i]);
     }
     return result;
 }
 
-template <U64 N, typename T, typename Concrete>
-Concrete max(const Tuple<N, T, Concrete> &a, const Tuple<N, T, Concrete> &b) {
-    Concrete result;
+template <U64 N, typename T>
+Tuple<N, T> max(const Tuple<N, T> &a, const Tuple<N, T> &b) {
+    Tuple<N, T> result;
     for (U64 i = 0; i < N; ++i) {
         result[i] = std::max(a[i], b[i]);
     }
     return result;
 }
 
-template <U64 N, typename T, typename Concrete>
-Concrete operator*(const T a, const Tuple<N, T, Concrete> &b) {
+template <U64 N, typename C, typename T>
+Tuple<N, T> operator*(const C a, const Tuple<N, T> &b) {
     return b * a;
 }
-template <U64 N, typename T, typename Concrete>
-Concrete operator/(const T a, const Tuple<N, T, Concrete> &b) {
-    return Tuple<N, T, Concrete>::fill(a) / b;
+template <U64 N, typename C, typename T>
+Tuple<N, T> operator/(const C a, const Tuple<N, T> &b) {
+    return Tuple<N, T>::fill(a) / b;
 }
-template <U64 N, typename T, typename Concrete>
-Concrete operator+(const T a, const Tuple<N, T, Concrete> &b) {
+template <U64 N, typename C, typename T>
+Tuple<N, T> operator+(const C a, const Tuple<N, T> &b) {
     return b + a;
 }
-template <U64 N, typename T, typename Concrete>
-Concrete operator-(const T a, const Tuple<N, T, Concrete> &b) {
+template <U64 N, typename C, typename T>
+Tuple<N, T> operator-(const C a, const Tuple<N, T> &b) {
     return -b + a;
 }
 
-template <U64 N, typename T, typename Concrete>
-std::ostream &operator<<(std::ostream &os, const Tuple<N, T, Concrete> &a) {
+template <U64 N>
+Tuple<N, F64> real(const Tuple<N, I64> &tuple) {
+    Tuple<N, F64> result;
+    for (U64 i = 0; i < N; ++i) {
+        result[i] = static_cast<F64>(tuple[i]);
+    }
+    return result;
+}
+
+template <U64 N>
+Tuple<N, I64> round(const Tuple<N, F64> &tuple) {
+    Tuple<N, I64> result;
+    for (U64 i = 0; i < N; ++i) {
+        result[i] = static_cast<I64>(std::round(tuple[i]));
+    }
+    return result;
+}
+
+template <U64 N>
+Tuple<N, I64> floor(const Tuple<N, F64> &tuple) {
+    Tuple<N, I64> result;
+    for (U64 i = 0; i < N; ++i) {
+        result[i] = static_cast<I64>(std::floor(tuple[i]));
+    }
+    return result;
+}
+
+template <U64 N>
+Tuple<N, I64> ceil(const Tuple<N, F64> &tuple) {
+    Tuple<N, I64> result;
+    for (U64 i = 0; i < N; ++i) {
+        result[i] = static_cast<I64>(std::ceil(tuple[i]));
+    }
+    return result;
+}
+
+template <U64 N, typename T>
+std::ostream &operator<<(std::ostream &os, const Tuple<N, T> &a) {
     return os << a.to_string();
 }
 
 } // namespace nvl
 
-template <U64 N, typename T, typename Concrete>
-struct std::hash<nvl::Tuple<N, T, Concrete>> {
-    pure U64 operator()(const nvl::Tuple<N, T, Concrete> &a) const noexcept { return nvl::sip_hash(a.indices_); }
+template <U64 N, typename T>
+struct std::hash<nvl::Tuple<N, T>> {
+    pure U64 operator()(const nvl::Tuple<N, T> &a) const noexcept { return nvl::sip_hash(a.indices_); }
 };

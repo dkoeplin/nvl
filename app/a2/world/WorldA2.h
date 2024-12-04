@@ -1,7 +1,6 @@
 #pragma once
 
 #include "nvl/entity/Entity.h"
-#include "nvl/macros/Literals.h"
 #include "nvl/reflect/ClassTag.h"
 #include "nvl/world/World.h"
 

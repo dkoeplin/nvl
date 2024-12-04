@@ -1,6 +1,6 @@
 #pragma once
 
-#include "nvl/geo/Pos.h"
+#include "nvl/geo/Tuple.h"
 #include "nvl/macros/Aliases.h"
 #include "nvl/macros/Unreachable.h"
 #include "nvl/reflect/Castable.h"
@@ -27,15 +27,15 @@ struct View3D final : AbstractViewOffset {
 
     void rotate(const Pos<2> &delta, const Pos<2> &shape);
 
-    pure Pos<3> project() const;
-    pure Pos<3> project(U64 length) const;
-    pure Pos<3> project(const Pos<3> &from, U64 length) const;
+    pure Vec<3> project() const;
+    pure Vec<3> project(F64 length) const;
+    pure Vec<3> project(const Vec<3> &from, F64 length) const;
 
     Pos<3> offset = Pos<3>::zero; // Location of camera, in world coordinates
-    float pitch = 0;              // Angle between XY, between -89 and 89
-    float angle = 0;              // Angle between XZ, between 0 and 360
-    float fov = 45;               // Viewing field of view, between 0 and 90
-    I64 dist = 1000;              // View distance
+    F64 pitch = 0;                // Angle between XY, between -89 and 89
+    F64 angle = 0;                // Angle between XZ, between 0 and 360
+    F64 fov = 45;                 // Viewing field of view, between 0 and 90
+    F64 dist = 1000;              // View distance
 };
 
 struct ViewOffset final : Castable<ViewOffset, AbstractViewOffset, std::shared_ptr<AbstractViewOffset>> {
@@ -51,11 +51,11 @@ struct ViewOffset final : Castable<ViewOffset, AbstractViewOffset, std::shared_p
         }
     }
     template <U64 N>
-    static ViewOffset at(const Pos<N> &pt) {
+    static ViewOffset at(const Pos<N> &pos) {
         if constexpr (N == 2) {
-            return ViewOffset::get<View2D>(pt);
+            return ViewOffset::get<View2D>(pos);
         } else if constexpr (N == 3) {
-            return ViewOffset::get<View3D>(pt);
+            return ViewOffset::get<View3D>(pos);
         } else {
             UNREACHABLE;
         }

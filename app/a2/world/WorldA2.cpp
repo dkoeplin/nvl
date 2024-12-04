@@ -41,18 +41,18 @@ WorldA2::WorldA2(AbstractScreen *parent) : World<3>(parent, {.gravity_accel = 3,
 
     const std::vector colors{Color::kRed, Color::kGreen, Color::kBlue};
     I64 x = -2500;
-    constexpr Pos<3> shape{1_m, 1_m, 1_m};
+    constexpr Pos<3> shape{1, 1, 1};
     for (const auto &color : colors) {
-        const Pos<3> loc{x, -2_m, -100_mm};
+        const Pos<3> loc{x, -2, -100};
         spawn<Block<3>>(loc, shape, Material::get<TestMaterial>(color));
-        x += 2_m;
+        x += 2;
     }
     const std::vector colors2{Color::kYellow, Color::kOrange, Color::kPurple};
-    x = -2500_mm;
+    x = -2500;
     for (const auto &color : colors2) {
-        const Pos<3> loc{x, -3_m, -100_mm};
+        const Pos<3> loc{x, -3, -100};
         spawn<Block<3>>(loc, shape, Material::get<TestMaterial>(color));
-        x += 2_m;
+        x += 2;
     }
 
     on_key_down[Key::P] = [this] {
@@ -72,12 +72,12 @@ void WorldA2::remove(const Actor &actor) {
 }
 
 void WorldA2::spawn_random_cube() {
-    const auto left = random.uniform<I64, I64>(-1_km, 1_km);
-    const auto back = random.uniform<I64, I64>(-1_km, 1_km);
-    const auto width = random.uniform<I64, I64>(10_mm, 5_m);
-    const auto height = random.uniform<I64, I64>(10_mm, 5_m);
-    const auto depth = random.uniform<I64, I64>(10_mm, 5_m);
-    const auto top = std::min<I64>(0, entities_.bbox().min[1]) - height - 2_m;
+    const auto left = random.uniform<I64, I64>(-1, 1);
+    const auto back = random.uniform<I64, I64>(-1, 1);
+    const auto width = random.uniform<I64, I64>(10, 5);
+    const auto height = random.uniform<I64, I64>(10, 5);
+    const auto depth = random.uniform<I64, I64>(10, 5);
+    const auto top = std::min<I64>(0, entities_.bbox().min[1]) - height - 2;
     const auto color_idx = random.uniform<U64, U64>(0, materials.size() - 1);
     const auto material = materials.at(color_idx);
     const Pos<3> pos{left, top, back};

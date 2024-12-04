@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
 #include "nvl/actor/Actor.h"
-#include "nvl/geo/Box.h"
+#include "nvl/geo/Volume.h"
 #include "nvl/message/Message.h"
 
 namespace {
