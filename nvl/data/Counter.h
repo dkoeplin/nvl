@@ -5,7 +5,6 @@
 #include "nvl/data/Iterator.h"
 #include "nvl/data/List.h"
 #include "nvl/data/Maybe.h"
-#include "nvl/macros/Implicit.h"
 #include "nvl/macros/Pure.h"
 
 namespace nvl {
