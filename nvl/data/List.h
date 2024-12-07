@@ -55,7 +55,7 @@ public:
     explicit List(Range<Value> range) : List(range.begin(), range.end()) {}
 
     pure bool operator==(const List &rhs) const {
-        return size() == rhs.size() && std::equal(begin(), end(), rhs.begin());
+        return size() == rhs.size() && std::equal(_begin(), _end(), rhs._begin());
     }
     pure bool operator!=(const List &other) const { return !(*this == other); }
 
