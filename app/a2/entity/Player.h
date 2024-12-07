@@ -1,5 +1,6 @@
 #pragma once
 
+#include "a2/macros/Literals.h"
 #include "nvl/entity/Entity.h"
 
 namespace a2 {
@@ -9,10 +10,10 @@ using namespace nvl;
 struct Player final : Entity<3> {
     class_tag(Player, Entity<3>);
 
-    static constexpr F64 kMaxVelocity = 10;
-    static constexpr F64 kDigDist = 3;
-    static constexpr F64 kDigRadius = 5;
-    static constexpr F64 kViewDistance = 100;
+    static constexpr I64 kMaxVelocity = 10_mps;
+    static constexpr I64 kDigDist = 3_m;
+    static constexpr I64 kDigRadius = 5_m;
+    static constexpr I64 kViewDistance = 50_m;
 
     static constexpr U64 kRespawnTicks = 100;
     static constexpr U64 kDigTicks = 5;

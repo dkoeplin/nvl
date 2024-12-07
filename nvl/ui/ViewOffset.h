@@ -36,6 +36,7 @@ struct View3D final : AbstractViewOffset {
     F64 angle = 0;                // Angle between XZ, between 0 and 360
     F64 fov = 45;                 // Viewing field of view, between 0 and 90
     F64 dist = 1000;              // View distance
+    F64 scale = 1;
 };
 
 struct ViewOffset final : Castable<ViewOffset, AbstractViewOffset, std::shared_ptr<AbstractViewOffset>> {

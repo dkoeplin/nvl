@@ -23,9 +23,6 @@ void PauseScreen::draw() {
     window_->centered_text(Color::kBlack, pos, 30, "Press Any Key to Resume");
 }
 
-void PauseScreen::tick() {
-    std::cout << "PAUSE SCREEN TICK" << std::endl;
-    glow.advance();
-}
+void PauseScreen::tick() { glow.advance(); }
 
 } // namespace a2

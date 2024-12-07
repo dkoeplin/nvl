@@ -7,8 +7,8 @@ namespace a2 {
 
 Player::Player(const Pos<3> &loc) : Entity(loc), spawn(loc) {
     const auto material = Material::get<TestMaterial>(Color::kBlue);
-    parts_.emplace(Box<3>({-50, 0, -50}, {50, 50, 50}), material);
-    parts_.emplace(Box<3>({-50, 50, -50}, {-50, 100, 50}), material);
+    parts_.emplace(Box<3>({-10_cm, 0, -10_cm}, {10_cm, 50_cm, 10_cm}), material);
+    parts_.emplace(Box<3>({-30_cm, 50_cm, -15_cm}, {30_cm, 170_cm, 15_cm}), material);
 }
 
 Status Player::receive(const Message &message) {

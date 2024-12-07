@@ -33,6 +33,9 @@ public:
     pure I64 height() const override;
     pure I64 width() const override;
     pure I64 fps() const override;
+
+private:
+    F64 scale_ = 1.0;
 };
 
 } // namespace nvl

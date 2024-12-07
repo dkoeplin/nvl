@@ -23,6 +23,7 @@ add_library(a2-lib SHARED
         a2/action/Strafe.h
         a2/action/Teleport.cpp
         a2/action/Teleport.h
+        a2/macros/Literals.h
         a2/ui/DeathScreen.cpp
         a2/ui/DeathScreen.h
         a2/ui/DebugScreen.cpp

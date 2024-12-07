@@ -26,9 +26,9 @@ DebugScreen::DebugScreen(AbstractScreen *parent, WorldA2 *world) : AbstractScree
 
 void DebugScreen::draw() {
     const auto &view3d = world_->view3d();
-    const Vec<3> offset = real(view3d.offset);
-    const Vec<3> target = view3d.project();
-    const Line<3> line{offset, target};
+    const Vec<3> offset = real(view3d.offset) / view3d.scale;
+    const Vec<3> target = view3d.project() / view3d.scale;
+    const Line<3> line{real(view3d.offset), view3d.project()};
     const Actor player(world_->player);
     std::string at = "N/A";
     if (const auto itx = world_->first_except(line, player)) {

@@ -91,8 +91,8 @@ void RayWindow::fill_box(const Color &color, const Box<2> &box) {
 }
 
 void RayWindow::line_cube(const Color &color, const Box<3> &cube) {
-    const Vec<3> min = real(cube.min);
-    const Vec<3> shape = real(cube.shape());
+    const Vec<3> min = real(cube.min) / scale_;
+    const Vec<3> shape = real(cube.shape()) / scale_;
     // Cube position is the _center_ position for raylib
     Vector3 pos;
     pos.x = static_cast<float>(min[0] + shape[0] / 2);
@@ -102,8 +102,8 @@ void RayWindow::line_cube(const Color &color, const Box<3> &cube) {
 }
 
 void RayWindow::fill_cube(const Color &color, const Box<3> &cube) {
-    const Vec<3> min = real(cube.min);
-    const Vec<3> shape = real(cube.shape());
+    const Vec<3> min = real(cube.min) / scale_;
+    const Vec<3> shape = real(cube.shape()) / scale_;
     // Cube position is the _center_ position for raylib
     Vector3 pos;
     pos.x = static_cast<float>(min[0] + shape[0] / 2);
@@ -117,10 +117,12 @@ void RayWindow::line(const Color &color, const Line<2> &line) {
 }
 
 void RayWindow::line(const Color &color, const Line<3> &line) {
-    const Vector3 start{
-        .x = static_cast<float>(line.a[0]), .y = static_cast<float>(line.a[1]), .z = static_cast<float>(line.a[2])};
-    const Vector3 end{
-        .x = static_cast<float>(line.b[0]), .y = static_cast<float>(line.b[1]), .z = static_cast<float>(line.b[2])};
+    const Vector3 start{.x = static_cast<float>(line.a[0] / scale_),
+                        .y = static_cast<float>(line.a[1] / scale_),
+                        .z = static_cast<float>(line.a[2] / scale_)};
+    const Vector3 end{.x = static_cast<float>(line.b[0] / scale_),
+                      .y = static_cast<float>(line.b[1] / scale_),
+                      .z = static_cast<float>(line.b[2] / scale_)};
     DrawLine3D(start, end, raycolor(color));
 }
 
@@ -140,24 +142,26 @@ void RayWindow::centered_text(const Color &color, const Pos<2> &pos, I64 font_si
 
 I64 RayWindow::fps() const { return GetFPS(); }
 
-void RayWindow::set_view_offset(const ViewOffset &offset) {
-    if (auto *view2d = offset.dyn_cast<View2D>()) {
+void RayWindow::set_view_offset(const ViewOffset &view) {
+    if (auto *view2d = view.dyn_cast<View2D>()) {
         Camera2D camera;
         camera.offset = Vector2{0, 0};
         camera.rotation = 0.0f;
         camera.zoom = 1.0f;
         camera.target = Vector2{static_cast<float>(view2d->offset[0]), static_cast<float>(view2d->offset[1])};
         BeginMode2D(camera);
-    } else if (auto *view3d = offset.dyn_cast<View3D>()) {
+    } else if (auto *view3d = view.dyn_cast<View3D>()) {
+        scale_ = view3d->scale;
+        const Vec<3> offset = real(view3d->offset) / scale_;
+        const Vec<3> target = view3d->project() / scale_;
+
         Camera3D camera;
         camera.projection = CAMERA_PERSPECTIVE;
         camera.fovy = view3d->fov;
         camera.up = {0.0f, -1.0f, 0.0f};
-        camera.position = Vector3{.x = static_cast<float>(view3d->offset[0]),
-                                  .y = static_cast<float>(view3d->offset[1]),
-                                  .z = static_cast<float>(view3d->offset[2])};
-        const auto target = view3d->project();
-        camera.target = {
+        camera.position = Vector3{
+            .x = static_cast<float>(offset[0]), .y = static_cast<float>(offset[1]), .z = static_cast<float>(offset[2])};
+        camera.target = Vector3{
             .x = static_cast<float>(target[0]), .y = static_cast<float>(target[1]), .z = static_cast<float>(target[2])};
         BeginMode3D(camera);
     } else {
@@ -170,6 +174,7 @@ void RayWindow::end_view_offset(const ViewOffset &offset) {
         EndMode2D();
     } else if (offset.isa<View3D>()) {
         EndMode3D();
+        scale_ = 1.0;
     } else {
         UNREACHABLE;
     }
