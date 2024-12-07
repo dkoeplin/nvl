@@ -54,7 +54,7 @@ public:
     }
 
     static Range<List<T>> get(const List<T> &end) {
-        return Counter(List<T>(end.size(), 0), end_(end), List<T>(end.size(), 1)).range();
+        return Counter(List<T>(end.size(), 0), end, List<T>(end.size(), 1)).range();
     }
 
     static Range<List<T>> get(const List<T> &start, const List<T> &end, const List<T> &stride) {
