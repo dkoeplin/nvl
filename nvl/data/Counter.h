@@ -19,6 +19,8 @@ public:
         static Iterator<List<I64>> begin(const Counter *ctr) { return make_iterator<iterator>(ctr, ctr->start_); }
         static Iterator<List<I64>> end(const Counter *ctr) { return make_iterator<iterator>(ctr, None); }
 
+        explicit iterator(const Counter *counter, Maybe<List<I64>> iters) : ctr_(counter), iters_(std::move(iters)) {}
+
         void increment() override {
             // Increment only does something if this is not the end iterator.
             if (iters_.has_value()) {
@@ -42,7 +44,6 @@ public:
         pure bool operator==(const iterator &rhs) const override { return *ctr_ == *rhs.ctr_ && iters_ == rhs.iters_; }
 
     private:
-        explicit iterator(Counter *counter, Maybe<List<I64>> iters) : ctr_(counter), iters_(std::move(iters)) {}
         const Counter *ctr_;
         Maybe<List<I64>> iters_;
     };
@@ -52,10 +53,11 @@ public:
     explicit Counter(const nvl::List<I64> &start, const nvl::List<I64> &end, const nvl::List<I64> &stride)
         : start_(start), end_(end), stride_(stride) {}
 
+    pure implicit operator Range<List<I64>>() const { return range(); }
+
     pure Iterator<List<I64>> begin() const { return iterator::begin(this); }
     pure Iterator<List<I64>> end() const { return iterator::end(this); }
-
-    pure implicit operator Range<List<I64>>() const { return make_range<iterator>(this); }
+    pure Range<List<I64>> range() const { return make_range<iterator>(this); }
 
     pure U64 size() const { return start_.size(); }
 
