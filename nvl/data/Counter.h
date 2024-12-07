@@ -16,8 +16,14 @@ public:
 
     class iterator final : public AbstractIteratorCRTP<iterator, List<T>> {
     public:
-        static Iterator<List<T>> begin(const Counter &ctr) { return make_iterator<iterator>(ctr, ctr->start_); }
-        static Iterator<List<T>> end(const Counter &ctr) { return make_iterator<iterator>(ctr, None); }
+        template <View Type = View::kImmutable>
+        static Iterator<List<T>, Type> begin(const Counter &ctr) {
+            return make_iterator<iterator, Type>(ctr, ctr.start_);
+        }
+        template <View Type = View::kImmutable>
+        static Iterator<List<T>, Type> end(const Counter &ctr) {
+            return make_iterator<iterator, Type>(ctr, None);
+        }
 
         explicit iterator(const Counter &counter, Maybe<List<T>> iters) : ctr_(counter), iters_(std::move(iters)) {}
 
@@ -26,12 +32,12 @@ public:
             if (iters_.has_value()) {
                 auto &idx = iters_.value();
                 I64 i = iters_->size() - 1;
-                idx[i] = idx[i] + ctr_->stride_[i];
-                while (i >= 0 && (ctr_->stride_[i] > 0 ? idx[i] >= ctr_->end_[i] : idx[i] <= ctr_->end_[i])) {
-                    idx[i] = ctr_->start_[i];
+                idx[i] = idx[i] + ctr_.stride_[i];
+                while (i >= 0 && (ctr_.stride_[i] > 0 ? idx[i] >= ctr_.end_[i] : idx[i] <= ctr_.end_[i])) {
+                    idx[i] = ctr_.start_[i];
                     i -= 1;
                     if (i >= 0) {
-                        idx[i] += ctr_->stride_[i];
+                        idx[i] += ctr_.stride_[i];
                     } else {
                         iters_ = None; // Reached end
                     }
@@ -60,9 +66,9 @@ public:
         return Counter(start, end, stride).range();
     }
 
-    pure Iterator<List<T>> begin() const { return iterator::begin(this); }
-    pure Iterator<List<T>> end() const { return iterator::end(this); }
-    pure Range<List<T>> range() const { return make_range<iterator>(this); }
+    pure Iterator<List<T>> begin() const { return iterator::begin(*this); }
+    pure Iterator<List<T>> end() const { return iterator::end(*this); }
+    pure Range<List<T>> range() const { return make_range<iterator>(*this); }
 
     pure U64 size() const { return start_.size(); }
 
