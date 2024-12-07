@@ -5,6 +5,7 @@
 #include "nvl/data/Iterator.h"
 #include "nvl/data/List.h"
 #include "nvl/data/Maybe.h"
+#include "nvl/macros/Implicit.h"
 #include "nvl/macros/Pure.h"
 
 namespace nvl {
@@ -53,6 +54,8 @@ public:
 
     pure Iterator<List<I64>> begin() const { return iterator::begin(this); }
     pure Iterator<List<I64>> end() const { return iterator::end(this); }
+
+    pure implicit operator Range<List<I64>>() const { return make_range<iterator>(this); }
 
     pure U64 size() const { return start_.size(); }
 
