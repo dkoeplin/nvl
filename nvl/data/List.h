@@ -55,7 +55,8 @@ public:
     explicit List(Range<Value> range) : List(range.begin(), range.end()) {}
 
     pure bool operator==(const List &rhs) const {
-        return size() == rhs.size() && std::equal(begin(), end(), rhs.begin());
+        // HOT SPOT: Using the custom iterators slows comparison down by ~20x. Likely to do with std::__unwrap_iter?
+        return size() == rhs.size() && std::equal(_begin(), _end(), rhs._begin());
     }
     pure bool operator!=(const List &other) const { return !(*this == other); }
 
