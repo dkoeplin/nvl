@@ -16,6 +16,7 @@ public:
 
     class iterator final : public AbstractIteratorCRTP<iterator, List<T>> {
     public:
+        class_tag(Counter<T>::iterator, AbstractIterator<List<T>>);
         template <View Type = View::kImmutable>
         static Iterator<List<T>, Type> begin(const Counter &ctr) {
             return make_iterator<iterator, Type>(ctr, ctr.start_);
