@@ -14,7 +14,7 @@ class Counter {
 public:
     using Value = List<I64>;
 
-    class iterator final : AbstractIteratorCRTP<iterator, List<I64>> {
+    class iterator final : public AbstractIteratorCRTP<iterator, List<I64>> {
     public:
         static Iterator<List<I64>> begin(const Counter *ctr) { return make_iterator<iterator>(ctr, ctr->start_); }
         static Iterator<List<I64>> end(const Counter *ctr) { return make_iterator<iterator>(ctr, None); }
