@@ -418,7 +418,7 @@ public:
         Maybe<Intersect> closest = None;
         Maybe<F64> distance = None;
         // TODO: Feels like we can improve this. Can potentially get a lot of volume which would not intersect.
-        for (auto item : (*this)[{floor(line.a), ceil(line.b)}]) {
+        for (auto item : (*this)[{floor(line.a()), ceil(line.b())}]) {
             if (auto intersection = line.intersect(bbox(item))) {
                 Intersect inter(*intersection, item);
                 if (auto len = dist(inter); len && (!distance.has_value() || *len < *distance)) {

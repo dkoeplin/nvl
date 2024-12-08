@@ -102,7 +102,7 @@ public:
         UNREACHABLE;
     }
     pure Box<N> window_to_world(const Box<2> &box) const {
-        return {window_to_world(box.min), window_to_world(box.max)};
+        return {window_to_world(box.min), window_to_world(box.end)};
     }
 
     template <typename Msg, typename... Args>
@@ -189,7 +189,7 @@ protected:
 template <U64 N>
 pure Maybe<typename World<N>::Intersect> World<N>::first_except(const Line<N> &line, const Actor &act) const {
     Maybe<Intersect> closest = None;
-    for (Actor actor : entities({floor(line.a), ceil(line.b)})) {
+    for (Actor actor : entities({floor(line.a()), ceil(line.b())})) {
         if (auto *entity = actor.dyn_cast<Entity<N>>(); entity && actor != act) {
             if (auto int0 = line.intersect(entity->bbox())) {
                 if (auto int1 = entity->first(line)) {

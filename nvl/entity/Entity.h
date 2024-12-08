@@ -154,13 +154,13 @@ Pos<N> Entity<N>::next_velocity() const {
         if (v != 0 || a != 0) {
             for (const At<N, Part> &part : parts()) {
                 const Box<N> box = part.bbox();
-                const I64 x = (v >= 0) ? box.max[i] : box.min[i];
+                const I64 x = (v >= 0) ? box.end[i] : box.min[i];
                 const Box<N> trj = box.with(i, x, x + v_next);
                 for (Actor actor : world_->entities(trj)) {
                     if (auto *entity = actor.dyn_cast<Entity<N>>(); entity && entity != this) {
                         for (const At<N, Part> &other : entity->parts(trj)) {
                             v_next = (v >= 0) ? std::clamp<I64>(other.bbox().min[i] - x, 0, v_next)
-                                              : std::clamp<I64>(x - other.bbox().max[i], v_next, 0);
+                                              : std::clamp<I64>(x - other.bbox().end[i], v_next, 0);
                         }
                     }
                 }

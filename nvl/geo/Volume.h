@@ -83,7 +83,7 @@ public:
                 auto &idx = idx_.value();
                 I64 i = N - 1;
                 idx[i] = idx[i] + step_[i];
-                while (i >= 0 && idx[i] >= box_.max[i]) {
+                while (i >= 0 && idx[i] >= box_.end[i]) {
                     idx[i] = box_.min[i];
                     i -= 1;
                     if (i >= 0) {
@@ -135,14 +135,14 @@ public:
                 I64 i = N - 1;
                 auto &current = current_.value();
                 current.min[i] += shape_[i];
-                current.max[i] += shape_[i];
-                while (i >= 0 && current.max[i] > box_.max[i]) {
+                current.end[i] += shape_[i];
+                while (i >= 0 && current.end[i] > box_.end[i]) {
                     current.min[i] = box_.min[i];
-                    current.max[i] = box_.min[i] + shape_[i];
+                    current.end[i] = box_.min[i] + shape_[i];
                     i -= 1;
                     if (i >= 0) {
                         current.min[i] += shape_[i];
-                        current.max[i] += shape_[i];
+                        current.end[i] += shape_[i];
                     } else {
                         current_ = None;
                     }
@@ -161,19 +161,19 @@ public:
     constexpr Volume(const Idx &a, const Idx &b) {
         for (U64 i = 0; i < N; i++) {
             min[i] = std::min(a[i], b[i]);
-            max[i] = std::max(a[i], b[i]);
+            end[i] = std::max(a[i], b[i]);
         }
     }
 
     /// Returns the number of dimensions in this box.
     pure constexpr I64 rank() const { return N; }
 
-    pure Idx shape() const { return max - min; }
+    pure Idx shape() const { return end - min; }
 
-    pure bool empty() const { return min == max; }
+    pure bool empty() const { return min == end; }
 
     pure Volume with(const U64 dim, const I64 lo, const I64 hi) const {
-        return Volume(this->min.with(dim, lo), this->max.with(dim, hi));
+        return Volume(this->min.with(dim, lo), this->end.with(dim, hi));
     }
 
     // TODO: Need to better define scaling by negatives here
@@ -182,19 +182,19 @@ public:
     //   Scaling by -2: [1,3) => [-6, -2)? [-4, 0)?
 
     /// Returns a new Volume shifted by `rhs`.
-    pure Volume operator+(const Idx &rhs) const { return Volume(min + rhs, max + rhs); }
-    pure Volume operator+(const I64 rhs) const { return Volume(min + rhs, max + rhs); }
-    pure Volume operator-(const Idx &rhs) const { return Volume(min - rhs, max - rhs); }
-    pure Volume operator-(const I64 rhs) const { return Volume(min - rhs, max - rhs); }
+    pure Volume operator+(const Idx &rhs) const { return Volume(min + rhs, end + rhs); }
+    pure Volume operator+(const I64 rhs) const { return Volume(min + rhs, end + rhs); }
+    pure Volume operator-(const Idx &rhs) const { return Volume(min - rhs, end - rhs); }
+    pure Volume operator-(const I64 rhs) const { return Volume(min - rhs, end - rhs); }
 
-    void operator+=(const Idx &rhs) { *this = Volume(min + rhs, max + rhs); }
-    void operator-=(const Idx &rhs) { *this = Volume(min - rhs, max - rhs); }
-    void operator-=(const I64 &rhs) { *this = Volume(min - rhs, max - rhs); }
-    void operator+=(const I64 &rhs) { *this = Volume(min + rhs, max + rhs); }
+    void operator+=(const Idx &rhs) { *this = Volume(min + rhs, end + rhs); }
+    void operator-=(const Idx &rhs) { *this = Volume(min - rhs, end - rhs); }
+    void operator-=(const I64 &rhs) { *this = Volume(min - rhs, end - rhs); }
+    void operator+=(const I64 &rhs) { *this = Volume(min + rhs, end + rhs); }
 
     /// Returns a new Volume which is clamped to the given grid size.
-    pure Volume clamp(const Idx &grid) const { return Volume(min.grid_min(grid), max.grid_max(grid)); }
-    pure Volume clamp(const I64 grid) const { return Volume(min.grid_min(grid), max.grid_max(grid)); }
+    pure Volume clamp(const Idx &grid) const { return Volume(min.grid_min(grid), end.grid_max(grid)); }
+    pure Volume clamp(const I64 grid) const { return Volume(min.grid_min(grid), end.grid_max(grid)); }
 
     /// Returns an iterator over points in this box with the given `step` size in each dimension.
     pure Range<Idx> indices(const I64 step = 1) const { return indices(Idx::fill(step)); }
@@ -208,17 +208,13 @@ public:
     /// Returns an iterator over sub-boxes with the given multidimensional `step` size.
     pure Range<Volume> volumes(const Idx &shape) const { return make_range<box_iterator>(*this, shape); }
 
-    /// Provides iteration over all points in this box.
-    pure Iterator<Idx> begin() const { return idx_iterator::template begin(*this, Idx::ones); }
-    pure Iterator<Idx> end() const { return idx_iterator::template end(*this, Idx::ones); }
-
-    pure bool operator==(const Volume &rhs) const { return min == rhs.min && max == rhs.max; }
+    pure bool operator==(const Volume &rhs) const { return min == rhs.min && end == rhs.end; }
     pure bool operator!=(const Volume &rhs) const { return !(*this == rhs); }
 
     /// Returns true if there is any overlap between this Volume and `rhs`.
     pure bool overlaps(const Volume &rhs) const {
         for (U64 i = 0; i < N; ++i) {
-            if (min[i] >= rhs.max[i] || rhs.min[i] >= max[i]) {
+            if (min[i] >= rhs.end[i] || rhs.min[i] >= end[i]) {
                 return false;
             }
         }
@@ -229,7 +225,7 @@ public:
     template <typename R>
     pure bool contains(const Tuple<N, R> &pt) const {
         for (U64 i = 0; i < N; ++i) {
-            if (pt[i] < min[i] || pt[i] >= max[i]) {
+            if (pt[i] < min[i] || pt[i] >= end[i]) {
                 return false;
             }
         }
@@ -239,7 +235,7 @@ public:
     /// Returns the Volume where this and `rhs` overlap. Returns None if there is no overlap.
     pure Maybe<Volume> intersect(const Volume &rhs) const {
         if (overlaps(rhs)) {
-            return Volume(nvl::max(min, rhs.min), nvl::min(max, rhs.max));
+            return Volume(nvl::max(min, rhs.min), nvl::min(end, rhs.end));
         }
         return None;
     }
@@ -281,18 +277,18 @@ public:
 
     /// Returns a new Volume which is expanded by `size` in every direction/dimension.
     /// e.g. [0,3) widened 3 => [-3,6)
-    pure Volume widened(const U64 size) const { return Volume(min - Idx::fill(size), max + Idx::fill(size)); }
+    pure Volume widened(const U64 size) const { return Volume(min - Idx::fill(size), end + Idx::fill(size)); }
 
     pure std::string to_string() const {
         std::stringstream ss;
-        ss << "{" << min.to_string() << ", " << max.to_string() << "}";
+        ss << "{" << min.to_string() << ", " << end.to_string() << "}";
         return ss.str();
     }
 
     const Volume &bbox() const { return *this; }
 
     Idx min;
-    Idx max;
+    Idx end;
 
 private:
     friend struct idx_iterator;
@@ -304,20 +300,20 @@ private:
             for (U64 i = 0; i < N; ++i) {
                 for (const Dir dir : Dir::list) {
                     Tuple<N, T> result_min;
-                    Tuple<N, T> result_max;
+                    Tuple<N, T> result_end;
                     for (U64 d = 0; d < N; ++d) {
                         if (i == d) {
-                            result_min[d] = (dir == Dir::Neg) ? min[d] : both.max[d];
-                            result_max[d] = (dir == Dir::Neg) ? both.min[d] : max[d];
+                            result_min[d] = (dir == Dir::Neg) ? min[d] : both.end[d];
+                            result_end[d] = (dir == Dir::Neg) ? both.min[d] : end[d];
                         } else if (d > i) {
                             result_min[d] = min[d];
-                            result_max[d] = max[d];
+                            result_end[d] = end[d];
                         } else {
                             result_min[d] = both.min[d];
-                            result_max[d] = both.max[d];
+                            result_end[d] = both.end[d];
                         }
                     }
-                    const Maybe<Volume> box = Volume::get(result_min, result_max);
+                    const Maybe<Volume> box = Volume::get(result_min, result_end);
                     if (box.has_value()) {
                         result.push_back(*box);
                     }
@@ -390,9 +386,9 @@ Edge<N, T> Volume<N, T>::edge(const Dir dir, const U64 dim, const I64 width, con
     auto unit = Tuple<N, T>::unit(dim);
     auto inner = unit * dist;
     auto outer = unit * (width - 1);
-    auto edge_min = (dir == Dir::Neg) ? min - outer - inner : min.with(dim, max[dim]) + inner;
-    auto edge_max = (dir == Dir::Neg) ? max.with(dim, min[dim]) - inner : max + outer + inner;
-    return Edge<N, T>(dir, dim, Volume(edge_min, edge_max));
+    auto edge_min = (dir == Dir::Neg) ? min - outer - inner : min.with(dim, end[dim]) + inner;
+    auto edge_end = (dir == Dir::Neg) ? end.with(dim, min[dim]) - inner : end + outer + inner;
+    return Edge<N, T>(dir, dim, Volume(edge_min, edge_end));
 }
 
 /*template <U64 N>
@@ -410,7 +406,7 @@ Volume<N> operator-(I64 a, const Volume<N> &b) {
 
 template <U64 N, typename T>
 std::ostream &operator<<(std::ostream &os, const Volume<N, T> &box) {
-    return os << "{" << box.min << ", " << box.max << "}";
+    return os << "{" << box.min << ", " << box.end << "}";
 }
 
 template <U64 N, typename T>
@@ -426,7 +422,7 @@ pure Volume<N, T> bounding_box(const Volume<N, T> &a, const Volume<N, T> &b) {
         return b;
     if (b.empty())
         return a;
-    return Volume<N, T>(min(a.min, b.min), max(a.max, b.max));
+    return Volume<N, T>(min(a.min, b.min), max(a.end, b.end));
 }
 
 } // namespace nvl

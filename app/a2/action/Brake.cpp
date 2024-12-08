@@ -5,17 +5,16 @@
 namespace a2 {
 
 Status Brake::act(Player &player) const {
-
     if (player.has_below()) {
-        Vec<3> v = real(player.v());
-        v[1] = 0;
-        const double v0 = v.magnitude();
-        const double v1 = v0 - player.walk_accel();
-        v[0] *= v1 / v0;
-        v[1] *= v1 / v0;
+        const F64 a = static_cast<F64>(player.walk_accel());
+        const Vec<3> v = real(player.v()).with(World<3>::kVerticalDim, 0);
+        const F64 speed = v.magnitude();
+        const F64 speed2 = speed > 0 ? std::max(0.0, speed - a) : std::min(0.0, speed + a);
+        const Line<3> line_v(Vec<3>::zero, v);
+        const Pos<3> v2 = round(line_v.interpolate(speed2));
+        player.v()[0] = v2[0];
+        player.v()[2] = v2[2];
     }
-    player.v()[0] = v0 > 0 ? std::max<I64>(v0 - a, 0) : std::min<I64>(v0 + a, 0);
-    player.v()[2] = v2 > 0 ? std::max<I64>(v2 - a, 0) : std::min<I64>(v2 + a, 0);
     return Status::kMove;
 }
 

@@ -26,6 +26,20 @@ struct nvl::RandomGen<Box<N>> {
     }
 };
 
+template <U64 N>
+struct nvl::RandomGen<Line<N>> {
+    pure Line<N> uniform(Random &random, const F64 min, const F64 max) const {
+        const auto a = random.uniform<Vec<N>, F64>(min, max);
+        const auto b = random.uniform<Vec<N>, F64>(min, max);
+        return Line<N>(a, b);
+    }
+    pure Line<N> normal(Random &random, const F64 mean, const F64 stddev) const {
+        const auto a = random.normal<Vec<N>, F64>(mean, stddev);
+        const auto b = random.normal<Vec<N>, F64>(mean, stddev);
+        return Line<N>(a, b);
+    }
+};
+
 } // namespace nvl
 
 namespace {
@@ -38,40 +52,150 @@ using nvl::Line;
 using nvl::Maybe;
 using nvl::Vec;
 
+#define EXPECT_VEC_NEAR(actual, expected, error)                                                                       \
+    for (U64 i = 0; i < actual.rank(); ++i) {                                                                          \
+        EXPECT_NEAR(actual[i], expected[i], error);                                                                    \
+    }
+
+TEST(TestLine, length) {
+    constexpr Line<2> a(Vec<2>(1, 3), Vec<2>(3, 6));
+    const F64 expected_len = std::sqrt(2 * 2 + 3 * 3);
+    EXPECT_NEAR(a.length(), expected_len, 0.01 * expected_len);
+}
+
+TEST(TestLine, slope) {
+    constexpr Line<2> a(Vec<2>(1, 3), Vec<2>(3, 6));
+    const F64 expected_len = std::sqrt(2 * 2 + 3 * 3);
+    const Vec<2> expected_slope = Vec<2>(2, 3) / expected_len;
+    EXPECT_VEC_NEAR(a.slope(), expected_slope, 0.001);
+}
+
 TEST(TestLine, intersect) {
     constexpr Box<3> box{{500, 950, 500}, {550, 1000, 550}};
-    constexpr Line<3> line{{528, 969, 410}, {528, 974, 510}};
+    const Line<3> line{Vec<3>{528, 969, 410}, Vec<3>{528, 974, 510}};
     const auto intersect = line.intersect(box);
     ASSERT_TRUE(intersect.has_value());
     EXPECT_EQ(intersect->pt, Vec<3>(528, 973.5, 500));
 }
 
-using FuzzLineIntersect = nvl::test::FuzzingTestFixture<Maybe<Intersect<2>>, Line<2>, Box<2>>;
-TEST_F(FuzzLineIntersect, fuzz2d) {
-    num_tests = 1E3;
-    in[0] = nvl::Distribution::Uniform<F64>(-20, 20);
-    in[1] = nvl::Distribution::Uniform<I64>(-15, 15);
-    fuzz([](Maybe<Intersect<2>> &x, const Line<2> &line, const Box<2> &box) { x = line.intersect(box); });
-
-    verify([](const Maybe<Intersect<2>> &x, const Line<2> &line, const Box<2> &box) {
-        /*std::cout << line << " + " << box << " = ";
-        if (x.has_value()) {
-            std::cout << x->pt << " (dist: " << x->dist << ", face: " << x->dir << x->dim << ")";
-        } else {
-            std::cout << "N/A";
-        }
-        std::cout << std::endl;*/
-        if (box.contains(line.a)) {
-            ASSERT(x->pt == line.a, "Expected A to be the intersection when A is inside the box.");
-            ASSERT(x->dist == 0, "Expected a distance of 0 when A is inside the box.");
-            ASSERT(x->face == Face(Dir::Pos, 0), "Expected face +0 when A is inside the box.");
-        }
-
-        // Confirm using y = mx + b, m = (y1 - y0)/(x1 - x0), b = y0 - m*x0
-        // This is pretty much just a simplified version of what the intersect code does
-        // F64 m = static_cast<F64>(line.b[1] - line.a[1]) / (line.b[0] - line.a[0]);
-        // F64 b = line.a[1] - m * line.a[0];
-    });
+TEST(TestLine, interpolate) {
+    const Line<2> line{{1, 1}, {4, 5}};
+    EXPECT_EQ(line.interpolate(-5), Vec<2>(-2, -3)); // Not on the line segment
+    EXPECT_EQ(line.interpolate(0), Vec<2>(1, 1));
+    EXPECT_EQ(line.interpolate(5), Vec<2>(4, 5));
+    EXPECT_EQ(line.interpolate(10), Vec<2>(7, 9)); // Not on the line segment
 }
+
+template <U64 N>
+struct FuzzLineIntersect : nvl::test::FuzzingTestFixture<Maybe<Intersect<N>>, Line<N>, Box<N>> {
+    FuzzLineIntersect() {
+        this->num_tests = 1E6;
+        this->in[0] = nvl::Distribution::Uniform<F64>(-20, 20);
+        this->in[1] = nvl::Distribution::Uniform<I64>(-15, 15);
+        this->fuzz([](Maybe<Intersect<N>> &x, const Line<N> &line, const Box<N> &box) { x = line.intersect(box); });
+
+        this->verify(
+            [](const Maybe<Intersect<N>> &x, const Line<N> &line, const Box<N> &box) {
+                if (box.contains(line.a())) {
+                    ASSERT_TRUE(x.has_value()) //
+                        << "Expected A to be the intersection when A is inside the box." << std::endl
+                        << "Box: " << box << std::endl
+                        << "Line: " << line;
+                    EXPECT_EQ(x->pt, line.a()) //
+                        << "Expected A to be the intersection when A is inside the box." << std::endl
+                        << "Box: " << box << std::endl
+                        << "Line: " << line;
+                    EXPECT_EQ(x->dist, 0) //
+                        << "Expected a distance of 0 when A is inside the box." << std::endl
+                        << "Box: " << box << std::endl
+                        << "Line: " << line;
+                    EXPECT_FALSE(x->face.has_value()) //
+                        << "Expected no face when A is inside box: " << std::endl
+                        << "Box: " << box << std::endl
+                        << "Line: " << line;
+                } else {
+                    if (x.has_value()) {
+                        EXPECT_GT(x->dist, 0) //
+                            << "Expected intersection distance to be > 0." << std::endl
+                            << "Box: " << box << std::endl
+                            << "Line: " << line << std::endl
+                            << "Length: " << line.length() << std::endl
+                            << "Intersect pt: " << x->pt << std::endl
+                            << "Intersect dist: " << x->dist << std::endl
+                            << "Intersect face: " << x->face.value() << std::endl;
+                        EXPECT_LE(x->dist, line.length()) //
+                            << "Expected intersection distance to be <= line length." << std::endl
+                            << "Box: " << box << std::endl
+                            << "Line: " << line << std::endl
+                            << "Length: " << line.length() << std::endl
+                            << "Intersect pt: " << x->pt << std::endl
+                            << "Intersect dist: " << x->dist << std::endl
+                            << "Intersect face: " << x->face.value() << std::endl;
+
+                        const auto pt = line.interpolate(x->dist);
+                        for (U64 i = 0; i < 2; ++i) {
+                            EXPECT_NEAR(pt[i], x->pt[i], 0.001) //
+                                << "Expected intersection point to be near interpolation point at dist." << std::endl
+                                << "Box: " << box << std::endl
+                                << "Line: " << line << std::endl
+                                << "Length: " << line.length() << std::endl
+                                << "Slope: " << line.slope() << std::endl
+                                << "Intersect pt: " << x->pt << std::endl
+                                << "Intersect dist: " << x->dist << std::endl
+                                << "Intersect face: " << x->face.value() << std::endl
+                                << "Interpolated point: " << pt << std::endl;
+                        }
+                        EXPECT_TRUE(box.contains(x->pt)) //
+                            << "Expected intersection point to be contained within box." << std::endl
+                            << "Box: " << box << std::endl
+                            << "Line: " << line << std::endl
+                            << "Intersect pt: " << x->pt << std::endl
+                            << "Intersect dist: " << x->dist << std::endl
+                            << "Intersect face: " << x->face.value() << std::endl;
+
+                        // Expect that the intersection point is at one of the surfaces of the box
+                        bool has_face = false;
+                        for (U64 d = 0; d < N; ++d) {
+                            has_face |= (x->pt[d] == box.min[d] || x->pt[d] == box.max[d] - 1);
+                        }
+                        EXPECT_TRUE(has_face) //
+                            << "Expected intersection point to be on a face of the box." << std::endl
+                            << "Box: " << box << std::endl
+                            << "Line: " << line << std::endl
+                            << "Intersect pt: " << x->pt << std::endl
+                            << "Intersect dist: " << x->dist << std::endl
+                            << "Intersect face: " << x->face.value() << std::endl;
+                    }
+                    for (I64 d = 0; d < static_cast<I64>(std::ceil(line.length())); ++d) {
+                        const F64 dist = static_cast<F64>(d) / 1000.0;
+                        const Vec<N> pt = line.interpolate(dist);
+                        if (x.has_value() && dist < x->dist) {
+                            EXPECT_FALSE(box.contains(pt)) //
+                                << "Expected interpolated point prior to intersection not to be in box." << std::endl
+                                << "Box: " << box << std::endl
+                                << "Line: " << line << std::endl
+                                << "Intersect pt: " << x->pt << std::endl
+                                << "Intersect dist: " << x->dist << std::endl
+                                << "Intersect face: " << x->face.value() << std::endl
+                                << "Interpolated dist: " << dist << std::endl
+                                << "Interpolated pt: " << pt << std::endl;
+                        } else if (!x.has_value()) {
+                            EXPECT_FALSE(box.contains(pt)) //
+                                << "Expected no points on line in box when intersection failed." << std::endl
+                                << "Box: " << box << std::endl
+                                << "Line: " << line << std::endl
+                                << "Interpolated dist: " << dist << std::endl
+                                << "Interpolated pt: " << pt << std::endl;
+                        }
+                    }
+                }
+            });
+    }
+};
+
+using FuzzIntersect2D = FuzzLineIntersect<2>;
+using FuzzIntersect3D = FuzzLineIntersect<3>;
+TEST_F(FuzzIntersect2D, fuzz2d) {}
+TEST_F(FuzzIntersect3D, fuzz3d) {}
 
 } // namespace

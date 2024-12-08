@@ -113,16 +113,16 @@ void RayWindow::fill_cube(const Color &color, const Box<3> &cube) {
 }
 
 void RayWindow::line(const Color &color, const Line<2> &line) {
-    DrawLine(line.a[0], line.a[1], line.b[0], line.b[1], raycolor(color));
+    const Vec<2> &a = line.a();
+    const Vec<2> &b = line.b();
+    DrawLine(a[0], a[1], b[0], b[1], raycolor(color));
 }
 
 void RayWindow::line(const Color &color, const Line<3> &line) {
-    const Vector3 start{.x = static_cast<float>(line.a[0] / scale_),
-                        .y = static_cast<float>(line.a[1] / scale_),
-                        .z = static_cast<float>(line.a[2] / scale_)};
-    const Vector3 end{.x = static_cast<float>(line.b[0] / scale_),
-                      .y = static_cast<float>(line.b[1] / scale_),
-                      .z = static_cast<float>(line.b[2] / scale_)};
+    const Vec<3> &a = line.a() / scale_;
+    const Vec<3> &b = line.b() / scale_;
+    const Vector3 start{.x = static_cast<float>(a[0]), .y = static_cast<float>(a[1]), .z = static_cast<float>(a[2])};
+    const Vector3 end{.x = static_cast<float>(b[0]), .y = static_cast<float>(b[1]), .z = static_cast<float>(b[2])};
     DrawLine3D(start, end, raycolor(color));
 }
 
