@@ -21,7 +21,13 @@ const std::vector kColors = {
 };
 } // namespace
 
-WorldA2::WorldA2(AbstractScreen *parent) : World<3>(parent, {.gravity_accel = 6_mps2, .maximum_y = 10_m}) {
+WorldA2::WorldA2(AbstractScreen *parent)
+    : World<3>(parent, {.gravity_accel = 10_mps2,
+                        .maximum_y = 10_m,
+                        .ms_per_tick = a2::kMillisPerTick,
+                        .pixels_per_meter = a2::kPixelsPerMeter,
+                        .terminal_velocity = 53_mps}) {
+
     window_->set_background(Color::kSkyBlue);
     paused = true;
     open<PauseScreen>(this);
@@ -29,6 +35,9 @@ WorldA2::WorldA2(AbstractScreen *parent) : World<3>(parent, {.gravity_accel = 6_
     for (const auto &color : kColors) {
         materials.push_back(Material::get<TestMaterial>(color));
     }
+
+    std::cout << "V: " << 30_mps << std::endl;
+    std::cout << "G: " << kGravityAccel << std::endl;
 
     const Material bulwark = Material::get<Bulwark>(Color::kDarkGreen);
     spawn<Block<3>>(Pos<3>{-50_m, 0, -50_m}, Pos<3>{100_m, 1_m, 100_m}, bulwark);
@@ -38,8 +47,8 @@ WorldA2::WorldA2(AbstractScreen *parent) : World<3>(parent, {.gravity_accel = 6_
     view3d().offset = start;
     view3d().angle = -90;
     view3d().pitch = 10;
-    view3d().dist = Player::kViewDistance;
-    view3d().scale = 10'000.0;
+    view3d().dist = 50_m;
+    view3d().scale = static_cast<double>(kPixelsPerMeter);
 
     const std::vector colors{Color::kRed, Color::kGreen, Color::kBlue};
     I64 x = -250_cm;

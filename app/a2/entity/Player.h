@@ -10,14 +10,6 @@ using namespace nvl;
 struct Player final : Entity<3> {
     class_tag(Player, Entity<3>);
 
-    static constexpr I64 kMaxVelocity = 10_mps;
-    static constexpr I64 kDigDist = 3_m;
-    static constexpr I64 kDigRadius = 5_m;
-    static constexpr I64 kViewDistance = 50_m;
-
-    static constexpr U64 kRespawnTicks = 100;
-    static constexpr U64 kDigTicks = 5;
-
     explicit Player(const Pos<3> &loc);
 
     Pos<3> &x() { return parts_.loc; }
@@ -30,6 +22,12 @@ struct Player final : Entity<3> {
     void draw(Window *, const Color &) const override;
     Status tick(const List<Message> &messages) override;
     Status broken(const List<Component> &) override;
+
+    pure I64 dig_ticks() const { return 5; }
+    pure I64 dig_reach() const { return 3_m; }
+    pure I64 dig_radius() const { return 1_m; }
+    pure I64 walk_accel() const { return 4_mps2; }
+    pure I64 walk_max_velocity() const { return 10_mps; }
 
     U64 last_dig = 0;
     Pos<3> spawn;

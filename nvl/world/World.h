@@ -27,11 +27,11 @@ public:
     class_tag(World<N>, AbstractScreen);
 
     struct Params {
-        U64 terminal_velocity = 53;  // meters/sec (default is about 120mph)
-        U64 gravity_accel = 10;      // meters/sec^2
+        I64 terminal_velocity = 53;  // meters/sec (default is about 120mph)
+        I64 gravity_accel = 10;      // meters/sec^2
         I64 maximum_y = 1e3;         // pixels -- down is positive
-        U64 pixels_per_meter = 1000; // pixels / meter
-        U64 ms_per_tick = 30;        // milliseconds / tick
+        I64 pixels_per_meter = 1000; // pixels / meter
+        I64 ms_per_tick = 30;        // milliseconds / tick
     };
 
     static constexpr I64 kMaxEntries = 10;

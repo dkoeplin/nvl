@@ -12,6 +12,9 @@ struct WorldA2;
 class DeathScreen final : public AbstractScreen {
 public:
     class_tag(DeathScreen, AbstractScreen);
+
+    static constexpr U64 kRespawnTicks = 100;
+
     explicit DeathScreen(AbstractScreen *parent, WorldA2 *world);
 
 protected:

@@ -7,10 +7,10 @@ namespace a2 {
 Status Dig::act(Player &player) const {
     const World<3> *world = player.world();
     const U64 now = world->ticks();
-    if (now >= player.last_dig + Player::kDigTicks) {
+    if (now >= player.last_dig + player.dig_ticks()) {
         const auto *view = world->view().dyn_cast<View3D>();
         const Vec<3> &start = real(view->offset);
-        const Vec<3> end = view->project(Player::kDigDist);
+        const Vec<3> end = view->project(player.dig_reach());
         const Line sight(start, end);
         if (const auto itx = world->first_except(sight, player.self())) {
             const Pos<3> pt = round(itx->pt);

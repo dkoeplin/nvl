@@ -7,7 +7,7 @@ namespace a2 {
 
 Status Jump::act(Player &player) const {
     if (player.has_below() && player.v()[1] == 0) {
-        player.v()[1] = -30_mps;
+        player.v()[1] = -5_mps;
         return Status::kMove;
     }
     return Status::kNone;
