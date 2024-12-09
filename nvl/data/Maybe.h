@@ -2,6 +2,8 @@
 
 #include <optional>
 
+#include "nvl/macros/ReturnIf.h"
+
 namespace nvl {
 
 template <typename Value>
