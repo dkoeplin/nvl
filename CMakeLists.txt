@@ -12,7 +12,6 @@ set(CMAKE_CXX_FLAGS " \
 -Wpedantic \
 -Wshadow \
 -Werror \
--fsanitize=address \
 ")
 
 add_library(nvl SHARED

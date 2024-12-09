@@ -5,6 +5,8 @@
 #include "nvl/geo/Volume.h"
 #include "nvl/macros/Aliases.h"
 #include "nvl/macros/Pure.h"
+#include "nvl/macros/ReturnIf.h"
+#include "nvl/math/Bitwise.h"
 
 namespace nvl {
 
@@ -90,20 +92,22 @@ Maybe<Intersect<N>> intersect(const Line<N> &line, const Box<N> &box) {
     }
 
     const F64 len = line.length();
+    const Vec<N> min = real(box.min);
+    const Vec<N> max = box.max_f64();
     Maybe<Intersect<N>> closest = None;
     // Iterate over faces of the box
     // If the line intersects with the box, and the point a is outside the box,
     // the closest point to a should be on one of the faces of the box.
-    for (const auto &edge : box.faces()) {
-        // A face is an N-dimensional surface where one of the dimensions (d) has a fixed value.
-        const Box<N> &f = edge.bbox();
-        const U64 d = edge.dim;
-        const I64 x = (edge.dir == Dir::Neg) ? f.min[d] : f.end[d] - 1;
-        const Maybe<Intersect<N>> pt = line.interpolate(d, x);
-        if (pt && pt->dist >= 0 && pt->dist <= len && box.contains(pt->pt)) {
-            if (!closest.has_value() || pt->dist < closest->dist) {
-                closest = pt;
-                closest->face = edge.face();
+    for (Dir dir : Dir::list) {
+        const Vec<N> &vec = (dir == Dir::Neg) ? min : max;
+        for (U64 d = 0; d < N; ++d) {
+            // A face is an N-dimensional surface where one of the dimensions (d) has a fixed value.
+            const Maybe<Intersect<N>> pt = line.interpolate(d, vec[d]);
+            if (pt && pt->dist >= 0 && pt->dist <= len && box.contains(pt->pt)) {
+                if (!closest.has_value() || pt->dist < closest->dist) {
+                    closest = pt;
+                    closest->face = Face(dir, d);
+                }
             }
         }
     }
@@ -117,14 +121,13 @@ Maybe<Intersect<N>> Line<N>::intersect(const Box<N> &box) const {
 
 template <U64 N>
 pure Vec<N> Line<N>::interpolate(const F64 dist) const {
-    return a_ + slope() * dist;
+    return a_ + dist * ((b_ - a_) / length());
 }
 
 template <U64 N>
 pure Maybe<Intersect<N>> Line<N>::interpolate(const U64 dim, const F64 x) const {
     ASSERT(dim < N, "Invalid dimension " << dim << " for rank " << N << " line.");
-    if (a_[dim] == b_[dim])
-        return None;
+    return_if(a_[dim] == b_[dim], None);
 
     // If the line has a non-zero slope in dimension d, calculate the slope with all other dimensions.
     // Use this to calculate the point on the line where dimension d would intersect with this face.

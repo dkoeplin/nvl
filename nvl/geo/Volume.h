@@ -1,5 +1,6 @@
 #pragma once
 
+#include "nvl/data/Counter.h"
 #include "nvl/data/Iterator.h"
 #include "nvl/data/List.h"
 #include "nvl/data/Maybe.h"
@@ -10,6 +11,7 @@
 #include "nvl/geo/Tuple.h"
 #include "nvl/macros/Aliases.h"
 #include "nvl/macros/Pure.h"
+#include "nvl/math/Bitwise.h"
 
 namespace nvl {
 
@@ -154,6 +156,9 @@ public:
         Maybe<Volume> current_;
         Idx shape_;
     };
+
+    struct face_iterator;
+
     explicit Volume() = default;
 
     /// Returns a Volume from points `a` to `b` (inclusive).
@@ -177,9 +182,9 @@ public:
     }
 
     // TODO: Need to better define scaling by negatives here
-    //   Scaling by -1: [1,3) => [-3,-1)? [-2,0)?
+    //   Scaling by -1: [1,3) => [-3,-1)
     //   Scaling by 2:  [1,3) => [2, 6)
-    //   Scaling by -2: [1,3) => [-6, -2)? [-4, 0)?
+    //   Scaling by -2: [1,3) => [-6, -2)
 
     /// Returns a new Volume shifted by `rhs`.
     pure Volume operator+(const Idx &rhs) const { return Volume(min + rhs, end + rhs); }
@@ -264,9 +269,9 @@ public:
 
     pure List<Volume> diff(const List<Volume> &boxes) const { return diff(Range(boxes.begin(), boxes.end())); }
 
-    /// Returns the faces with given `width`.
-    /// Faces begin at the outermost "pixel" of the box and extend inwards.
-    pure List<Edge<N, T>> faces(I64 width = 1) const;
+    /// Returns a range over the faces of this volume.
+    /// Faces have a "thickness" of zero.
+    pure Range<Edge<N, T>> faces() const;
 
     /// Returns the edges with given width and distance from the outermost pixel.
     /// Edges begin at `dist` "pixels" away from the outermost 'pixel" of the box and extend outwards.
@@ -286,6 +291,16 @@ public:
     }
 
     const Volume &bbox() const { return *this; }
+
+    /// Returns the maximum value representable in F64 per dimension.
+    pure Vec<N> max_f64() const {
+        Vec<N> result;
+        for (U64 i = 0; i < N; ++i) {
+            const auto x = static_cast<F64>(end[i]);
+            result[i] = x - ulps(x, 1);
+        }
+        return result;
+    }
 
     Idx min;
     Idx end;
@@ -366,8 +381,54 @@ struct Edge : Face {
 };
 
 template <U64 N, typename T>
-List<Edge<N, T>> Volume<N, T>::faces(const I64 width) const {
-    return edges(-width, 0);
+struct Volume<N, T>::face_iterator final : AbstractIteratorCRTP<face_iterator, Edge<N, T>> {
+    class_tag(Volume::face_iterator, AbstractIterator<Edge<N, T>>);
+
+    template <View Type = View::kImmutable>
+        requires(Type == View::kImmutable)
+    static Iterator<Edge<N, T>, Type> begin(const Volume &box) {
+        return make_iterator<face_iterator, Type>(box, Dir::Neg, 0);
+    }
+    template <View Type = View::kImmutable>
+        requires(Type == View::kImmutable)
+    static Iterator<Edge<N, T>, Type> end(const Volume &box) {
+        return make_iterator<face_iterator, Type>(box, Dir::Neg, N);
+    }
+
+    explicit face_iterator(const Volume &box, Dir dir, U64 dim) : box_(box), face_(dir, dim, box) { update_face(); }
+
+    const Edge<N, T> *ptr() override { return &face_; }
+
+    pure bool operator==(const face_iterator &rhs) const override {
+        return box_ == rhs.box_ && face_.dim == rhs.face_.dim && face_.dir == rhs.face_.dir;
+    }
+
+    void increment() override {
+        if (face_.dim < N) {
+            if (face_.dir == Dir::Neg) {
+                face_.dir = Dir::Pos;
+            } else {
+                face_.dir = Dir::Neg;
+                face_.dim += 1;
+            }
+            update_face();
+        }
+    }
+
+    void update_face() {
+        const U64 i = face_.dim;
+        return_if(i >= N);
+        face_.box.min = (face_.dir == Dir::Neg) ? box_.min : box_.min.with(i, box_.end[i]);
+        face_.box.end = (face_.dir == Dir::Neg) ? box_.end.with(i, box_.min[i]) : box_.end;
+    }
+
+    Volume box_;
+    Edge<N, T> face_;
+};
+
+template <U64 N, typename T>
+Range<Edge<N, T>> Volume<N, T>::faces() const {
+    return make_range<face_iterator>(*this);
 }
 
 template <U64 N, typename T>
@@ -391,18 +452,10 @@ Edge<N, T> Volume<N, T>::edge(const Dir dir, const U64 dim, const I64 width, con
     return Edge<N, T>(dir, dim, Volume(edge_min, edge_end));
 }
 
-/*template <U64 N>
-Volume<N> operator*(I64 a, const Volume<N> &b) {
-    return b * a;
-}*/
 template <U64 N, typename T>
 Volume<N, T> operator+(I64 a, const Volume<N, T> &b) {
     return b + a;
 }
-/*template <U64 N>
-Volume<N> operator-(I64 a, const Volume<N> &b) {
-    return -b + a;
-}*/
 
 template <U64 N, typename T>
 std::ostream &operator<<(std::ostream &os, const Volume<N, T> &box) {

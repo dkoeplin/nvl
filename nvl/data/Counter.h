@@ -14,7 +14,7 @@ class Counter {
 public:
     using Value = List<T>;
 
-    class iterator final : public AbstractIteratorCRTP<iterator, List<T>> {
+    class iterator : public AbstractIteratorCRTP<iterator, List<T>> {
     public:
         class_tag(Counter<T>::iterator, AbstractIterator<List<T>>);
         template <View Type = View::kImmutable>

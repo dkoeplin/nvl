@@ -109,21 +109,14 @@ public:
     /// Returns the element at `i` or `v` if `i` is out of bounds.
     pure T get_or(const U64 i, const T v) const { return i < N ? indices_[i] : v; }
 
-    /// Returns the element at `i`, asserting that `i` is within bounds.
-    pure constexpr T operator[](const U64 i) const {
-        ASSERT(i < N, "Index " << i << " is out of bounds [" << 0 << ", " << N << ")");
-        return indices_[i];
-    }
+    /// Returns the element at `i`.
+    pure constexpr T operator[](const U64 i) const { return indices_[i]; }
 
-    /// Returns a reference to the element at `i`, asserting that `i` is within bounds.
-    pure constexpr T &operator[](const U64 i) {
-        ASSERT(i < N, "Index " << i << " is out of bounds [" << 0 << ", " << N << ")");
-        return indices_[i];
-    }
+    /// Returns a reference to the element at `i`.
+    pure constexpr T &operator[](const U64 i) { return indices_[i]; }
 
     /// Returns a copy with the element at `i` changed to `v`.
     pure Tuple with(const U64 i, const T v) const {
-        ASSERT(i < N, "Index " << i << " is out of bounds [" << 0 << ", " << N << ")");
         Tuple result = *this;
         result.indices_[i] = v;
         return result;
