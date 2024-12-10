@@ -68,6 +68,7 @@ public:
     using parent::front;
     using parent::pop_back;
     using parent::push_back;
+    using parent::reserve;
     using parent::size;
 
     pure MIterator<Value> begin() { return iterator::template begin<View::kMutable>(*this); }

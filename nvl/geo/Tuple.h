@@ -7,6 +7,7 @@
 #include "nvl/data/SipHash.h"
 #include "nvl/macros/Aliases.h"
 #include "nvl/macros/Assert.h"
+#include "nvl/macros/SIMD.h"
 #include "nvl/math/Grid.h"
 #include "nvl/reflect/ClassTag.h"
 
@@ -125,87 +126,69 @@ public:
     /// Returns a copy with every element negated.
     pure Tuple operator-() const {
         Tuple result = *this;
-        for (T &x : result.indices_) {
-            x = -x;
-        }
+        simd for (T &x : result.indices_) { x = -x; }
         return result;
     }
 
     /// Returns a new instance with the result of element-wise multiplication.
     pure Tuple operator*(const Tuple &rhs) const {
         Tuple result;
-        for (U64 i = 0; i < N; ++i) {
-            result[i] = indices_[i] * rhs.indices_[i];
-        }
+        simd for (U64 i = 0; i < N; ++i) { result[i] = indices_[i] * rhs.indices_[i]; }
         return result;
     }
 
     /// Returns a new instance with the result of element-wise division.
     pure Tuple operator/(const Tuple &rhs) const {
         Tuple result;
-        for (U64 i = 0; i < N; ++i) {
-            result[i] = indices_[i] / rhs.indices_[i];
-        }
+        simd for (U64 i = 0; i < N; ++i) { result[i] = indices_[i] / rhs.indices_[i]; }
         return result;
     }
 
     /// Returns a new instance with the result of element-wise addition.
     pure Tuple operator+(const Tuple &rhs) const {
         Tuple result;
-        for (U64 i = 0; i < N; ++i) {
-            result[i] = indices_[i] + rhs.indices_[i];
-        }
+        simd for (U64 i = 0; i < N; ++i) { result[i] = indices_[i] + rhs.indices_[i]; }
         return result;
     }
 
     /// Returns a new instance with the result of element-wise subtraction.
     pure Tuple operator-(const Tuple &rhs) const {
         Tuple result;
-        for (U64 i = 0; i < N; ++i) {
-            result[i] = indices_[i] - rhs.indices_[i];
-        }
+        simd for (U64 i = 0; i < N; ++i) { result[i] = indices_[i] - rhs.indices_[i]; }
         return result;
     }
 
     /// Returns a new instance with the result of element-wise multiplication.
     pure Tuple operator*(const T rhs) const {
         Tuple result = *this;
-        for (T &x : result.indices_) {
-            x *= rhs;
-        }
+        simd for (T &x : result.indices_) { x *= rhs; }
         return result;
     }
 
     /// Returns a new instance with the result of element-wise division.
     pure Tuple operator/(const T rhs) const {
         Tuple result = *this;
-        for (T &x : result.indices_) {
-            x /= rhs;
-        }
+        simd for (T &x : result.indices_) { x /= rhs; }
         return result;
     }
 
     /// Returns a new instance with the result of element-wise addition.
     pure Tuple operator+(const T rhs) const {
         Tuple result = *this;
-        for (T &x : result.indices_) {
-            x += rhs;
-        }
+        simd for (T &x : result.indices_) { x += rhs; }
         return result;
     }
 
     /// Returns a new instance with the result of element-wise subtraction.
     pure Tuple operator-(const T rhs) const {
         Tuple result = *this;
-        for (T &x : result.indices_) {
-            x -= rhs;
-        }
+        simd for (T &x : result.indices_) { x -= rhs; }
         return result;
     }
 
     /// Returns true if the two instances have identical elements.
     pure bool operator==(const Tuple &rhs) const {
-        for (U64 i = 0; i < N; ++i) {
+        simd for (U64 i = 0; i < N; ++i) {
             if (indices_[i] != rhs.indices_[i]) {
                 return false;
             }
@@ -218,23 +201,23 @@ public:
 
     /// Returns true if every element is strictly less than the corresponding element in `rhs`.
     pure bool all_lt(const Tuple &rhs) const {
-        for (U64 i = 0; i < N; ++i) {
+        simd for (U64 i = 0; i < N; ++i) {
             if (indices_[i] >= rhs.indices_[i]) {
                 return false;
             }
         }
         return true;
-    }
+    } // namespace nvl
 
     /// Returns true if every element is less than or equal to the corresponding element in `rhs`.
     pure bool all_lte(const Tuple &rhs) const {
-        for (U64 i = 0; i < N; ++i) {
+        simd for (U64 i = 0; i < N; ++i) {
             if (indices_[i] > rhs.indices_[i]) {
                 return false;
             }
         }
         return true;
-    }
+    } // namespace nvl
 
     /// Returns true if every element is greater than the corresponding element in `rhs`.
     pure bool all_gt(const Tuple &rhs) const { return rhs.all_lt(*static_cast<const Tuple *>(this)); }
@@ -246,17 +229,13 @@ public:
     /// Elements are rounded up to the grid in each dimension.
     pure Tuple grid_max(const Tuple &grid) const {
         Tuple result;
-        for (U64 i = 0; i < N; i++) {
-            result[i] = nvl::grid_max(this->indices_[i], grid[i]);
-        }
+        simd for (U64 i = 0; i < N; i++) { result[i] = nvl::grid_max(this->indices_[i], grid[i]); }
         return result;
     }
 
     pure Tuple grid_max(const T grid) const {
         Tuple result;
-        for (U64 i = 0; i < N; i++) {
-            result[i] = nvl::grid_max(this->indices_[i], grid);
-        }
+        simd for (U64 i = 0; i < N; i++) { result[i] = nvl::grid_max(this->indices_[i], grid); }
         return result;
     }
 
@@ -264,31 +243,25 @@ public:
     /// Elements are rounded down to the grid in each dimension.
     pure Tuple grid_min(const Tuple &grid) const {
         Tuple result;
-        for (U64 i = 0; i < N; i++) {
-            result[i] = nvl::grid_min(this->indices_[i], grid[i]);
-        }
+        simd for (U64 i = 0; i < N; i++) { result[i] = nvl::grid_min(this->indices_[i], grid[i]); }
         return result;
     }
 
     pure Tuple grid_min(const T grid) const {
         Tuple result;
-        for (U64 i = 0; i < N; i++) {
-            result[i] = nvl::grid_min(this->indices_[i], grid);
-        }
+        simd for (U64 i = 0; i < N; i++) { result[i] = nvl::grid_min(this->indices_[i], grid); }
         return result;
     }
 
     pure T manhattan_dist(const Tuple &rhs) const {
         T result = 0;
-        for (U64 i = 0; i < N; ++i) {
-            result += std::abs(this->indices_[i] - rhs.indices_[i]);
-        }
+        simd for (U64 i = 0; i < N; ++i) { result += std::abs(this->indices_[i] - rhs.indices_[i]); }
         return result;
     }
 
     pure F64 dist(const Tuple &rhs) const {
         F64 result = 0;
-        for (U64 i = 0; i < N; ++i) {
+        simd for (U64 i = 0; i < N; ++i) {
             const F64 diff = static_cast<F64>(indices_[i]) - rhs.indices_[i];
             result += diff * diff;
         }
@@ -297,9 +270,7 @@ public:
 
     pure F64 magnitude() const {
         F64 result = 0;
-        for (U64 i = 0; i < N; ++i) {
-            result += static_cast<F64>(indices_[i]) * indices_[i];
-        }
+        simd for (U64 i = 0; i < N; ++i) { result += static_cast<F64>(indices_[i]) * indices_[i]; }
         return std::sqrt(result);
     }
 
@@ -327,51 +298,35 @@ public:
     }
 
     Tuple &operator*=(const Tuple &rhs) {
-        for (U64 i = 0; i < N; ++i) {
-            indices_[i] *= rhs.indices_[i];
-        }
+        simd for (U64 i = 0; i < N; ++i) { indices_[i] *= rhs.indices_[i]; }
         return *static_cast<Tuple *>(this);
     }
     Tuple &operator/=(const Tuple &rhs) {
-        for (U64 i = 0; i < N; ++i) {
-            indices_[i] /= rhs.indices_[i];
-        }
+        simd for (U64 i = 0; i < N; ++i) { indices_[i] /= rhs.indices_[i]; }
         return *static_cast<Tuple *>(this);
     }
     Tuple &operator+=(const Tuple &rhs) {
-        for (U64 i = 0; i < N; ++i) {
-            indices_[i] += rhs.indices_[i];
-        }
+        simd for (U64 i = 0; i < N; ++i) { indices_[i] += rhs.indices_[i]; }
         return *static_cast<Tuple *>(this);
     }
     Tuple &operator-=(const Tuple &rhs) {
-        for (U64 i = 0; i < N; ++i) {
-            indices_[i] -= rhs.indices_[i];
-        }
+        simd for (U64 i = 0; i < N; ++i) { indices_[i] -= rhs.indices_[i]; }
         return *static_cast<Tuple *>(this);
     }
     Tuple &operator*=(const T rhs) {
-        for (T &x : indices_) {
-            x *= rhs;
-        }
+        simd for (T &x : indices_) { x *= rhs; }
         return *this;
     }
     Tuple &operator/=(const T rhs) {
-        for (T &x : indices_) {
-            x /= rhs;
-        }
+        simd for (T &x : indices_) { x /= rhs; }
         return *this;
     }
     Tuple &operator+=(const T rhs) {
-        for (T &x : indices_) {
-            x += rhs;
-        }
+        simd for (T &x : indices_) { x += rhs; }
         return *this;
     }
     Tuple &operator-=(const T rhs) {
-        for (T &x : indices_) {
-            x -= rhs;
-        }
+        simd for (T &x : indices_) { x -= rhs; }
         return *this;
     }
 
@@ -388,7 +343,7 @@ public:
 protected:
     friend struct std::hash<Tuple>;
     T indices_[N];
-};
+}; // namespace nvl
 
 template <U64 N>
 using Vec = Tuple<N, F64>;
@@ -405,18 +360,14 @@ const Tuple<N, T> Tuple<N, T>::ones = Tuple::fill(1);
 template <U64 N, typename T>
 Tuple<N, T> min(const Tuple<N, T> &a, const Tuple<N, T> &b) {
     Tuple<N, T> result;
-    for (U64 i = 0; i < N; ++i) {
-        result[i] = std::min(a[i], b[i]);
-    }
+    simd for (U64 i = 0; i < N; ++i) { result[i] = std::min(a[i], b[i]); }
     return result;
 }
 
 template <U64 N, typename T>
 Tuple<N, T> max(const Tuple<N, T> &a, const Tuple<N, T> &b) {
     Tuple<N, T> result;
-    for (U64 i = 0; i < N; ++i) {
-        result[i] = std::max(a[i], b[i]);
-    }
+    simd for (U64 i = 0; i < N; ++i) { result[i] = std::max(a[i], b[i]); }
     return result;
 }
 
@@ -440,36 +391,28 @@ Tuple<N, T> operator-(const C a, const Tuple<N, T> &b) {
 template <U64 N>
 Tuple<N, F64> real(const Tuple<N, I64> &tuple) {
     Tuple<N, F64> result;
-    for (U64 i = 0; i < N; ++i) {
-        result[i] = static_cast<F64>(tuple[i]);
-    }
+    simd for (U64 i = 0; i < N; ++i) { result[i] = static_cast<F64>(tuple[i]); }
     return result;
 }
 
 template <U64 N>
 Tuple<N, I64> round(const Tuple<N, F64> &tuple) {
     Tuple<N, I64> result;
-    for (U64 i = 0; i < N; ++i) {
-        result[i] = static_cast<I64>(std::round(tuple[i]));
-    }
+    simd for (U64 i = 0; i < N; ++i) { result[i] = static_cast<I64>(std::round(tuple[i])); }
     return result;
 }
 
 template <U64 N>
 Tuple<N, I64> floor(const Tuple<N, F64> &tuple) {
     Tuple<N, I64> result;
-    for (U64 i = 0; i < N; ++i) {
-        result[i] = static_cast<I64>(std::floor(tuple[i]));
-    }
+    simd for (U64 i = 0; i < N; ++i) { result[i] = static_cast<I64>(std::floor(tuple[i])); }
     return result;
 }
 
 template <U64 N>
 Tuple<N, I64> ceil(const Tuple<N, F64> &tuple) {
     Tuple<N, I64> result;
-    for (U64 i = 0; i < N; ++i) {
-        result[i] = static_cast<I64>(std::ceil(tuple[i]));
-    }
+    simd for (U64 i = 0; i < N; ++i) { result[i] = static_cast<I64>(std::ceil(tuple[i])); }
     return result;
 }
 

@@ -58,13 +58,13 @@ using nvl::Vec;
     }
 
 TEST(TestLine, length) {
-    constexpr Line<2> a(Vec<2>(1, 3), Vec<2>(3, 6));
+    const Line<2> a(Vec<2>(1, 3), Vec<2>(3, 6));
     const F64 expected_len = std::sqrt(2 * 2 + 3 * 3);
     EXPECT_NEAR(a.length(), expected_len, 0.01 * expected_len);
 }
 
 TEST(TestLine, slope) {
-    constexpr Line<2> a(Vec<2>(1, 3), Vec<2>(3, 6));
+    const Line<2> a(Vec<2>(1, 3), Vec<2>(3, 6));
     const F64 expected_len = std::sqrt(2 * 2 + 3 * 3);
     const Vec<2> expected_slope = Vec<2>(2, 3) / expected_len;
     EXPECT_VEC_NEAR(a.slope(), expected_slope, 0.001);
@@ -86,6 +86,33 @@ TEST(TestLine, interpolate) {
     EXPECT_EQ(line.interpolate(10), Vec<2>(7, 9)); // Not on the line segment
 }
 
+TEST(TestLine, profile_intersect) {
+    constexpr U64 kNumTests = 1E6;
+    nvl::Random random(0xFEEDBEEF);
+    const auto lines_gen = nvl::Distribution::Uniform<F64>(-20, 20);
+    const auto boxes_gen = nvl::Distribution::Uniform<I64>(-15, 15);
+
+    nvl::List<Line<3>> lines;
+    nvl::List<Box<3>> boxes;
+    lines.reserve(kNumTests);
+    boxes.reserve(kNumTests);
+    for (U64 i = 0; i < kNumTests; ++i) {
+        lines.push_back(lines_gen.next<Line<3>>(random));
+        boxes.push_back(boxes_gen.next<Box<3>>(random));
+    }
+
+    nvl::List<Maybe<Intersect<3>>> results;
+    results.reserve(kNumTests);
+    const auto start = nvl::Clock::now();
+    for (U64 i = 0; i < kNumTests; ++i) {
+        results.push_back(lines[i].intersect(boxes[i]));
+    }
+    const auto stop = nvl::Clock::now();
+    const auto time = nvl::Duration(stop - start);
+    std::cout << "Total time:  " << time << std::endl;
+    std::cout << "Time / call: " << time / kNumTests << std::endl;
+}
+
 template <U64 N>
 struct FuzzLineIntersect : nvl::test::FuzzingTestFixture<Maybe<Intersect<N>>, Line<N>, Box<N>> {
     FuzzLineIntersect() {
@@ -94,7 +121,7 @@ struct FuzzLineIntersect : nvl::test::FuzzingTestFixture<Maybe<Intersect<N>>, Li
         this->in[1] = nvl::Distribution::Uniform<I64>(-15, 15);
         this->fuzz([](Maybe<Intersect<N>> &x, const Line<N> &line, const Box<N> &box) { x = line.intersect(box); });
 
-        /*this->verify(
+        this->verify(
             [](const Maybe<Intersect<N>> &x, const Line<N> &line, const Box<N> &box) {
                 if (box.contains(line.a())) {
                     ASSERT_TRUE(x.has_value()) //
@@ -166,30 +193,32 @@ struct FuzzLineIntersect : nvl::test::FuzzingTestFixture<Maybe<Intersect<N>>, Li
                             << "Intersect dist: " << x->dist << std::endl
                             << "Intersect face: " << x->face.value() << std::endl;
                     }
-                    for (I64 d = 0; d < static_cast<I64>(std::ceil(line.length())); ++d) {
-                        const F64 dist = static_cast<F64>(d) / 1000.0;
+                    for (I64 d = 0; d < static_cast<I64>(std::ceil(line.length())) * 10; ++d) {
+                        const F64 dist = static_cast<F64>(d) / 10.0;
                         const Vec<N> pt = line.interpolate(dist);
                         if (x.has_value() && dist < x->dist) {
-                            EXPECT_FALSE(box.contains(pt)) //
-                                << "Expected interpolated point prior to intersection not to be in box." << std::endl
-                                << "Box: " << box << std::endl
-                                << "Line: " << line << std::endl
-                                << "Intersect pt: " << x->pt << std::endl
-                                << "Intersect dist: " << x->dist << std::endl
-                                << "Intersect face: " << x->face.value() << std::endl
-                                << "Interpolated dist: " << dist << std::endl
-                                << "Interpolated pt: " << pt << std::endl;
-                        } else if (!x.has_value()) {
-                            EXPECT_FALSE(box.contains(pt)) //
-                                << "Expected no points on line in box when intersection failed." << std::endl
-                                << "Box: " << box << std::endl
-                                << "Line: " << line << std::endl
-                                << "Interpolated dist: " << dist << std::endl
-                                << "Interpolated pt: " << pt << std::endl;
+                            ASSERT(!box.contains(pt), //
+                                   "Expected interpolated point prior to intersection not to be in box."
+                                       << std::endl
+                                       << "Box: " << box << std::endl
+                                       << "Line: " << line << std::endl
+                                       << "Intersect pt: " << x->pt << std::endl
+                                       << "Intersect dist: " << x->dist << std::endl
+                                       << "Intersect face: " << x->face.value() << std::endl
+                                       << "Interpolated dist: " << dist << std::endl
+                                       << "Interpolated pt: " << pt << std::endl);
+                        } else if (!x.has_value() && dist <= line.length()) {
+                            ASSERT(!box.contains(pt), //
+                                   "Expected no points on line in box when intersection failed."
+                                       << std::endl
+                                       << "Box: " << box << std::endl
+                                       << "Line: " << line << std::endl
+                                       << "Interpolated dist: " << dist << std::endl
+                                       << "Interpolated pt: " << pt << std::endl);
                         }
                     }
                 }
-            });*/
+            });
     }
 };
 

@@ -37,11 +37,19 @@ public:
 
     template <typename Func>
     void fuzz(Func func) {
+        std::cout << "Over " << num_tests << " calls:" << std::endl;
+
+        const auto gen_start = Clock::now();
         for (U64 i = 0; i < num_tests; ++i) {
             Tuple tuple;
             generate<1, Tuple, Args...>(tuple, random_, in);
             io.push_back(std::move(tuple));
         }
+        const auto gen_end = Clock::now();
+        const Duration gen_time(gen_end - gen_start);
+        std::cout << "  Total gen time:  " << gen_time << std::endl;
+        std::cout << "  Avg. time / gen: " << (gen_time / num_tests) << std::endl;
+        std::cout << "  ----" << std::endl;
 
         const auto start = Clock::now();
         for (U64 i = 0; i < num_tests; ++i) {
@@ -50,7 +58,6 @@ public:
         const auto end = Clock::now();
 
         const Duration time(end - start);
-        std::cout << "Over " << num_tests << " calls:" << std::endl;
         std::cout << "  Total call time:  " << time << std::endl;
         std::cout << "  Avg. time / call: " << (time / num_tests) << std::endl;
     }
@@ -63,8 +70,9 @@ public:
         }
         const auto end = Clock::now();
         const Duration time(end - start);
-        std::cout << "Verify time: " << time << std::endl;
-        std::cout << "Verify time / Call: " << (time / num_tests) << std::endl;
+        std::cout << "  ----" << std::endl;
+        std::cout << "  Total verify time:  " << time << std::endl;
+        std::cout << "  Avg. time / verify: " << (time / num_tests) << std::endl;
     }
 
     U64 num_tests = 1E6;

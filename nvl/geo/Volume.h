@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cmath>
+
 #include "nvl/data/Counter.h"
 #include "nvl/data/Iterator.h"
 #include "nvl/data/List.h"
@@ -11,7 +13,6 @@
 #include "nvl/geo/Tuple.h"
 #include "nvl/macros/Aliases.h"
 #include "nvl/macros/Pure.h"
-#include "nvl/math/Bitwise.h"
 
 namespace nvl {
 
@@ -296,8 +297,7 @@ public:
     pure Vec<N> max_f64() const {
         Vec<N> result;
         for (U64 i = 0; i < N; ++i) {
-            const auto x = static_cast<F64>(end[i]);
-            result[i] = x - ulps(x, 1);
+            result[i] = std::nextafter(static_cast<F64>(end[i]), -std::numeric_limits<F64>::infinity());
         }
         return result;
     }

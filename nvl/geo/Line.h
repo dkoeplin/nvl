@@ -4,9 +4,10 @@
 #include "nvl/geo/Tuple.h"
 #include "nvl/geo/Volume.h"
 #include "nvl/macros/Aliases.h"
+#include "nvl/macros/Hot.h"
 #include "nvl/macros/Pure.h"
 #include "nvl/macros/ReturnIf.h"
-#include "nvl/math/Bitwise.h"
+#include "nvl/macros/Unroll.h"
 
 namespace nvl {
 
@@ -29,7 +30,7 @@ public:
 
     /// Returns the point on the line with the same slope as this line segment which is `dist` away from point a.
     /// The resulting point may not be on this line segment itself.
-    pure Vec<N> interpolate(F64 dist) const;
+    pure expand Vec<N> interpolate(F64 dist) const { return a_ + dist * ((b_ - a_) / length()); }
 
     /// Returns the point on the line with the same slope as this line segment where dimension `dim` has the given `x`.
     /// The resulting point may not be on this line segment itself.
@@ -78,11 +79,12 @@ private:
 // (m here is the slope of y/x, e.g. a/b above)
 //   y = m*(x2 - x0) + y0
 template <U64 N>
-Maybe<Intersect<N>> intersect(const Line<N> &line, const Box<N> &box) {
+pure Maybe<Intersect<N>> intersect(const Line<N> &line, const Box<N> &box) {
     if (box.empty())
         return None;
 
     const Vec<N> &a = line.a();
+    // const Vec<N> &b = line.b();
     if (box.contains(a)) {
         Intersect<N> result;
         result.pt = a;
@@ -94,63 +96,45 @@ Maybe<Intersect<N>> intersect(const Line<N> &line, const Box<N> &box) {
     const F64 len = line.length();
     const Vec<N> min = real(box.min);
     const Vec<N> max = box.max_f64();
-    Maybe<Intersect<N>> closest = None;
+
+    F64 closest_dist = len;
+    Vec<N> closest_pt;
+    Maybe<Face> closest_face = None;
     // Iterate over faces of the box
     // If the line intersects with the box, and the point a is outside the box,
     // the closest point to a should be on one of the faces of the box.
-    for (Dir dir : Dir::list) {
-        const Vec<N> &vec = (dir == Dir::Neg) ? min : max;
-        for (U64 d = 0; d < N; ++d) {
-            // A face is an N-dimensional surface where one of the dimensions (d) has a fixed value.
-            const Maybe<Intersect<N>> pt = line.interpolate(d, vec[d]);
-            if (pt && pt->dist >= 0 && pt->dist <= len && box.contains(pt->pt)) {
-                if (!closest.has_value() || pt->dist < closest->dist) {
-                    closest = pt;
-                    closest->face = Face(dir, d);
-                }
+    unroll for (U64 d = 0; d < N * 2; ++d) {
+        const Vec<N> &vec = (d & 0x1) ? max : min;
+        if (const auto pt = line.interpolate(d / 2, vec[d / 2])) {
+            if (pt->dist >= 0 && pt->dist < closest_dist && box.contains(pt->pt)) {
+                closest_dist = pt->dist;
+                closest_pt = pt->pt;
+                closest_face = Face((d & 0x1) ? Dir::Pos : Dir::Neg, d);
             }
         }
     }
-    return closest;
+    if (closest_face.has_value())
+        return Intersect<N>{.pt = closest_pt, .face = closest_face, .dist = closest_dist};
+    return None;
 }
 
 template <U64 N>
-Maybe<Intersect<N>> Line<N>::intersect(const Box<N> &box) const {
+pure Maybe<Intersect<N>> Line<N>::intersect(const Box<N> &box) const {
     return nvl::intersect(*this, box);
 }
 
 template <U64 N>
-pure Vec<N> Line<N>::interpolate(const F64 dist) const {
-    return a_ + dist * ((b_ - a_) / length());
-}
-
-template <U64 N>
 pure Maybe<Intersect<N>> Line<N>::interpolate(const U64 dim, const F64 x) const {
-    ASSERT(dim < N, "Invalid dimension " << dim << " for rank " << N << " line.");
-    return_if(a_[dim] == b_[dim], None);
-
-    // If the line has a non-zero slope in dimension d, calculate the slope with all other dimensions.
-    // Use this to calculate the point on the line where dimension d would intersect with this face.
-    const Vec<N> slope = b_ - a_;
-    const F64 dx = slope[dim];
     const F64 x0 = a_[dim];
-    const F64 delta_x = x - x0;
-
-    Intersect<N> intersect;
-    Dir dir = Dir::Pos;
-    for (U64 i = 0; i < N; ++i) {
-        const F64 y0 = a_[i];
-        const F64 dy = slope[i];
-        const F64 m = dy / dx;
-        const F64 delta_y = m * delta_x;
-        intersect.pt[i] = delta_y + y0;
-        if (std::signbit(delta_y) != std::signbit(dy)) {
-            dir = Dir::Neg;
-        }
-    }
-    intersect.pt[dim] = x;
-    intersect.dist = dir * intersect.pt.dist(a_);
-    return intersect;
+    const F64 x1 = b_[dim];
+    return_if(x0 == x1, None);
+    // Infer the distance from x0 first, then interpolate from that.
+    const F64 dist = length() * (x - x0) / (x1 - x0);
+    Intersect<N> result;
+    result.pt = interpolate(dist);
+    result.pt[dim] = x;
+    result.dist = dist;
+    return result;
 }
 
 template <U64 N>
