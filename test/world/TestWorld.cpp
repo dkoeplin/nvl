@@ -96,7 +96,7 @@ TEST(TestWorld, idle_when_not_moving) {
         for (U64 i = 0; i < 10; ++i) {
             world.tick();
         }
-        EXPECT_EQ(block->bbox().max[1], 0);
+        EXPECT_EQ(block->bbox().end[1], 0);
         EXPECT_EQ(world.num_awake(), 0);
         EXPECT_EQ(world.num_alive(), 2);
     }
@@ -214,7 +214,7 @@ TEST(TestWorld, break_block2) {
     EXPECT_EQ(world->num_alive(), 1);
 }
 
-struct FuzzFall : nvl::test::FuzzingTestFixture<Box<2>, Pos<2>, Box<2>, I64, I64> {
+struct FuzzFall : nvl::test::FuzzingTestFixture<Box<2>, Pos<2>, Pos<2>, I64, I64> {
     FuzzFall() = default;
 };
 
@@ -224,17 +224,17 @@ TEST_F(FuzzFall, fall2d) {
 
     this->num_tests = 1E3;
     this->in[0] = Distribution::Uniform<I64>(0, 100);
-    this->in[1] = Distribution::Uniform<I64>(0, 30);
+    this->in[1] = Distribution::Uniform<I64>(1, 30);
     this->in[2] = Distribution::Uniform<I64>(900, 999);
     this->in[3] = Distribution::Uniform<I64>(1, 100);
 
     auto material = Material::get<TestMaterial>(Color::kBlack);
     auto bulwark = Material::get<Bulwark>();
 
-    fuzz([material, bulwark](Box<2> &end, const Pos<2> &loc, const Box<2> &shape, I64 y, I64 thickness) {
+    fuzz([material, bulwark](Box<2> &end, const Pos<2> &loc, const Pos<2> &shape, const I64 y, const I64 thickness) {
         NullWindow window;
         auto *world = window.open<World<2>>();
-        world->spawn<Block<2>>(Pos<2>(0, y), Box<2>({0, 0}, {1000, thickness}), bulwark);
+        world->spawn<Block<2>>(Pos<2>(0, y), Pos<2>(1000, thickness), bulwark);
         const auto *block = world->spawn<Block<2>>(loc, shape, material);
         for (int64_t i = 0; i < 1000 && world->num_awake() > 0; ++i) {
             world->tick();
@@ -244,10 +244,11 @@ TEST_F(FuzzFall, fall2d) {
         end = block->bbox();
     });
 
-    verify([&](const Box<2> &end, const Pos<2> &loc, const Box<2> &shape, I64 y, I64 thickness) {
-        EXPECT_EQ(end.max[1], y) << "Incorrect ending location! "
-                                 << "Box: " << end << " {loc: " << loc << ", shape: " << shape << ", y: " << y
-                                 << ", thickness: " << thickness << "}";
+    verify([&](const Box<2> &end, const Pos<2> &loc, const Pos<2> &shape, const I64 y, const I64 thickness) {
+        ASSERT(end.end[1] == y, "Incorrect ending location! " << std::endl
+                                                              << "Box: " << end << " {start: " << loc
+                                                              << ", shape: " << shape << ", y: " << y
+                                                              << ", thickness: " << thickness << "}");
     });
 }
 

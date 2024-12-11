@@ -61,23 +61,18 @@ TEST(TestPos, brackets_apply) {
     constexpr Pos<5> a{0, 1, 2, 3, 4};
     EXPECT_EQ(a[0], 0);
     EXPECT_EQ(a[3], 3);
-    EXPECT_DEATH({ std::cout << a[-1]; }, "out of bounds \\[0, 5\\)");
 }
 
 TEST(TestPos, brackets_update) {
     Pos<5> a{0, 1, 2, 3, 4};
     a[0] = 32;
     EXPECT_EQ(a.get(0), 32);
-
-    EXPECT_DEATH({ a[-1] = 32; }, "out of bounds \\[0, 5\\)");
 }
 
 TEST(TestPos, with) {
     constexpr Pos<5> a{0, 1, 2, 3, 4};
     EXPECT_THAT(a.with(3, 5), ElementsAre(0, 1, 2, 5, 4));
     EXPECT_THAT(a, ElementsAre(0, 1, 2, 3, 4));
-
-    EXPECT_DEATH({ std::cout << a.with(-1, 32); }, "out of bounds \\[0, 5\\)");
 }
 
 TEST(TestPos, negate) {

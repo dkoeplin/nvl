@@ -245,7 +245,7 @@ struct FuzzBoxDiff : nvl::test::FuzzingTestFixture<List<Box<N>>, Box<N>, Box<N>>
 
             // Confirm that all points in `a` are in the remainder boxes unless they are also in b
             const auto remainders = nvl::Range(diff.begin(), diff.end());
-            for (const Pos<N> &pt : a) {
+            for (const Pos<N> &pt : a.indices()) {
                 if (b.contains(pt)) {
                     for (const auto &d : diff) {
                         ASSERT(!d.contains(pt), "[DIFF] a: " << a << " b: " << b << "\n"
@@ -266,7 +266,7 @@ struct FuzzBoxDiff : nvl::test::FuzzingTestFixture<List<Box<N>>, Box<N>, Box<N>>
                 const Box<N> &first = diff[i];
                 for (U64 j = i + 1; j < diff.size(); ++j) {
                     const Box<N> &second = diff[j];
-                    for (const Pos<N> &pt : first) {
+                    for (const Pos<N> &pt : first.indices()) {
                         ASSERT(!second.contains(pt), "[DIFF] a: " << a << " b: " << b << "\n"
                                                                   << "  Remainders: " << diff << "\n"
                                                                   << "  Remainders " << first << " and " << second
