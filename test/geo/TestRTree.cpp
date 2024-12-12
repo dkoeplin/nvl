@@ -216,6 +216,16 @@ TEST(TestRTree, components_pairs) {
     EXPECT_THAT(tree.components(), UnorderedElementsAre(Comp{a, b}, Comp{c, d}));
 }
 
+TEST(TestRTree, components_block) {
+    using Comp = RTree<2, LabeledBox>::Component;
+    RTree<2, LabeledBox> tree;
+    const Ref<LabeledBox> a = tree.emplace(1, Box<2>({0, 0}, {1, 1})); // 1
+    const Ref<LabeledBox> b = tree.emplace(2, Box<2>({0, 1}, {1, 2})); // 2
+    const Ref<LabeledBox> c = tree.emplace(3, Box<2>({0, 2}, {1, 3})); // 3
+    const Ref<LabeledBox> d = tree.emplace(4, Box<2>({0, 3}, {1, 4})); // 4
+    EXPECT_THAT(tree.components(), UnorderedElementsAre(Comp{a, b, c, d}));
+}
+
 TEST(TestRTree, components_complex) {
     constexpr Box<2> box{{817, 846}, {1134, 1105}};
     const List<Box<2>> rem{{{1100, 1005}, {1140, 1045}},

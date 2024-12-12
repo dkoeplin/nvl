@@ -276,10 +276,10 @@ public:
 
     /// Returns the edges with given width and distance from the outermost pixel.
     /// Edges begin at `dist` "pixels" away from the outermost 'pixel" of the box and extend outwards.
-    pure List<Edge<N, T>> edges(I64 width = 1, I64 dist = 1) const;
+    pure List<Edge<N, T>> edges(I64 width = 1, I64 dist = 0) const;
 
     /// Returns the edge on the side of the box in dimension `dim` in direction `dir`.
-    pure Edge<N, T> edge(Dir dir, U64 dim, I64 width = 1, I64 dist = 1) const;
+    pure Edge<N, T> edge(Dir dir, U64 dim, I64 width = 1, I64 dist = 0) const;
 
     /// Returns a new Volume which is expanded by `size` in every direction/dimension.
     /// e.g. [0,3) widened 3 => [-3,6)
@@ -446,7 +446,7 @@ template <U64 N, typename T>
 Edge<N, T> Volume<N, T>::edge(const Dir dir, const U64 dim, const I64 width, const I64 dist) const {
     auto unit = Tuple<N, T>::unit(dim);
     auto inner = unit * dist;
-    auto outer = unit * (width - 1);
+    auto outer = unit * width;
     auto edge_min = (dir == Dir::Neg) ? min - outer - inner : min.with(dim, end[dim]) + inner;
     auto edge_end = (dir == Dir::Neg) ? end.with(dim, min[dim]) - inner : end + outer + inner;
     return Edge<N, T>(dir, dim, Volume(edge_min, edge_end));

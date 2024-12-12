@@ -153,18 +153,24 @@ TEST(TestBox, clamp) {
 /*
  0 1 2 3 4 5 6
 1
-2      E E E
-3    E X # # E
-4    E # # # E
-5    E # # Y E
-6      E E E
+2      E E
+3    E # # E
+4    E # # E
+5      E E
+6
 */
 TEST(TestBox, edges) {
-    constexpr Box<2> box({3, 3}, {5, 5});
-    EXPECT_THAT(box.edges(), UnorderedElementsAre(Edge<2, I64>(Dir::Neg, 0, Box<2>({2, 3}, {2, 5})),
-                                                  Edge<2, I64>(Dir::Pos, 0, Box<2>({6, 3}, {6, 5})),
-                                                  Edge<2, I64>(Dir::Neg, 1, Box<2>({3, 2}, {5, 2})),
-                                                  Edge<2, I64>(Dir::Pos, 1, Box<2>({3, 6}, {5, 6}))));
+    constexpr Box<2> box0({3, 3}, {5, 5});
+    EXPECT_THAT(box0.edges(), UnorderedElementsAre(Edge<2, I64>(Dir::Neg, 0, Box<2>({2, 3}, {3, 5})),
+                                                   Edge<2, I64>(Dir::Pos, 0, Box<2>({5, 3}, {6, 5})),
+                                                   Edge<2, I64>(Dir::Neg, 1, Box<2>({3, 2}, {5, 3})),
+                                                   Edge<2, I64>(Dir::Pos, 1, Box<2>({3, 5}, {5, 6}))));
+
+    constexpr Box<2> box1({0, 0}, {1, 1});
+    EXPECT_THAT(box1.edges(), UnorderedElementsAre(Edge<2, I64>(Dir::Neg, 0, Box<2>({-1, 0}, {0, 1})),
+                                                   Edge<2, I64>(Dir::Pos, 0, Box<2>({1, 0}, {2, 1})),
+                                                   Edge<2, I64>(Dir::Neg, 1, Box<2>({0, -1}, {1, 0})),
+                                                   Edge<2, I64>(Dir::Pos, 1, Box<2>({0, 1}, {1, 2}))));
 }
 
 TEST(TestBox, overlaps) {
