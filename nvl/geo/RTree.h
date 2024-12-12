@@ -444,7 +444,7 @@ public:
     pure bool has(const ItemRef &item) const { return item_ids_.has(item); }
 
     /// Returns the connected components in this tree.
-    List<Component> components() {
+    List<Component> components() const {
         UnionFind<ItemRef, ItemRefHash> components;
         for (const std::unique_ptr<Item> &a : items_.values()) {
             ItemRef a_ref(a.get());
