@@ -126,14 +126,16 @@ public:
     pure expand Maybe<ItemRef> first(const Box<N> &box) const { return this->items_.first(box - loc); }
     pure expand Maybe<ItemRef> first(const Pos<N> &pos) const { return this->items_.first(pos - loc); }
 
+    /// Returns the closest item which intersects with the line segment according to the distance function.
+    /// Also returns the location and face of the intersection if it exists.
+    pure expand Maybe<Intersect> first_where(const Line<N> &line,
+                                             const std::function<Maybe<F64>(Intersect)> &dist) const {
+        return this->items_.first_where(line - loc, dist);
+    }
+
     /// Returns true if there are any items stored in the given volume.
     pure expand bool exists(const Box<N> &box) const { return this->items_.exists(box - loc); }
     pure expand bool exists(const Pos<N> &pos) const { return this->items_.exists(pos - loc); }
-
-    /// Returns the closest item which intersects with the line segment according to the distance function.
-    pure Maybe<Intersect> first_where(const Line<N> &line, const std::function<Maybe<F64>(Intersect)> &dist) const {
-        return this->items_.first_where(line - loc, dist);
-    }
 
     pure const ItemTree &item_rtree() const { return this->items_; }
     pure const EdgeTree &edge_rtree() const { return this->get_edges(); }

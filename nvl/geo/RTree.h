@@ -120,6 +120,11 @@ public:
         Pos<N> pos;
     };
 
+    struct Intersect : nvl::Intersect<N> {
+        explicit Intersect(const nvl::Intersect<N> &init, ItemRef ref) : nvl::Intersect<N>(init), item(ref) {}
+        ItemRef item;
+    };
+
     enum class Traversal {
         kPoints,  // All possible points in existing nodes
         kEntries, // All existing entries
@@ -409,12 +414,8 @@ public:
     pure expand bool exists(const Box<N> &box) const { return collect_first(box).has_value(); }
     pure expand bool exists(const Pos<N> &pos) const { return collect_first(Box<N>::unit(pos)).has_value(); }
 
-    struct Intersect : nvl::Intersect<N> {
-        explicit Intersect(const nvl::Intersect<N> &init, ItemRef ref) : nvl::Intersect<N>(init), item(ref) {}
-        ItemRef item;
-    };
-
     /// Returns the closest item which intersects with the line segment according to the distance function.
+    /// Also returns the location and face of the intersection if it exists.
     pure Maybe<Intersect> first_where(const Line<N> &line, const std::function<Maybe<F64>(Intersect)> &dist) const {
         Maybe<Intersect> closest = None;
         Maybe<F64> distance = None;

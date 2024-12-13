@@ -83,6 +83,8 @@ public:
     pure Range<Actor> entities() const { return entities_.items(); }
     pure Set<Actor> entities(const Box<N> &box) const { return entities_[box]; }
     pure Set<Actor> entities(const Pos<N> &pos) const { return entities_[pos]; }
+    pure Maybe<Actor> first_in(const Box<N> &box) const { return entities_.first(box); }
+    pure Maybe<Actor> first_in(const Pos<N> &pos) const { return entities_.first(pos); }
 
     pure Maybe<Intersect> first_except(const Line<N> &line, const Actor &actor) const;
     pure Maybe<Intersect> first(const Line<N> &line) const { return first_except(line, nullptr); }

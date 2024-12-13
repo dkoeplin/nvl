@@ -42,7 +42,18 @@ public:
     pure Set<Rel<Part>> parts(const Box<N> &box) const { return parts_[box]; }
     pure Set<Rel<Part>> parts(const Pos<N> &pos) const { return parts_[pos]; }
 
-    pure Maybe<Intersect> first(const Line<N> &line) const;
+    /// Returns the first part stored in the given volume, if one exists.
+    pure expand Maybe<Rel<Part>> first(const Box<N> &box) const { return parts_.first(box); }
+    pure expand Maybe<Rel<Part>> first(const Pos<N> &pos) const { return parts_.first(pos); }
+
+    /// Returns the first part along the given line, if one exists, along with the intersection location and face.
+    pure expand Maybe<Intersect> first(const Line<N> &line) const {
+        return parts_.first_where(line, [](const Intersect &x) { return x.dist; });
+    }
+
+    /// Returns true if there are any items stored in the given volume.
+    pure expand bool exists(const Box<N> &box) const { return parts_.exists(box); }
+    pure expand bool exists(const Pos<N> &pos) const { return parts_.exists(pos); }
 
     pure virtual bool falls() const {
         return parts().all([](const Rel<Part> &part) { return part->material->falls; });
@@ -96,11 +107,6 @@ protected:
 };
 
 template <U64 N>
-pure Maybe<typename Entity<N>::Intersect> Entity<N>::first(const Line<N> &line) const {
-    return parts_.first_where(line, [](const Intersect &x) { return x.dist; });
-}
-
-template <U64 N>
 Set<Actor> Entity<N>::above() const {
     Set<Actor> above;
     for (const Rel<Edge> &edge : parts_.edges()) {
@@ -126,7 +132,7 @@ bool Entity<N>::has_below() const {
             const Box<N> box = edge->box + loc();
             for (const Actor &actor : world_->entities(box)) {
                 if (const Entity<N> *entity = actor.dyn_cast<Entity<N>>(); entity && entity != this) {
-                    return_if(!entity->parts(box).empty(), true);
+                    return_if(entity->exists(box), true);
                 }
             }
         }
@@ -149,10 +155,10 @@ Pos<N> Entity<N>::next_velocity() const {
                 const Box<N> trj = box.with(i, x, x + v_next);
                 for (Actor actor : world_->entities(trj)) {
                     if (auto *entity = actor.dyn_cast<Entity<N>>(); entity && entity != this) {
-                        const I64 entity_loc = entity->loc()[i];
+                        const I64 entity_x = entity->loc()[i];
                         for (const Rel<Part> &other : entity->parts(trj)) {
-                            v_next = (v >= 0) ? std::clamp<I64>(other->box.min[i] + entity_loc - x, 0, v_next)
-                                              : std::clamp<I64>(x - entity_loc - other->box.end[i], v_next, 0);
+                            v_next = (v >= 0) ? std::clamp<I64>(other->box.min[i] + entity_x - x, 0, v_next)
+                                              : std::clamp<I64>(x - entity_x - other->box.end[i], v_next, 0);
                         }
                     }
                 }
