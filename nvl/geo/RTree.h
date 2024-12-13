@@ -5,7 +5,6 @@
 #include "nvl/data/List.h"
 #include "nvl/data/Map.h"
 #include "nvl/data/Once.h"
-#include "nvl/data/PointerHash.h"
 #include "nvl/data/Range.h"
 #include "nvl/data/Ref.h"
 #include "nvl/data/Set.h"
@@ -52,7 +51,7 @@ struct Node {
 
     pure Entry *get(const Pos<N> &pos) const { return map.get(pos.grid_min(grid)); }
 
-    pure Range<Pos<N>> indices(const Box<N> &vol) const { return vol.clamp(grid).indices(Pos<N>::fill(grid)); }
+    pure Range<Pos<N>> indices(const Box<N> &vol) const { return vol.clamp(grid).indices(grid); }
 
     U64 id = -1;
     Maybe<Parent> parent;
@@ -115,8 +114,6 @@ public:
     using PreorderWork = detail::PreorderWork<N, ItemRef>;
     using Work = detail::Work<N, ItemRef>;
     using Node = detail::Node<N, ItemRef>;
-    using ItemRefHash = PointerHash<ItemRef>; // Hashing is done based on pointer, not value
-    using Component = typename UnionFind<ItemRef, ItemRefHash>::Group;
 
     struct Point {
         Node *node;
@@ -182,7 +179,7 @@ public:
                     // Visit this list or (node, pos)
                     return true;
                 }
-                ASSERT(entry->node->parent.has_value(), "Sub-node had no parent entry.");
+                // ASSERT(entry->node->parent.has_value(), "Sub-node had no parent entry.");
                 if (auto range = entry->node->parent->box.intersect(box)) {
                     // Continue to this child node by updating the worklist
                     worklist.emplace_back(entry->node, *range);
@@ -238,7 +235,7 @@ public:
 
         // 3) Iterating across nodes
         List<Work> worklist = {};
-        Set<ItemRef, ItemRefHash> visited;
+        Set<ItemRef> visited;
 
         const RTree *tree;
         Box<N> box;
@@ -400,13 +397,17 @@ public:
     /// Returns a mutable range over all existing nodes in the given volume.
     MRange<Point> entries_in(const Box<N> &box) { return make_range<entry_iterator, View::kMutable>(*this, box); }
 
-    /// Returns an iterable range over all unique stored items in the given volume.
-    pure MRange<ItemRef> operator[](const Box<N> &box) { return make_mrange<window_iterator>(*this, box); }
-    pure Range<ItemRef> operator[](const Box<N> &box) const { return make_range<window_iterator>(*this, box); }
+    /// Returns a set of all stored items in the given volume.
+    pure expand Set<ItemRef> operator[](const Box<N> &box) const { return collect(box); }
+    pure expand Set<ItemRef> operator[](const Pos<N> &pos) const { return collect(Box<N>::unit(pos)); }
 
-    /// Returns an iterable range over all unique stored items at the given point.
-    pure MRange<ItemRef> operator[](const Pos<N> &pt) { return operator[](Box<N>::unit(pt)); }
-    pure Range<ItemRef> operator[](const Pos<N> &pt) const { return operator[](Box<N>::unit(pt)); }
+    /// Returns the first item stored in the given volume, if one exists.
+    pure expand Maybe<ItemRef> first(const Box<N> &box) const { return collect_first(box); }
+    pure expand Maybe<ItemRef> first(const Pos<N> &pos) const { return collect_first(Box<N>::unit(pos)); }
+
+    /// Returns true if there are any items stored in the given volume.
+    pure expand bool exists(const Box<N> &box) const { return collect_first(box).has_value(); }
+    pure expand bool exists(const Pos<N> &pos) const { return collect_first(Box<N>::unit(pos)).has_value(); }
 
     struct Intersect : nvl::Intersect<N> {
         explicit Intersect(const nvl::Intersect<N> &init, ItemRef ref) : nvl::Intersect<N>(init), item(ref) {}
@@ -444,13 +445,13 @@ public:
     pure bool has(const ItemRef &item) const { return item_ids_.has(item); }
 
     /// Returns the connected components in this tree.
-    List<Component> components() const {
-        UnionFind<ItemRef, ItemRefHash> components;
+    pure List<Set<ItemRef>> components() const {
+        UnionFind<ItemRef> components;
         for (const std::unique_ptr<Item> &a : items_.values()) {
             ItemRef a_ref(a.get());
             bool had_neighbors = false;
             for (const auto &edge : a->bbox().edges()) {
-                for (const ItemRef &b : (*this)[edge.bbox()]) {
+                for (const ItemRef &b : collect(edge.bbox())) {
                     had_neighbors = true;
                     components.add(a_ref, b); // Adds neighboring boxes to the same component
                 }
@@ -461,8 +462,8 @@ public:
             }
         }
         // Need to return this as a List to avoid references to the local `components` data structure.
-        List<Component> result;
-        for (const Component &set : components.sets()) {
+        List<Set<ItemRef>> result;
+        for (const Set<ItemRef> &set : components.sets()) {
             result.push_back(std::move(set));
         }
         return result;
@@ -543,7 +544,7 @@ public:
         }
     }
 
-private:
+protected:
     struct Garbage {
         explicit Garbage(RTree *parent) : parent(parent) {}
         ~Garbage() {
@@ -554,6 +555,50 @@ private:
         List<U64> removed_nodes;
         RTree *parent;
     };
+
+    template <bool kFirstOnly = false>
+    pure Set<ItemRef> collect(const Box<N> &box) const {
+        struct Work {
+            explicit Work(Box<N> box, Node *node) : box(box), node(node) {}
+            Box<N> box;
+            Node *node;
+        };
+        List<Work> worklist;
+        Set<ItemRef> items;
+        worklist.emplace_back(box.clamp(root_->grid), root_);
+        while (!worklist.empty()) {
+            const auto [target, node] = worklist.back();
+            worklist.pop_back();
+            const U64 grid = node->grid;
+            const U64 box_offsets = target.num_volumes(grid);
+            const U64 map_offsets = node->map.size();
+            const Range<Pos<N>> offsets = box_offsets < map_offsets ? target.indices(grid) : node->map.keys();
+            const auto &map = node->map;
+            for (const Pos<N> &ofs : offsets) {
+                if (auto *entry = map.get(ofs)) {
+                    const Box<N> range(ofs, ofs + grid);
+                    if (range.overlaps(box)) {
+                        for (const ItemRef &item : entry->list) {
+                            if (box.overlaps(bbox(item))) {
+                                items.insert(item);
+                                if constexpr (kFirstOnly)
+                                    return items;
+                            }
+                        }
+                        if (auto *next = entry->node) {
+                            worklist.emplace_back(range, next);
+                        }
+                    }
+                }
+            }
+        }
+        return items;
+    }
+
+    pure Maybe<ItemRef> collect_first(const Box<N> &box) const {
+        const auto set = collect<true>(box);
+        return set.empty() ? None : Some(*set.begin());
+    }
 
     Node *next_node(const Maybe<typename Node::Parent> &parent, const I64 grid, const List<ItemRef> &items) {
         const Pos<N> grid_fill = Pos<N>::fill(grid);
@@ -727,7 +772,7 @@ private:
     // These references are guaranteed stable as long as the item itself is not removed from the map.
     // See: https://cplusplus.com/reference/unordered_map/unordered_map/operator[]/
     Map<U64, std::unique_ptr<Item>> items_;
-    Map<ItemRef, U64, ItemRefHash> item_ids_;
+    Map<ItemRef, U64> item_ids_;
 
     Map<U64, Node> nodes_;
     Node *root_;

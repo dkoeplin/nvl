@@ -214,6 +214,12 @@ public:
     /// Returns an iterator over sub-boxes with the given multidimensional `step` size.
     pure Range<Volume> volumes(const Idx &shape) const { return make_range<box_iterator>(*this, shape); }
 
+    /// Returns the number of sub-volumes an iterator with this shape would have.
+    pure U64 num_volumes(const I64 step) const {
+        const Idx box_shape = this->shape();
+        return (box_shape / step).product();
+    }
+
     pure bool operator==(const Volume &rhs) const { return min == rhs.min && end == rhs.end; }
     pure bool operator!=(const Volume &rhs) const { return !(*this == rhs); }
 

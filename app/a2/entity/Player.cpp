@@ -29,6 +29,6 @@ void Player::draw(Window *, const Color &) const {
 
 Status Player::tick(const List<Message> &messages) { return Entity::tick(messages); }
 
-Status Player::broken(const List<Component> &) { return Status::kNone; }
+Status Player::broken(const List<Set<Rel<Part>>> &) { return Status::kNone; }
 
 } // namespace a2

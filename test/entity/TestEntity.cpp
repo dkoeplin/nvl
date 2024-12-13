@@ -17,13 +17,15 @@ using nvl::Hit;
 using nvl::Material;
 using nvl::Message;
 using nvl::Pos;
+using nvl::Rel;
+using nvl::Set;
 using nvl::Status;
 using nvl::TestMaterial;
 using nvl::Window;
 
-struct SimpleEntity : Entity<2> {
+struct SimpleEntity final : Entity<2> {
     using Entity::Entity;
-    Status broken(const nvl::List<Component> &) override { return Status::kNone; }
+    Status broken(const nvl::List<Set<Rel<Part>>> &) override { return Status::kNone; }
     void draw(Window *, const Color &) const override {}
 };
 

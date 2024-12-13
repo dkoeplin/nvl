@@ -21,7 +21,7 @@ struct Player final : Entity<3> {
     Status receive(const Message &message) override;
     void draw(Window *, const Color &) const override;
     Status tick(const List<Message> &messages) override;
-    Status broken(const List<Component> &) override;
+    Status broken(const List<Set<Rel<Part>>> &) override;
 
     pure I64 dig_ticks() const { return 5; }
     pure I64 dig_reach() const { return 3_m; }

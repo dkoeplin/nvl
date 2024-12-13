@@ -81,8 +81,8 @@ public:
     }
 
     pure Range<Actor> entities() const { return entities_.items(); }
-    pure Range<Actor> entities(const Box<N> &box) const { return entities_[box]; }
-    pure Range<Actor> entities(const Pos<N> &pos) const { return entities_[pos]; }
+    pure Set<Actor> entities(const Box<N> &box) const { return entities_[box]; }
+    pure Set<Actor> entities(const Pos<N> &pos) const { return entities_[pos]; }
 
     pure Maybe<Intersect> first_except(const Line<N> &line, const Actor &actor) const;
     pure Maybe<Intersect> first(const Line<N> &line) const { return first_except(line, nullptr); }
@@ -170,7 +170,7 @@ public:
     mutable Random random;
 
 protected:
-    using EntityHash = PointerHash<Ref<Entity<N>>>;
+    using EntityHash = PointerHash<Ref<Entity<N>>, Entity<N>>;
 
     void tick_entity(Set<Actor> &idled, Ref<Entity<N>> entity);
 

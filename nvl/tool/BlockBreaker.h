@@ -14,8 +14,8 @@ public:
         on_mouse_down[Mouse::Left] = on_mouse_move[{Mouse::Left}] = [this] {
             const Pos<2> pt = world_->window_to_world(window_->center());
             const Box<2> box(pt - radius_, pt + radius_);
-            const Range<Actor> entities = world_->entities(box);
-            world_->send<Hit<2>>(nullptr, entities, box, /*strength*/ 1);
+            const Set<Actor> entities = world_->entities(box);
+            world_->send<Hit<2>>(nullptr, entities.values(), box, /*strength*/ 1);
         };
         on_mouse_scroll[Scroll::kVertical] = [this] {
             const auto dist = window_->scroll_y();

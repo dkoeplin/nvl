@@ -1,6 +1,7 @@
 #pragma once
 
 #include "nvl/data/HasEquality.h"
+#include "nvl/data/PointerHash.h"
 #include "nvl/io/HasPrint.h"
 #include "nvl/macros/Expand.h"
 #include "nvl/macros/Implicit.h"
@@ -39,7 +40,7 @@ public:
     }
     pure bool operator!=(const Ref &rhs) const { return !(*this == rhs); }
 
-private:
+protected:
     Value *ptr_ = nullptr;
 };
 
@@ -53,3 +54,7 @@ expand std::ostream &operator<<(std::ostream &os, const Ref<Value> &ref) {
 }
 
 } // namespace nvl
+
+/// By default, Ref is hashed like a raw pointer.
+template <typename Value>
+struct std::hash<nvl::Ref<Value>> : nvl::PointerHash<nvl::Ref<Value>, Value> {};

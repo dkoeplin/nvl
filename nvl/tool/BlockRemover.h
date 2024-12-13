@@ -15,7 +15,8 @@ public:
         // Same action for dragging and moving
         on_mouse_move[{Mouse::Any}] = on_mouse_move[{}] = [this] {
             const Pos<2> pt = world_->window_to_world(window_->center());
-            const Range<Actor> entities = world_->entities(pt);
+            // TODO: GET FIRST
+            const Set<Actor> entities = world_->entities(pt);
             hovered_ = entities.empty() ? nullptr : *entities.begin();
         };
         on_mouse_up[Mouse::Left] = [this] {

@@ -101,7 +101,7 @@ TEST(TestRTree, subdivide) {
                                                         IDs{.box = {{128, 128}, {256, 256}}, .ids = {2}}));
 
     // Check that we find all values when iterating over the bounding box, but each value is returned exactly once.
-    const List<Ref<LabeledBox>> elements(tree[tree.bbox()]);
+    const Set<Ref<LabeledBox>> elements = tree[tree.bbox()];
     EXPECT_THAT(elements, UnorderedElementsAre(b0, b1, b2));
 }
 
@@ -174,9 +174,9 @@ TEST(TestRTree, fetch) {
     const auto a = tree.emplace(1, Box<2>({0, 882}, {1512, 982}));
     const auto b = tree.emplace(2, Box<2>({346, -398}, {666, -202}));
 
-    const List<Ref<LabeledBox>> range0(tree[{{0, -300}, {1024, 1000}}]);
-    const List<Ref<LabeledBox>> range1(tree[{{0, 0}, {100, 100}}]);
-    const List<Ref<LabeledBox>> range2(tree[{{0, 885}, {100, 886}}]);
+    const Set<Ref<LabeledBox>> range0 = tree[{{0, -300}, {1024, 1000}}];
+    const Set<Ref<LabeledBox>> range1 = tree[{{0, 0}, {100, 100}}];
+    const Set<Ref<LabeledBox>> range2 = tree[{{0, 885}, {100, 886}}];
 
     EXPECT_THAT(range0, UnorderedElementsAre(a, b));
     EXPECT_THAT(range1, IsEmpty());
@@ -198,7 +198,7 @@ TEST(TestRTree, empty_components) {
 }
 
 TEST(TestRTree, components_individuals) {
-    using Comp = RTree<2, LabeledBox>::Component;
+    using Comp = Set<Ref<LabeledBox>>;
     RTree<2, LabeledBox> tree;
     const Ref<LabeledBox> a = tree.emplace(1, Box<2>({0, 0}, {10, 10}));
     const Ref<LabeledBox> b = tree.emplace(2, Box<2>({15, 15}, {20, 20}));
@@ -207,7 +207,7 @@ TEST(TestRTree, components_individuals) {
 }
 
 TEST(TestRTree, components_pairs) {
-    using Comp = RTree<2, LabeledBox>::Component;
+    using Comp = Set<Ref<LabeledBox>>;
     RTree<2, LabeledBox> tree;
     const Ref<LabeledBox> a = tree.emplace(1, Box<2>({0, 0}, {11, 11}));
     const Ref<LabeledBox> b = tree.emplace(2, Box<2>({11, 0}, {20, 11}));
@@ -217,7 +217,7 @@ TEST(TestRTree, components_pairs) {
 }
 
 TEST(TestRTree, components_block) {
-    using Comp = RTree<2, LabeledBox>::Component;
+    using Comp = Set<Ref<LabeledBox>>;
     RTree<2, LabeledBox> tree;
     const Ref<LabeledBox> a = tree.emplace(1, Box<2>({0, 0}, {1, 1})); // 1
     const Ref<LabeledBox> b = tree.emplace(2, Box<2>({0, 1}, {1, 2})); // 2

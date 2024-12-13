@@ -8,6 +8,7 @@
 #include "nvl/macros/Aliases.h"
 #include "nvl/macros/Assert.h"
 #include "nvl/macros/SIMD.h"
+#include "nvl/math/Bitwise.h"
 #include "nvl/math/Grid.h"
 #include "nvl/reflect/ClassTag.h"
 

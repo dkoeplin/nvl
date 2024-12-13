@@ -46,21 +46,22 @@ struct Player final : Entity<2> {
     }
 
     void draw(Window *window, const Color &scale) const override {
-        for (const At<2, Part> &part : this->parts()) {
+        const Pos<2> loc = this->loc();
+        for (const Rel<Part> &part : this->parts()) {
             const auto color = part->material->color.highlight(scale);
-            window->fill_box(color, part.bbox());
+            window->fill_box(color, part.bbox(loc));
         }
         if (digging) {
             const auto color = Color::kBlue.highlight({.a = 100});
             const auto bbox = this->bbox();
-            const Box<2> dig_box{bbox.min - 10, {bbox.max[0] + 10, bbox.max[1]}};
+            const Box<2> dig_box{bbox.min - 10, {bbox.end[0] + 10, bbox.end[1]}};
             window->fill_box(color, dig_box);
         }
     }
 
     Status tick(const List<Message> &messages) override {
         const auto bbox = this->bbox();
-        Box<2> dig_box{bbox.min - 10, {bbox.max[0] + 10, bbox.max[1]}};
+        Box<2> dig_box{bbox.min - 10, {bbox.end[0] + 10, bbox.end[1]}};
         if (digging) {
             if (velocity_[1] < 0) {
                 dig_box.min[1] += velocity_[1];
@@ -80,7 +81,7 @@ struct Player final : Entity<2> {
         return Entity::tick(messages);
     }
 
-    Status broken(const List<Component> &) override { return Status::kNone; }
+    Status broken(const List<Set<Rel<Part>>> &) override { return Status::kNone; }
 
     bool digging = false;
 };

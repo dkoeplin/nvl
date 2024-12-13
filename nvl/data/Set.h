@@ -48,6 +48,11 @@ public:
         return *this;
     }
 
+    Set &insert(const Set<Value> &rhs) {
+        parent::insert(rhs.begin(), rhs.end());
+        return *this;
+    }
+
     Set &insert(const Range<Value> &range) {
         parent::insert(range.begin(), range.end());
         return *this;

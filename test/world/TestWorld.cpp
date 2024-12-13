@@ -41,6 +41,7 @@ using nvl::Face;
 using nvl::Line;
 using nvl::Material;
 using nvl::Pos;
+using nvl::Rel;
 using nvl::TestMaterial;
 using nvl::Vec;
 using nvl::World;
@@ -151,7 +152,6 @@ TEST(TestWorld, stop_when_fallen) {
 }
 
 TEST(TestWorld, break_block) {
-    using nvl::At;
     using nvl::Hit;
     using nvl::List;
     using nvl::Message;
@@ -170,8 +170,8 @@ TEST(TestWorld, break_block) {
     EXPECT_EQ(world->num_alive(), 1);
 
     nvl::Set<Box<2>> boxes;
-    for (const At<2, Part<2>> &part : block.parts()) {
-        boxes.insert(part.bbox());
+    for (const Rel<Part<2>> &part : block.parts()) {
+        boxes.insert(part.bbox(block.loc()));
     }
     EXPECT_THAT(boxes, UnorderedElementsAre(Box<2>{{817, 846}, {1024, 1106}}, Box<2>{{1024, 1046}, {1063, 1106}},
                                             Box<2>{{1024, 846}, {1063, 1005}}, Box<2>{{1063, 1046}, {1100, 1106}},
@@ -181,8 +181,10 @@ TEST(TestWorld, break_block) {
     block.tick({Message::get<Hit<2>>(nullptr, Box<2>{{987, 1006}, {1028, 1047}}, 1)});
     boxes.clear();
     for (auto actor : world->entities()) {
-        for (const At<2, Part<2>> &part : actor.dyn_cast<Block<2>>()->parts()) {
-            boxes.insert(part.bbox());
+        auto *blk = actor.dyn_cast<Block<2>>();
+        const Pos<2> loc = blk->loc();
+        for (const Rel<Part<2>> &part : blk->parts()) {
+            boxes.insert(part.bbox(loc));
         }
     }
     EXPECT_THAT(boxes, UnorderedElementsAre(Box<2>{{817, 846}, {987, 1106}}, Box<2>{{987, 1047}, {1024, 1106}},
@@ -194,7 +196,6 @@ TEST(TestWorld, break_block) {
 }
 
 TEST(TestWorld, break_block2) {
-    using nvl::At;
     using nvl::Hit;
     using nvl::List;
     using nvl::Message;

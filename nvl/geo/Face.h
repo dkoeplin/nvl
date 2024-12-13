@@ -1,5 +1,6 @@
 #pragma once
 
+#include "nvl/data/SipHash.h"
 #include "nvl/geo/Dir.h"
 #include "nvl/macros/Aliases.h"
 #include "nvl/macros/Pure.h"
@@ -26,3 +27,8 @@ struct Face {
 inline std::ostream &operator<<(std::ostream &os, const Face &face) { return os << face.dir << face.dim; }
 
 } // namespace nvl
+
+template <>
+struct std::hash<nvl::Face> {
+    pure U64 operator()(const nvl::Face &face) const noexcept { return nvl::sip_hash(face); }
+};

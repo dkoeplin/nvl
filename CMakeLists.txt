@@ -35,7 +35,7 @@ add_library(nvl SHARED
         nvl/data/Tensor.h
         nvl/data/UnionFind.h
         nvl/entity/Entity.h
-        nvl/geo/At.h
+        nvl/geo/Rel.h
         nvl/geo/Volume.h
         nvl/geo/BRTree.h
         nvl/geo/Dir.h

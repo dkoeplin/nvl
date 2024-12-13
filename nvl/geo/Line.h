@@ -22,6 +22,12 @@ public:
     constexpr Line() = default;
     constexpr Line(const Vec<N> &x, const Vec<N> &y) : a_(x), b_(y) {}
 
+    template <typename T>
+    pure Line operator+(const Tuple<N, T> &rhs) const { return Line(a_ + real(rhs), b_ + real(rhs)); }
+
+    template <typename T>
+    pure Line operator-(const Tuple<N, T> &rhs) const { return Line(a_ - real(rhs), b_ - real(rhs)); }
+
     /// Returns the point closest to `a` which overlaps with the given box, if one exists.
     pure Maybe<Intersect<N>> intersect(const Box<N> &box) const;
 
