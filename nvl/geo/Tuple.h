@@ -145,6 +145,15 @@ public:
         return result;
     }
 
+    /// Returns a new instance with the result of element-wise mod.
+    pure Tuple operator%(const Tuple rhs) const
+        requires std::is_integral_v<T>
+    {
+        Tuple result;
+        simd for (U64 i = 0; i < N; ++i) { result[i] = indices_[i] % rhs.indices_[i]; }
+        return result;
+    }
+
     /// Returns a new instance with the result of element-wise addition.
     pure Tuple operator+(const Tuple &rhs) const {
         Tuple result;
@@ -170,6 +179,15 @@ public:
     pure Tuple operator/(const T rhs) const {
         Tuple result = *this;
         simd for (T &x : result.indices_) { x /= rhs; }
+        return result;
+    }
+
+    /// Returns a new instance with the result of element-wise mod.
+    pure Tuple operator%(const T rhs) const
+        requires std::is_integral_v<T>
+    {
+        Tuple result = *this;
+        simd for (T &x : result.indices_) { x %= rhs; }
         return result;
     }
 
@@ -208,7 +226,7 @@ public:
             }
         }
         return true;
-    } // namespace nvl
+    }
 
     /// Returns true if every element is less than or equal to the corresponding element in `rhs`.
     pure bool all_lte(const Tuple &rhs) const {
@@ -218,7 +236,7 @@ public:
             }
         }
         return true;
-    } // namespace nvl
+    }
 
     /// Returns true if every element is greater than the corresponding element in `rhs`.
     pure bool all_gt(const Tuple &rhs) const { return rhs.all_lt(*static_cast<const Tuple *>(this)); }
@@ -306,6 +324,10 @@ public:
         simd for (U64 i = 0; i < N; ++i) { indices_[i] /= rhs.indices_[i]; }
         return *static_cast<Tuple *>(this);
     }
+    Tuple &operator%=(const Tuple &rhs) {
+        simd for (U64 i = 0; i < N; ++i) { indices_[i] %= rhs.indices_[i]; }
+        return *static_cast<Tuple *>(this);
+    }
     Tuple &operator+=(const Tuple &rhs) {
         simd for (U64 i = 0; i < N; ++i) { indices_[i] += rhs.indices_[i]; }
         return *static_cast<Tuple *>(this);
@@ -320,6 +342,10 @@ public:
     }
     Tuple &operator/=(const T rhs) {
         simd for (T &x : indices_) { x /= rhs; }
+        return *this;
+    }
+    Tuple &operator%=(const T rhs) {
+        simd for (T &x : indices_) { x %= rhs; }
         return *this;
     }
     Tuple &operator+=(const T rhs) {
