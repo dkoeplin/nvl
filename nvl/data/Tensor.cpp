@@ -7,14 +7,7 @@
 
 namespace nvl {
 
-Tensor<2, char> matrix_from_file(const std::string &filename) {
-    std::ifstream file(filename);
-
-    std::string line;
-    List<std::string> lines;
-    while (std::getline(file, line)) {
-        lines.push_back(line);
-    }
+Tensor<2, char> matrix_from_lines(const List<std::string> &lines) {
     const I64 rows = lines.size();
     const I64 cols = lines[0].size();
     Tensor<2, char> matrix({rows, cols}, '.');
@@ -24,6 +17,16 @@ Tensor<2, char> matrix_from_file(const std::string &filename) {
         }
     }
     return matrix;
+}
+
+Tensor<2, char> matrix_from_file(const std::string &filename) {
+    std::ifstream file(filename);
+    std::string line;
+    List<std::string> lines;
+    while (std::getline(file, line)) {
+        lines.push_back(line);
+    }
+    return matrix_from_lines(lines);
 }
 
 } // namespace nvl

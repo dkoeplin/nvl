@@ -72,6 +72,8 @@ bool compare_tensors(std::ostream &os, const Tensor<N, T> &a, const Tensor<N, T>
     return mismatches == 0;
 }
 
+Tensor<2, char> matrix_from_lines(const List<std::string> &lines);
+
 Tensor<2, char> matrix_from_file(const std::string &filename);
 
 } // namespace nvl
