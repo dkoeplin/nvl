@@ -7,6 +7,7 @@
 #include "nvl/macros/Assert.h"
 #include "nvl/macros/Expand.h"
 #include "nvl/macros/Pure.h"
+#include "nvl/macros/ReturnIf.h"
 
 namespace nvl {
 
@@ -26,6 +27,14 @@ public:
     pure Iterator<T> end() const { return data_.end(); }
 
     pure Range<Idx> indices() const { return Volume<N, I64>(Idx::zero, shape_).indices(); }
+
+    /// Returns the first index where the given predicate is true. Returns None otherwise.
+    pure Maybe<Idx> index_where(const std::function<bool(T)> &predicate) const {
+        for (const auto &idx : indices()) {
+            return_if(predicate((*this)[idx]), idx);
+        }
+        return None;
+    }
 
     pure expand bool has(Idx indices) const { return indices.all_gte(Idx::zero) && indices.all_lt(shape_); }
 
