@@ -38,7 +38,7 @@ public:
 
     explicit CastableShared(std::shared_ptr<T> ptr) : ptr_(std::move(ptr)) {
         if (ptr_) {
-            ptr_->self_ = ptr;
+            ptr_->self_ = ptr_;
         }
     }
 
