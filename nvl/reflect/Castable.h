@@ -32,7 +32,7 @@ public:
     Castable() = default;
     explicit Castable(Ptr ptr) : ptr_(ptr) {
         if (ptr != nullptr) {
-            ptr->self_ = this;
+            ptr->self_ = static_cast<Ref *>(this);
         }
     }
     implicit Castable(nullptr_t) : ptr_(nullptr) {}
