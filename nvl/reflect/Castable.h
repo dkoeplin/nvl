@@ -12,16 +12,10 @@ class Castable {
 public:
     struct BaseClass {
         virtual ~BaseClass() = default;
-        Ref self() const {
-            T *inst = static_cast<const T *>(this);
-            Ptr ptr(inst);
-            return Ref(ptr);
-        }
-        Ref self() {
-            T *inst = static_cast<T *>(this);
-            Ptr ptr(inst);
-            return Ref(ptr);
-        }
+        const Ref &self() const { return *self_; }
+        Ref &self() { return *self_; }
+
+        Ref *self_ = nullptr;
     };
     struct Hash {
         U64 operator()(const Ref &ref) const { return sip_hash(ref.ptr()); }
@@ -36,9 +30,12 @@ public:
     }
 
     Castable() = default;
-    explicit Castable(Ptr ptr) : ptr_(ptr) {}
+    explicit Castable(Ptr ptr) : ptr_(ptr) {
+        if (ptr != nullptr) {
+            ptr->self_ = this;
+        }
+    }
     implicit Castable(nullptr_t) : ptr_(nullptr) {}
-    virtual ~Castable() = default;
 
     explicit operator bool() const { return ptr() != nullptr; }
 
