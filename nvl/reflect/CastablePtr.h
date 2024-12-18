@@ -7,35 +7,27 @@
 
 namespace nvl {
 
-template <typename Ref, typename T, typename Ptr = T *>
-class Castable {
+/**
+ * @class CastablePtr
+ * @brief Provides a thin wrapper around a raw pointer with methods for dynamic casting.
+ * @tparam Ref The wrapper type
+ * @tparam T The common parent class of all subclasses
+ */
+template <typename Ref, typename T>
+class CastablePtr {
 public:
     struct BaseClass {
         virtual ~BaseClass() = default;
-        const Ref &self() const { return *self_; }
-        Ref &self() { return *self_; }
-
-        Ref *self_ = nullptr;
+        // Loses const here - there's not a good way to maintain const on the returned Ref
+        Ref self() const { return Ref(const_cast<T *>(static_cast<const T *>(this))); }
     };
     struct Hash {
         U64 operator()(const Ref &ref) const { return sip_hash(ref.ptr()); }
     };
 
-    template <typename R, typename... Args>
-        requires std::is_same_v<Ptr, std::unique_ptr<T>> || std::is_same_v<Ptr, std::shared_ptr<T>>
-    static Ref get(Args &&...args) {
-        R *inst = new R(std::forward<Args>(args)...);
-        Ptr ptr(inst);
-        return Ref(std::move(ptr));
-    }
-
-    Castable() = default;
-    explicit Castable(Ptr ptr) : ptr_(ptr) {
-        if (ptr != nullptr) {
-            ptr->self_ = static_cast<Ref *>(this);
-        }
-    }
-    implicit Castable(nullptr_t) : ptr_(nullptr) {}
+    CastablePtr() = default;
+    explicit CastablePtr(T *ptr) : ptr_(ptr) {}
+    implicit CastablePtr(nullptr_t) : ptr_(nullptr) {}
 
     explicit operator bool() const { return ptr() != nullptr; }
 
@@ -67,7 +59,7 @@ public:
     pure expand const T *ptr() const { return &*ptr_; }
 
 protected:
-    Ptr ptr_ = nullptr;
+    T *ptr_ = nullptr;
 };
 
 } // namespace nvl

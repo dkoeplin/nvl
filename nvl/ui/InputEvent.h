@@ -1,7 +1,9 @@
 #pragma once
 
+#include <sstream>
+
 #include "nvl/macros/Abstract.h"
-#include "nvl/reflect/Castable.h"
+#include "nvl/reflect/CastableShared.h"
 #include "nvl/ui/Key.h"
 #include "nvl/ui/Mouse.h"
 #include "nvl/ui/Scroll.h"
@@ -10,15 +12,14 @@ namespace nvl {
 
 struct InputEvent;
 
-abstract struct AbstractInputEvent
-    : Castable<InputEvent, AbstractInputEvent, std::shared_ptr<AbstractInputEvent>>::BaseClass {
+abstract struct AbstractInputEvent : CastableShared<InputEvent, AbstractInputEvent>::BaseClass {
     class_tag(AbstractInputEvent);
     pure virtual std::string to_string() const = 0;
 };
 
-struct InputEvent final : Castable<InputEvent, AbstractInputEvent, std::shared_ptr<AbstractInputEvent>> {
-    using Castable::Castable;
-    using Castable::get;
+struct InputEvent final : CastableShared<InputEvent, AbstractInputEvent> {
+    using CastableShared::CastableShared;
+    using CastableShared::get;
     pure std::string to_string() const { return ptr_->to_string(); }
 };
 

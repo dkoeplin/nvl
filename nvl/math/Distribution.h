@@ -4,17 +4,19 @@
 
 #include "nvl/macros/Unreachable.h"
 #include "nvl/math/Random.h"
-#include "nvl/reflect/Castable.h"
+#include "nvl/reflect/CastableShared.h"
 #include "nvl/reflect/ClassTag.h"
 
 namespace nvl {
 
-struct AbstractDistribution {
+class Distribution;
+
+struct AbstractDistribution : CastableShared<Distribution, AbstractDistribution>::BaseClass {
     class_tag(AbstractDistribution);
     virtual ~AbstractDistribution() = default;
 };
 
-class Distribution final : public Castable<Distribution, AbstractDistribution, std::shared_ptr<AbstractDistribution>> {
+class Distribution final : public CastableShared<Distribution, AbstractDistribution> {
 public:
     template <typename T>
     static Distribution Uniform(T min, T max);
@@ -29,7 +31,7 @@ public:
     T next(Random &random) const;
 
 private:
-    using Castable::Castable;
+    using CastableShared::CastableShared;
 };
 
 template <typename T>

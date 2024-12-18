@@ -1,11 +1,10 @@
 #pragma once
 
-#include <memory>
 #include <string>
 
 #include "nvl/macros/Abstract.h"
 #include "nvl/macros/Aliases.h"
-#include "nvl/reflect/Castable.h"
+#include "nvl/reflect/CastableShared.h"
 #include "nvl/reflect/ClassTag.h"
 #include "nvl/ui/Color.h"
 
@@ -13,7 +12,7 @@ namespace nvl {
 
 struct Material;
 
-abstract struct AbstractMaterial : Castable<Material, AbstractMaterial>::BaseClass {
+abstract struct AbstractMaterial : CastableShared<Material, AbstractMaterial>::BaseClass {
     class_tag(AbstractMaterial);
 
     explicit AbstractMaterial(const Color color, const I64 durability, const bool falls = true)
@@ -25,9 +24,9 @@ abstract struct AbstractMaterial : Castable<Material, AbstractMaterial>::BaseCla
     bool outline = true;
 };
 
-struct Material final : Castable<Material, AbstractMaterial, std::shared_ptr<AbstractMaterial>> {
-    using Castable::Castable;
-    using Castable::get;
+struct Material final : CastableShared<Material, AbstractMaterial> {
+    using CastableShared::CastableShared;
+    using CastableShared::get;
 };
 
 } // namespace nvl

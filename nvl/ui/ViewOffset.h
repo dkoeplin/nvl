@@ -3,12 +3,12 @@
 #include "nvl/geo/Tuple.h"
 #include "nvl/macros/Aliases.h"
 #include "nvl/macros/Unreachable.h"
-#include "nvl/reflect/Castable.h"
+#include "nvl/reflect/CastableShared.h"
 
 namespace nvl {
 struct ViewOffset;
 
-struct AbstractViewOffset : Castable<ViewOffset, AbstractViewOffset, std::shared_ptr<AbstractViewOffset>>::BaseClass {
+struct AbstractViewOffset : CastableShared<ViewOffset, AbstractViewOffset>::BaseClass {
     class_tag(AbstractViewOffset);
 };
 
@@ -39,8 +39,8 @@ struct View3D final : AbstractViewOffset {
     F64 scale = 1;
 };
 
-struct ViewOffset final : Castable<ViewOffset, AbstractViewOffset, std::shared_ptr<AbstractViewOffset>> {
-    using Castable::Castable;
+struct ViewOffset final : CastableShared<ViewOffset, AbstractViewOffset> {
+    using CastableShared::CastableShared;
     template <U64 N>
     static ViewOffset zero() {
         if constexpr (N == 2) {

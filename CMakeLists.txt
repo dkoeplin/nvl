@@ -65,7 +65,7 @@ add_library(nvl SHARED
         nvl/message/Notify.h
         nvl/reflect/Backtrace.cpp
         nvl/reflect/Backtrace.h
-        nvl/reflect/Castable.h
+        nvl/reflect/CastablePtr.h
         nvl/reflect/Casting.h
         nvl/reflect/ClassTag.cpp
         nvl/reflect/ClassTag.h

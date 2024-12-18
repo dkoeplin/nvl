@@ -1,10 +1,12 @@
 #pragma once
 
 #include "nvl/macros/Assert.h"
+#include "nvl/macros/Implicit.h"
 #include "nvl/macros/Pure.h"
 #include "nvl/macros/ReturnIf.h"
 #include "nvl/macros/Unreachable.h"
-#include "nvl/reflect/Castable.h"
+#include "nvl/reflect/Casting.h"
+#include "nvl/reflect/ClassTag.h"
 
 namespace nvl {
 

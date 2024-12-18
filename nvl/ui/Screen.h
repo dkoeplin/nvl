@@ -4,10 +4,9 @@
 #include "nvl/data/Map.h"
 #include "nvl/data/Set.h"
 #include "nvl/data/SipHash.h"
-#include "nvl/geo/Tuple.h"
 #include "nvl/macros/Abstract.h"
 #include "nvl/macros/Pure.h"
-#include "nvl/reflect/Castable.h"
+#include "nvl/reflect/CastableShared.h"
 #include "nvl/ui/InputEvent.h"
 #include "nvl/ui/Key.h"
 #include "nvl/ui/Mouse.h"
@@ -18,7 +17,7 @@ namespace nvl {
 struct Screen;
 class Window;
 
-abstract class AbstractScreen : public Castable<Screen, AbstractScreen, std::shared_ptr<AbstractScreen>>::BaseClass {
+abstract class AbstractScreen : public CastableShared<Screen, AbstractScreen>::BaseClass {
 public:
     class_tag(AbstractScreen);
 
@@ -77,9 +76,9 @@ protected:
     bool closed_ = false;
 };
 
-struct Screen final : Castable<Screen, AbstractScreen, std::shared_ptr<AbstractScreen>> {
-    using Castable::Castable;
-    using Castable::get;
+struct Screen final : CastableShared<Screen, AbstractScreen> {
+    using CastableShared::CastableShared;
+    using CastableShared::get;
 };
 
 template <typename T, typename... Args>

@@ -2,8 +2,7 @@
 
 #include "nvl/macros/Abstract.h"
 #include "nvl/macros/Aliases.h"
-#include "nvl/macros/Pure.h"
-#include "nvl/reflect/Castable.h"
+#include "nvl/reflect/ClassTag.h"
 #include "nvl/ui/Screen.h"
 
 namespace nvl {
