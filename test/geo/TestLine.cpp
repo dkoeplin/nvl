@@ -11,7 +11,7 @@
 namespace nvl {
 
 template <U64 N>
-struct nvl::RandomGen<Box<N>> {
+struct RandomGen<Box<N>> {
     template <typename I>
     pure Box<N> uniform(Random &random, const I min, const I max) const {
         const auto a = random.uniform<Pos<N>, I>(min, max);
@@ -27,7 +27,7 @@ struct nvl::RandomGen<Box<N>> {
 };
 
 template <U64 N>
-struct nvl::RandomGen<Line<N>> {
+struct RandomGen<Line<N>> {
     pure Line<N> uniform(Random &random, const F64 min, const F64 max) const {
         const auto a = random.uniform<Vec<N>, F64>(min, max);
         const auto b = random.uniform<Vec<N>, F64>(min, max);

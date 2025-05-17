@@ -183,20 +183,20 @@ public:
 
     pure MIterator<Entry> begin() { return entry_iterator::template begin<View::kMutable>(*this); }
     pure MIterator<Entry> end() { return entry_iterator::template end<View::kMutable>(*this); }
-    pure Iterator<Entry> begin() const { return entry_iterator::template begin(*this); }
-    pure Iterator<Entry> end() const { return entry_iterator::template end(*this); }
+    pure Iterator<Entry> begin() const { return entry_iterator::template begin<View::kImmutable>(*this); }
+    pure Iterator<Entry> end() const { return entry_iterator::template end<View::kImmutable>(*this); }
 
     pure MRange<V> values() { return {values_begin(), values_end()}; }
     pure Range<V> values() const { return {values_begin(), values_end()}; }
 
     pure MIterator<V> values_begin() { return viterator::template begin<View::kMutable>(*this); }
     pure MIterator<V> values_end() { return viterator::template end<View::kMutable>(*this); }
-    pure Iterator<V> values_begin() const { return viterator::template begin(*this); }
-    pure Iterator<V> values_end() const { return viterator::template end(*this); }
+    pure Iterator<V> values_begin() const { return viterator::template begin<View::kImmutable>(*this); }
+    pure Iterator<V> values_end() const { return viterator::template end<View::kImmutable>(*this); }
 
     pure Range<K> keys() const { return {keys_begin(), keys_end()}; }
-    pure Iterator<K> keys_begin() const { return kiterator::template begin(*this); }
-    pure Iterator<K> keys_end() const { return kiterator::template end(*this); }
+    pure Iterator<K> keys_begin() const { return kiterator::template begin<View::kImmutable>(*this); }
+    pure Iterator<K> keys_end() const { return kiterator::template end<View::kImmutable>(*this); }
 
 protected:
     pure typename parent::const_iterator _begin() const { return parent::begin(); }

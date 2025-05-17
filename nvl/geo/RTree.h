@@ -439,8 +439,8 @@ public:
     pure MIterator<ItemRef> begin() { return item_iterator::template begin<View::kMutable>(items_); }
     pure MIterator<ItemRef> end() { return item_iterator::template end<View::kMutable>(items_); }
 
-    pure Iterator<ItemRef> begin() const { return item_iterator::template begin(items_); }
-    pure Iterator<ItemRef> end() const { return item_iterator::template end(items_); }
+    pure Iterator<ItemRef> begin() const { return item_iterator::template begin<View::kImmutable>(items_); }
+    pure Iterator<ItemRef> end() const { return item_iterator::template end<View::kImmutable>(items_); }
 
     /// Returns true if this item is contained within the tree.
     pure bool has(const ItemRef &item) const { return item_ids_.has(item); }

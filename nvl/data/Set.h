@@ -79,8 +79,8 @@ public:
 
     pure MIterator<Value> begin() { return iterator::template begin<View::kMutable>(*this); }
     pure MIterator<Value> end() { return iterator::template end<View::kMutable>(*this); }
-    pure Iterator<Value> begin() const { return iterator::template begin(*this); }
-    pure Iterator<Value> end() const { return iterator::template end(*this); }
+    pure Iterator<Value> begin() const { return iterator::template begin<View::kImmutable>(*this); }
+    pure Iterator<Value> end() const { return iterator::template end<View::kImmutable>(*this); }
 
     pure MRange<Value> values() { return {begin(), end()}; }
     pure Range<Value> values() const { return {begin(), end()}; }

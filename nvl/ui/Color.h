@@ -72,7 +72,7 @@ constexpr Color Color::kDarker {.r = 763, .g = 763, .b = 763, .a = 1024};
 constexpr Color Color::kMoreTransparent {.r = 1024, .g = 1024, .b = 1024, .a = 763};
 constexpr Color Color::kLessTransparent {.r = 1024, .g = 1024, .b = 1024, .a = 1462};
 
-// Adapted from the raylib color pallete
+// Adapted from the raylib color pallet
 constexpr Color Color::kLightGray  { 200, 200, 200, 255 };
 constexpr Color Color::kGray       { 130, 130, 130, 255 };
 constexpr Color Color::kDarkGray   { 80, 80, 80, 255 };
@@ -103,7 +103,7 @@ constexpr Color Color::kRayWhite   { 245, 245, 245, 255 };
 // clang-format on
 
 template <>
-struct nvl::RandomGen<Color> {
+struct RandomGen<Color> {
     template <typename I>
     pure Color uniform(Random &random, const I min, const I max) const {
         const U64 mn = std::max<I>(0x00, static_cast<U64>(min));
