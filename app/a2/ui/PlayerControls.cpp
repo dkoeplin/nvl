@@ -11,7 +11,7 @@
 namespace a2 {
 
 void PlayerControls::tick() {
-    Actor player(world_->player);
+    const Actor player(world_->player);
     if (window_->pressed(Key::Space)) {
         world_->send<Jump>(nullptr, player);
     }

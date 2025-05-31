@@ -22,11 +22,12 @@ struct WorldA2 final : World<3> {
     void tick() override;
     void draw() override;
 
+    const View3D &view3d() const { return *view_.dyn_cast<View3D>(); }
     View3D &view3d() { return *view_.dyn_cast<View3D>(); }
 
     Player *player;
     U64 prev_generated = 0;
-    U64 ticks_per_gen = 50;
+    U64 ticks_per_gen = 2;
     bool paused = false;
 
     std::vector<Material> materials;

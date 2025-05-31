@@ -29,7 +29,6 @@ WorldA2::WorldA2(AbstractScreen *parent)
                         .terminal_velocity = 53_mps}) {
 
     window_->set_background(Color::kSkyBlue);
-    paused = true;
     open<PauseScreen>(this);
 
     for (const auto &color : kColors) {
@@ -66,16 +65,12 @@ WorldA2::WorldA2(AbstractScreen *parent)
         x += 2_m;
     }
 
-    on_key_down[Key::P] = [this] {
-        paused = true;
-        open<PauseScreen>(this);
-    };
+    on_key_down[Key::P] = [this] { open<PauseScreen>(this); };
     on_key_down[Key::N] = [this] { spawn_random_cube(); };
 }
 
 void WorldA2::remove(const Actor &actor) {
     if (actor.isa<Player>()) {
-        paused = true;
         window_->open<DeathScreen>(this);
     } else {
         World::remove(actor);
@@ -83,11 +78,11 @@ void WorldA2::remove(const Actor &actor) {
 }
 
 void WorldA2::spawn_random_cube() {
-    const auto left = random.uniform<I64, I64>(-1_km, 1_km);
-    const auto back = random.uniform<I64, I64>(-1_km, 1_km);
-    const auto width = random.uniform<I64, I64>(10_mm, 5_m);
-    const auto height = random.uniform<I64, I64>(10_mm, 5_m);
-    const auto depth = random.uniform<I64, I64>(10_mm, 5_m);
+    const auto left = random.uniform<I64, I64>(-50_m, 50_m);
+    const auto back = random.uniform<I64, I64>(-50_m, 50_m);
+    const auto width = random.uniform<I64, I64>(10_cm, 5_m);
+    const auto height = random.uniform<I64, I64>(10_cm, 5_m);
+    const auto depth = random.uniform<I64, I64>(10_cm, 5_m);
     const auto top = std::min<I64>(0, entities_.bbox().min[1]) - height - 2;
     const auto color_idx = random.uniform<U64, U64>(0, materials.size() - 1);
     const auto material = materials.at(color_idx);
@@ -106,8 +101,8 @@ void WorldA2::tick() {
     const auto diff = player->loc() - prev_player_loc;
     view3d().offset += diff;
 
-#if 0
-    if (window_->ticks() - prev_generated >= ticks_per_gen) {
+#if 1
+    if (ticks() - prev_generated >= ticks_per_gen) {
         spawn_random_cube();
     }
 #endif

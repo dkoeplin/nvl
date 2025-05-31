@@ -1,5 +1,6 @@
 #pragma once
 
+#include <ranges>
 #include <utility>
 
 #include "nvl/actor/Actor.h"
@@ -42,7 +43,7 @@ public:
 
     struct Intersect : nvl::Intersect<N> {
         Intersect(const nvl::Intersect<N> &init, Actor actor, Ref<Part<N>> part)
-            : nvl::Intersect<N>(init), actor(std::move(actor)), part(part) {}
+            : nvl::Intersect<N>(init), actor(actor), part(part) {}
         Actor actor;
         Ref<Part<N>> part;
     };
@@ -211,7 +212,7 @@ void World<N>::tick() {
     ticks_ += 1;
 
     // Wake any entities with pending messages
-    for (auto &[actor, _] : messages_) {
+    for (const Actor &actor : messages_.keys()) {
         if (entities_.has(actor)) {
             awake_.emplace(actor);
         } else {

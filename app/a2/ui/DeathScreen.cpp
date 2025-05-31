@@ -10,6 +10,8 @@
 namespace a2 {
 
 DeathScreen::DeathScreen(AbstractScreen *parent, WorldA2 *world) : AbstractScreen(parent), world_(world) {
+    world_->paused = true;
+
     on_key_down[Key::Any] = [this] {
         if (ticks > kRespawnTicks) {
             auto &view = world_->view3d();

@@ -26,7 +26,7 @@ struct Player final : Entity<3> {
     pure I64 dig_ticks() const { return 5; }
     pure I64 dig_reach() const { return 3_m; }
     pure I64 dig_radius() const { return 1_m; }
-    pure I64 walk_accel() const { return 4_mps2; }
+    pure I64 walk_accel() const { return 30_mps2; }
     pure I64 walk_max_velocity() const { return 10_mps; }
 
     U64 last_dig = 0;

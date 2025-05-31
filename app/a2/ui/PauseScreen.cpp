@@ -6,6 +6,8 @@
 namespace a2 {
 
 PauseScreen::PauseScreen(AbstractScreen *parent, WorldA2 *world) : AbstractScreen(parent), world_(world) {
+    world_->paused = true;
+
     on_key_down[Key::Any] = [this] {
         world_->paused = false;
         close();
