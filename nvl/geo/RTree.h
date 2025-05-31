@@ -100,11 +100,12 @@ struct PreorderWork {
  * @class RTree
  * @brief Data structure for storing volumes within an N-dimensional space with O(log(N)) lookup.
  *
- * @tparam N Number of dimensions in the N-dimensional space.
- * @tparam Item Value type being stored.
- * @tparam kMaxEntries Maximum number of entries per node. Defaults to 10.
- * @tparam kGridExpMin Minimum node grid size (2 ^ min_grid_exp). Defaults to 2.
- * @tparam kGridExpMax Initial grid size of the root. (2 ^ root_grid_exp). Defaults to 10.
+ * @tparam N - Number of dimensions in the N-dimensional space.
+ * @tparam Item - Value type being stored.
+ * @tparam ItemRef - Type used for providing references to items held in this tree. Defaults to Ref<Item>.
+ * @tparam kMaxEntries - Maximum number of entries per node. Defaults to 10.
+ * @tparam kGridExpMin - Minimum node grid size (2 ^ min_grid_exp). Defaults to 2.
+ * @tparam kGridExpMax - Initial grid size of the root. (2 ^ root_grid_exp). Defaults to 10.
  */
 template <U64 N, typename Item, typename ItemRef = Ref<Item>, U64 kMaxEntries = 10, U64 kGridExpMin = 2,
           U64 kGridExpMax = 10>
@@ -769,7 +770,7 @@ protected:
     U64 node_id_ = 0;
     U64 item_id_ = 0;
 
-    // Nodes keep references to the items stored in the above map to avoid storing two copies of each item.
+    // Nodes keep references to the items stored in the items_ map to avoid storing two copies of each item.
     // These references are guaranteed stable as long as the item itself is not removed from the map.
     // See: https://cplusplus.com/reference/unordered_map/unordered_map/operator[]/
     Map<U64, std::unique_ptr<Item>> items_;

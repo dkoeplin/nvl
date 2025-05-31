@@ -10,6 +10,13 @@
 
 namespace nvl {
 
+/**
+ * @class Ref
+ * @brief A non-null reference to an object (internally kept as a pointer).
+ * Primary use case is to store references in collections.
+ *
+ * @tparam Value - The value type being referenced.
+ */
 template <typename Value>
 class Ref {
 public:

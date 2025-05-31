@@ -2,6 +2,7 @@
 
 #include <memory>
 
+#include "nvl/macros/Abstract.h"
 #include "nvl/macros/Unreachable.h"
 #include "nvl/math/Random.h"
 #include "nvl/reflect/CastableShared.h"
@@ -11,11 +12,17 @@ namespace nvl {
 
 class Distribution;
 
-struct AbstractDistribution : CastableShared<Distribution, AbstractDistribution>::BaseClass {
+abstract struct AbstractDistribution : CastableShared<Distribution, AbstractDistribution>::BaseClass {
     class_tag(AbstractDistribution);
-    virtual ~AbstractDistribution() = default;
 };
 
+/**
+ * @class Distribution
+ * @brief A random distribution for generating random numbers.
+ *
+ * Example Usage:
+ *   auto distribution = Distribution::Uniform(0, 100);
+ */
 class Distribution final : public CastableShared<Distribution, AbstractDistribution> {
 public:
     template <typename T>
@@ -27,6 +34,8 @@ public:
     template <typename T>
     static Distribution Custom(const std::function<T(Random &)> &func);
 
+    // TODO(davidk): This is a little incongruous. You can create a Distribution with type A and then request
+    //               a value of type B from it. Is there any way to make this type checked?
     template <typename T>
     T next(Random &random) const;
 
@@ -36,7 +45,7 @@ private:
 
 template <typename T>
 struct UniformDistribution final : AbstractDistribution {
-    class_tag(UniformDistribution<T>);
+    class_tag(UniformDistribution<T>, AbstractDistribution);
     explicit UniformDistribution(T min, T max) : min(min), max(max) {}
     T min;
     T max;
@@ -44,7 +53,7 @@ struct UniformDistribution final : AbstractDistribution {
 
 template <typename T>
 struct NormalDistribution final : AbstractDistribution {
-    class_tag(NormalDistribution<T>);
+    class_tag(NormalDistribution<T>, AbstractDistribution);
     explicit NormalDistribution(T mean, T stddev) : mean(mean), stddev(stddev) {}
     T mean;
     T stddev;
@@ -52,7 +61,7 @@ struct NormalDistribution final : AbstractDistribution {
 
 template <typename T>
 struct CustomDistribution final : AbstractDistribution {
-    class_tag(CustomDistribution<T>);
+    class_tag(CustomDistribution<T>, AbstractDistribution);
     explicit CustomDistribution(const std::function<T(Random &)> &func) : func(func) {}
     std::function<T(Random &)> func;
 };

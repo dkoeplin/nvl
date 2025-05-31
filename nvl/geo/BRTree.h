@@ -64,11 +64,12 @@ private:
  * @class BRTree
  * @brief Data structure for storing volumes in N-dimensional space with lazily computed edges and global offset.
  *
- * @tparam N Number of dimensions in the N-dimensional space.
- * @tparam Item Value type being stored.
- * @tparam kMaxEntries Maximum number of entries per node. Defaults to 10.
- * @tparam kGridExpMin Minimum node grid size (2 ^ min_grid_exp). Defaults to 2.
- * @tparam kGridExpMax Initial grid size of the root. (2 ^ root_grid_exp). Defaults to 10.
+ * @tparam N - Number of dimensions in the N-dimensional space.
+ * @tparam Item - Value type being stored.
+ * @tparam ItemRef - Type to use for providing references to items held in this tree. Default is Rel<Item>.
+ * @tparam kMaxEntries - Maximum number of entries per node. Defaults to 10.
+ * @tparam kGridExpMin - Minimum node grid size (2 ^ min_grid_exp). Defaults to 2.
+ * @tparam kGridExpMax - Initial grid size of the root. (2 ^ root_grid_exp). Defaults to 10.
  */
 template <U64 N, typename Item, typename ItemRef = Rel<Item>, U64 kMaxEntries = 10, U64 kGridExpMin = 2,
           U64 kGridExpMax = 10>

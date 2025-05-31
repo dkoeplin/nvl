@@ -4,6 +4,7 @@
 
 #include "nvl/data/Iterator.h"
 #include "nvl/data/Range.h"
+#include "nvl/macros/Hot.h"
 #include "nvl/macros/Pure.h"
 
 namespace nvl {
@@ -54,7 +55,7 @@ public:
 
     explicit List(Range<Value> range) : List(range.begin(), range.end()) {}
 
-    pure bool operator==(const List &rhs) const {
+    pure HOT bool operator==(const List &rhs) const {
         // HOT SPOT: Using the custom iterators slows comparison down by ~20x. Likely to do with std::__unwrap_iter?
         return size() == rhs.size() && std::equal(_begin(), _end(), rhs._begin());
     }

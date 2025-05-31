@@ -14,6 +14,7 @@ namespace nvl {
 template <U64 N, typename T>
 class Tensor {
 public:
+    /// An N-dimensional index into a tensor with rank N
     using Idx = Tuple<N, I64>;
 
     /// Creates an empty tuple of empty shape.

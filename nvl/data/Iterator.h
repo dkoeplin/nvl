@@ -1,5 +1,6 @@
 #pragma once
 
+#include "nvl/macros/Abstract.h"
 #include "nvl/macros/Assert.h"
 #include "nvl/macros/Implicit.h"
 #include "nvl/macros/Pure.h"
@@ -10,6 +11,10 @@
 
 namespace nvl {
 
+/**
+ * @enum View
+ * @brief View type for iterators (mutable or immutable).
+ */
 enum class View {
     kImmutable, // Cannot mutate the elements of the underlying collection.
     kMutable,   // Can mutate the elements of the underlying collection.
@@ -17,10 +22,12 @@ enum class View {
 
 /**
  * @struct AbstractIterator
- * @brief Base class for iterator which provide constant references.
+ * @brief Base class for iterators which provide constant references.
+ * NOTE: Prefer to inherit from AbstractIteratorCRTP when possible.
+ * * @tparam Value - The element type which the iterator iterates over.
  */
 template <typename Value>
-struct AbstractIterator {
+abstract struct AbstractIterator {
     class_tag(AbstractIterator<Value>);
     using value_type = Value;
     using reference = const Value &;
@@ -37,28 +44,42 @@ struct AbstractIterator {
     pure virtual bool equals(const AbstractIterator &rhs) const = 0;
 };
 
+/**
+ * @struct AbstractIteratorCRTP
+ * @brief Helper intermediate type for defining custom iterators.
+ * @tparam Concrete - The type of the inheriting class.
+ * @tparam Value - The element type which the iterator iterates over.
+ */
 template <typename Concrete, typename Value>
-struct AbstractIteratorCRTP : AbstractIterator<Value> {
+abstract struct AbstractIteratorCRTP : AbstractIterator<Value> {
     pure std::shared_ptr<AbstractIterator<Value>> copy() const final {
         return std::make_shared<Concrete>(*static_cast<const Concrete *>(this));
     }
-    pure bool equals(const AbstractIterator<Value> &rhs) const final {
-        auto *b = dyn_cast<Concrete>(&rhs);
-        return b && *this == *b;
-    }
-    pure virtual U64 operator-(const Concrete &) const { UNREACHABLE; }
-    pure virtual bool operator==(const Concrete &rhs) const = 0;
-
     pure U64 diff(const AbstractIterator<Value> &rhs) const final {
         auto *b = dyn_cast<Concrete>(&rhs);
         ASSERT(b, "Cannot compute diff between differing iterator types.");
         return *this - *b;
     }
+    pure bool equals(const AbstractIterator<Value> &rhs) const final {
+        auto *b = dyn_cast<Concrete>(&rhs);
+        return b && *this == *b;
+    }
+
+    /**
+     * [OPTIONAL] Returns the difference, in elements, between this iterator and that iterator.
+     */
+    pure virtual U64 operator-(const Concrete &) const { UNREACHABLE; }
+
+    /**
+     * [REQUIRED] Returns true if this iterator is the same as the [rhs] iterator.
+     */
+    pure virtual bool operator==(const Concrete &rhs) const = 0;
 };
 
 /**
  * @struct Iterator
- * @brief
+ * @brief A shared pointer to a subclass of AbstractIterator.
+ * Used to easily pass arbitrary iterator types when the container type doesn't matter, only the Value type.
  */
 template <typename Value, View Type = View::kImmutable>
 struct Iterator {
@@ -71,10 +92,12 @@ struct Iterator {
     Iterator() = default;
     Iterator(const Iterator &rhs) : Iterator(rhs.ptr_) {}
 
-    /// Converts a mutable iterator to an immutable one.
-    /// Requires C-style casting because the two aren't actually related by inheritance.
+    /**
+     * Implicitly converts a mutable iterator to an immutable one.
+     */
     implicit Iterator(const Iterator<Value, View::kMutable> &rhs)
         requires(Type == View::kImmutable)
+        // Requires C-style casting because the two aren't actually related by inheritance.
         : Iterator(*(const Iterator<Value> *)(&rhs)) {}
 
     explicit Iterator(std::shared_ptr<AbstractIterator<Value>> impl) : ptr_(impl) {}
@@ -83,19 +106,27 @@ struct Iterator {
 
     Iterator copy() const { return ptr_ ? Iterator(ptr_->copy()) : Iterator(); }
 
-    /// Returns an immutable reference to the current value.
+    /**
+     * Returns an immutable reference to the current value.
+     */
     pure reference operator*() const { return *const_cast<pointer>(ptr_->ptr()); }
 
-    /// Returns an immutable pointer to the current value.
+    /**
+     * Returns an immutable pointer to the current value.
+     */
     pure pointer operator->() const { return const_cast<pointer>(ptr_->ptr()); }
 
-    /// Increments this iterator and returns the value of the iterator _after_ incrementing.
+    /**
+     * Increments this iterator and returns the value of the iterator _after_ incrementing.
+     */
     Iterator &operator++() {
         ptr_->increment();
         return *this;
     }
 
-    /// Increments this iterator and returns a copy of the iterator _before_ incrementing.
+    /**
+     * Increments this iterator and returns a copy of the iterator _before_ incrementing.
+     */
     Iterator operator++(int) {
         Iterator prev = copy();
         ptr_->increment();

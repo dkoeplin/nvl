@@ -162,8 +162,9 @@ public:
 
     explicit Volume() = default;
 
-    /// Returns a Volume from points `a` to `b` (inclusive).
-    /// Registers `min` and `max` fields to be the min and max in each dimension, respectively.
+    /// Returns a Volume from points `a` to `b`.
+    /// Registers `min` and `end` fields to be the min and max in each dimension, respectively.
+    /// Minimum is exclusive, maximum (end) is exclusive.
     constexpr Volume(const Idx &a, const Idx &b) {
         for (U64 i = 0; i < N; i++) {
             min[i] = std::min(a[i], b[i]);

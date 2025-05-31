@@ -8,11 +8,10 @@ namespace nvl {
 /**
  * @class Once
  * @brief A pair of iterators which can be iterated over exactly once.
- *
  * Most uses of Once are destructive, as they cause the `begin` iterator to be modified.
  *
- * @tparam Value The value type being iterated over.
- * @tparam Type The type of view this range provides over the underlying elements (mutable or immutable).
+ * @tparam Value - The value type being iterated over.
+ * @tparam Type - The type of view this range provides over the underlying elements (mutable or immutable).
  */
 template <typename Value, View Type = View::kImmutable>
 class Once final {

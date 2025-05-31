@@ -10,8 +10,9 @@ namespace nvl {
 /**
  * @class CastablePtr
  * @brief Provides a thin wrapper around a raw pointer with methods for dynamic casting.
- * @tparam Ref The wrapper type
- * @tparam T The common parent class of all subclasses
+ *
+ * @tparam Ref - The wrapper type
+ * @tparam T - The common parent class of all subclasses
  */
 template <typename Ref, typename T>
 class CastablePtr {

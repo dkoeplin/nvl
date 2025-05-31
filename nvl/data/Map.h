@@ -8,6 +8,16 @@
 
 namespace nvl {
 
+/**
+ * @class Map
+ * @brief An unordered map from keys to values.
+ *
+ * @tparam K - The key type.
+ * @tparam V - The value type.
+ * @tparam Hash - The hasher for type K. Defaults to std::hash.
+ * @tparam Equal - The equality check for type K. Defaults to std::equal_to, which uses operator==.
+ * @tparam Allocator - Memory allocator for entries in the map.
+ */
 template <typename K, typename V, typename Hash = std::hash<K>, typename Equal = std::equal_to<K>,
           typename Allocator = std::allocator<std::pair<const K, V>>>
 class Map : std::unordered_map<K, V, Hash, Equal, Allocator> {
@@ -22,6 +32,10 @@ public:
     using parent::end;
     using parent::size;
 
+    /**
+     * @struct entry_iterator
+     * @brief An iterator over a map's (key, value) pairs.
+     */
     struct entry_iterator final : AbstractIteratorCRTP<entry_iterator, Entry>, parent::const_iterator {
         class_tag(Map::entry_iterator, AbstractIterator<Entry>);
         template <View Type = View::kImmutable>
@@ -43,49 +57,57 @@ public:
         }
     };
 
-    struct viterator final : AbstractIteratorCRTP<viterator, V>, parent::const_iterator {
-        class_tag(Map::viterator, AbstractIterator<V>);
+    /**
+     * @struct value_iterator
+     * @brief An iterator over a map's values.
+     */
+    struct value_iterator final : AbstractIteratorCRTP<value_iterator, V>, parent::const_iterator {
+        class_tag(Map::value_iterator, AbstractIterator<V>);
         using value_type = V; // Override from parent classes
 
         template <View Type = View::kImmutable>
         static Iterator<V, Type> begin(const Map &map) {
-            return make_iterator<viterator, Type>(map._begin());
+            return make_iterator<value_iterator, Type>(map._begin());
         }
         template <View Type = View::kImmutable>
         static Iterator<V, Type> end(const Map &map) {
-            return make_iterator<viterator, Type>(map._end());
+            return make_iterator<value_iterator, Type>(map._end());
         }
 
-        explicit viterator(typename parent::const_iterator iter) : parent::const_iterator(iter) {}
+        explicit value_iterator(typename parent::const_iterator iter) : parent::const_iterator(iter) {}
 
         void increment() override { parent::const_iterator::operator++(); }
         const V *ptr() override { return &parent::const_iterator::operator->()->second; }
 
-        pure bool operator==(const viterator &rhs) const override {
+        pure bool operator==(const value_iterator &rhs) const override {
             return *static_cast<const typename parent::const_iterator *>(this) == rhs;
         }
     };
 
-    struct kiterator final : AbstractIteratorCRTP<kiterator, K>, parent::const_iterator {
-        class_tag(Map::kiterator, AbstractIterator<K>);
+    /**
+     * @struct key_iterator
+     * @brief An iterator over a map's keys.
+     */
+    struct key_iterator final : AbstractIteratorCRTP<key_iterator, K>, parent::const_iterator {
+        class_tag(Map::key_iterator, AbstractIterator<K>);
         using value_type = K; // Override from parent classes
 
         template <View Type = View::kImmutable>
         static Iterator<K, Type> begin(const Map &map) {
-            return make_iterator<kiterator, Type>(map._begin());
+            return make_iterator<key_iterator, Type>(map._begin());
         }
 
         template <View Type = View::kImmutable>
         static Iterator<K, Type> end(const Map &map) {
-            return make_iterator<kiterator, Type>(map._end());
+            return make_iterator<key_iterator, Type>(map._end());
         }
 
-        explicit kiterator(typename parent::const_iterator iter) : parent::const_iterator(iter) {}
+        explicit key_iterator(typename parent::const_iterator iter) : parent::const_iterator(iter) {}
 
         void increment() override { parent::const_iterator::operator++(); }
         const K *ptr() override { return &parent::const_iterator::operator->()->first; }
 
-        pure bool operator==(const kiterator &rhs) const override {
+        pure bool operator==(const key_iterator &rhs) const override {
             return *static_cast<const typename parent::const_iterator *>(this) == rhs;
         }
     };
@@ -140,6 +162,7 @@ public:
     }
 
     pure V *get(const K &key) const {
+        // Ideally this would return Maybe<V &>, but Maybe can't hold a reference right now.
         if (auto iter = parent::find(key); parent::end() != iter) {
             // TODO: Why does this require casting?
             return const_cast<V *>(&iter->second);
@@ -189,14 +212,14 @@ public:
     pure MRange<V> values() { return {values_begin(), values_end()}; }
     pure Range<V> values() const { return {values_begin(), values_end()}; }
 
-    pure MIterator<V> values_begin() { return viterator::template begin<View::kMutable>(*this); }
-    pure MIterator<V> values_end() { return viterator::template end<View::kMutable>(*this); }
-    pure Iterator<V> values_begin() const { return viterator::template begin<View::kImmutable>(*this); }
-    pure Iterator<V> values_end() const { return viterator::template end<View::kImmutable>(*this); }
+    pure MIterator<V> values_begin() { return value_iterator::template begin<View::kMutable>(*this); }
+    pure MIterator<V> values_end() { return value_iterator::template end<View::kMutable>(*this); }
+    pure Iterator<V> values_begin() const { return value_iterator::template begin<View::kImmutable>(*this); }
+    pure Iterator<V> values_end() const { return value_iterator::template end<View::kImmutable>(*this); }
 
     pure Range<K> keys() const { return {keys_begin(), keys_end()}; }
-    pure Iterator<K> keys_begin() const { return kiterator::template begin<View::kImmutable>(*this); }
-    pure Iterator<K> keys_end() const { return kiterator::template end<View::kImmutable>(*this); }
+    pure Iterator<K> keys_begin() const { return key_iterator::template begin<View::kImmutable>(*this); }
+    pure Iterator<K> keys_end() const { return key_iterator::template end<View::kImmutable>(*this); }
 
 protected:
     pure typename parent::const_iterator _begin() const { return parent::begin(); }

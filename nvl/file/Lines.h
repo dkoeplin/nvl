@@ -9,6 +9,10 @@
 
 namespace nvl {
 
+/**
+ * @class Lines
+ * @brief An iterator over lines in a file.
+ */
 class Lines : public AbstractIteratorCRTP<Lines, std::string> {
 public:
     explicit Lines(const std::string &filename);

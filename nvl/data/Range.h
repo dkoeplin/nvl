@@ -14,8 +14,8 @@ namespace nvl {
  *
  * Iterating over a Range causes the `begin` iterator to be copied to allow repeated iteration.
  *
- * @tparam Value The value type being iterated over.
- * @tparam Type The type of view this range provides over the underlying elements (mutable or immutable).
+ * @tparam Value - The value type being iterated over.
+ * @tparam Type - The type of view this range provides over the underlying elements (mutable or immutable).
  */
 template <typename Value, View Type = View::kImmutable>
 class Range final {
