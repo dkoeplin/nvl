@@ -39,7 +39,13 @@ WorldA2::WorldA2(AbstractScreen *parent)
     std::cout << "G: " << kGravityAccel << std::endl;
 
     const Material bulwark = Material::get<Bulwark>(Color::kDarkGreen);
-    spawn<Block<3>>(Pos<3>{-50_m, 0, -50_m}, Pos<3>{100_m, 1_m, 100_m}, bulwark);
+    List<Part<3>> ground_parts;
+    constexpr Box<3> ground_size({-50_m, 0, -50_m}, {50_m, 1_m, 50_m});
+    for (const Box<3> &box : ground_size.volumes(/*step*/ 100_m)) {
+        ground_parts.emplace_back(box, bulwark);
+    }
+    std::cout << "Creating ground with " << ground_parts.size() << " parts" << std::endl;
+    spawn<Block<3>>(Pos<3>{0, 0, 0}, ground_parts);
 
     constexpr Pos<3> start{0, -2_m, 0};
     player = spawn<Player>(start);
@@ -95,17 +101,15 @@ void WorldA2::spawn_random_cube() {
 void WorldA2::tick() {
     return_if(paused);
 
+    if (ticks() - prev_generated >= ticks_per_gen) {
+        spawn_random_cube();
+    }
+
     const auto prev_player_loc = player->loc();
     World::tick();
 
     const auto diff = player->loc() - prev_player_loc;
     view3d().offset += diff;
-
-#if 1
-    if (ticks() - prev_generated >= ticks_per_gen) {
-        spawn_random_cube();
-    }
-#endif
 }
 
 void WorldA2::draw() { World::draw(); }

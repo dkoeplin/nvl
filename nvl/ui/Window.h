@@ -9,6 +9,7 @@
 #include "nvl/geo/Tuple.h"
 #include "nvl/geo/Volume.h"
 #include "nvl/macros/Pure.h"
+#include "nvl/time/Duration.h"
 #include "nvl/ui/Key.h"
 #include "nvl/ui/Mouse.h"
 #include "nvl/ui/Screen.h"
@@ -106,6 +107,12 @@ public:
 
     void set_background(const Color &color) { background_ = color; }
 
+    /// Sets the target FPS for windows which draw to the screen.
+    virtual void set_target_fps(U64) const {}
+
+    const Duration &last_draw_time() const { return last_draw_time_; }
+    const Duration &last_tick_time() const { return last_tick_time_; }
+
 protected:
     virtual List<InputEvent> detect_events() = 0;
     virtual void set_view_offset(const ViewOffset &offset) = 0;
@@ -125,6 +132,9 @@ protected:
 
     MouseMode mouse_mode_ = MouseMode::kStandard;
     Color background_ = Color::kRayWhite;
+
+    Duration last_draw_time_;
+    Duration last_tick_time_;
 };
 
 } // namespace nvl

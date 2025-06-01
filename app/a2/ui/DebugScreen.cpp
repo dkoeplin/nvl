@@ -48,17 +48,25 @@ void DebugScreen::draw() {
     const Player *player(world_->player);
 
     // clang-format off
-    window_->text(Color::kBlack, {10, 10}, 20,  "FPS:  " + std::to_string(window_->fps()));
-    window_->text(Color::kBlack, {10, 40}, 20,  "Loc:  " + offset.to_string());
-    window_->text(Color::kBlack, {10, 70}, 20,  "Look: " + look.to_string());
-    window_->text(Color::kBlack, {10, 100}, 20, "V:    " + player->velocity().to_string());
-    window_->text(Color::kBlack, {10, 130}, 20, "A:    " + player->accel().to_string());
-    window_->text(Color::kBlack, {10, 160}, 20, "Target: " + target);
-    window_->text(Color::kBlack, {10, 190}, 20, "Angle:  " + std::to_string(view3d.angle));
-    window_->text(Color::kBlack, {10, 220}, 20, "Pitch:  " + std::to_string(view3d.pitch));
-    window_->text(Color::kBlack, {10, 250}, 20,
-                  "Alive: " + std::to_string(world_->num_awake()) + "/" + std::to_string(world_->num_alive()));
+    List<std::string> messages{
+        "Draw:  " + window_->last_draw_time().to_string() + " (" + std::to_string(window_->fps()) + " FPS)",
+        "Tick:  " + window_->last_tick_time().to_string(),
+        "Loc:   " + offset.to_string(),
+        "Look: " + look.to_string(),
+        "V:    " + player->velocity().to_string(),
+        "A:    " + player->accel().to_string(),
+        "Target: " + target,
+        "Angle:  " + std::to_string(view3d.angle),
+        "Pitch:  " + std::to_string(view3d.pitch),
+        "Alive: " + std::to_string(world_->num_awake()) + "/" + std::to_string(world_->num_alive())
+    };
     // clang-format on
+
+    I64 y = 10;
+    for (const std::string &message : messages) {
+        window_->text(Color::kBlack, {10, y}, 20, message);
+        y += 30;
+    }
 }
 
 void DebugScreen::tick() {}

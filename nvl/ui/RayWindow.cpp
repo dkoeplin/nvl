@@ -196,4 +196,6 @@ bool RayWindow::should_close() const { return WindowShouldClose(); }
 I64 RayWindow::height() const { return GetRenderHeight(); }
 I64 RayWindow::width() const { return GetRenderWidth(); }
 
+void RayWindow::set_target_fps(const U64 fps) const { SetTargetFPS(fps); }
+
 } // namespace nvl

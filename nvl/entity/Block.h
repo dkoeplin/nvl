@@ -9,6 +9,12 @@
 
 namespace nvl {
 
+/**
+ * @class Block
+ * @brief A simple uniform entity composed of one or more volumes of the same material.
+ *
+ * @tparam N - Number of dimensions
+ */
 template <U64 N>
 class Block : public Entity<N> {
 public:
@@ -16,20 +22,34 @@ public:
     using Edge = typename Entity<N>::Edge;
     using Part = typename Entity<N>::Part;
 
+    /**
+     * Creates a Block of [material] at location [loc] with [shape].
+     */
     explicit Block(Pos<N> loc, Pos<N> shape, Material material) : Entity<N>(loc), material_(std::move(material)) {
         this->parts_.emplace(Box<N>{Pos<N>::zero, shape}, material_);
     }
 
+    /**
+     * Creates a Block of [material] at location [loc] with volume [box].
+     */
     explicit Block(Pos<N> loc, const Box<N> &box, Material material) : Entity<N>(loc), material_(std::move(material)) {
         this->parts_.emplace(box, material_);
     }
 
+    /**
+     * Creates a Block of relative [parts] at location [loc].
+     * Parts should all be of the same material.
+     */
     explicit Block(Pos<N> loc, Range<Rel<Part>> parts) : Entity<N>(loc, parts) {
         if (!this->parts().empty()) {
             material_ = this->parts().begin()->raw().material;
         }
     }
 
+    /**
+     * Creates a Block of [parts] at location [loc].
+     * Parts should all be of the same material.
+     */
     explicit Block(Pos<N> loc, Range<Part> parts) : Entity<N>(loc, parts) {
         if (!this->parts().empty()) {
             material_ = this->parts().begin()->raw().material;

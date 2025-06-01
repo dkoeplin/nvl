@@ -25,14 +25,16 @@ public:
     void text(const Color &color, const Pos<2> &pos, I64 font_size, std::string_view text) override;
     void centered_text(const Color &color, const Pos<2> &pos, I64 font_size, std::string_view text) override;
 
-    void set_view_offset(const ViewOffset &offset) override;
-    void end_view_offset(const ViewOffset &offset) override;
+    void set_view_offset(const ViewOffset &view) override;
+    void end_view_offset(const ViewOffset &view) override;
 
     void set_mouse_mode(MouseMode mode) override;
     pure bool should_close() const override;
     pure I64 height() const override;
     pure I64 width() const override;
     pure I64 fps() const override;
+
+    void set_target_fps(U64 fps) const override;
 
 private:
     F64 scale_ = 1.0;
