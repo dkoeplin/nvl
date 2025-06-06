@@ -100,10 +100,11 @@ public:
         return *this;
     }
 
-    List<Value> &remove(const Value &value) {
+    bool remove(const Value &value) {
         auto it = std::remove(parent::begin(), parent::end(), value);
+        const bool changed = it != parent::end();
         parent::erase(it, parent::end());
-        return *this;
+        return changed;
     }
 
     List<Value> &remove_if(const std::function<bool(Value)> &cond) {

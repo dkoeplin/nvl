@@ -10,14 +10,13 @@ namespace nvl {
 
 namespace detail {
 
-template <U64 N, typename Item, typename ItemRef = Rel<Item>, U64 kMaxEntries = 10, U64 kGridExpMin = 2,
-          U64 kGridExpMax = 10>
+template <U64 N, typename Item, typename ItemRef = Rel<Item>, U64 kMaxEntries = 10, U64 kGridExpMin = 2>
 class BRTreeEdges {
 protected:
     using Edge = nvl::Edge<N, I64>;
     using EdgeRef = Rel<Edge>;
-    using ItemTree = RTree<N, Item, ItemRef, kMaxEntries, kGridExpMin, kGridExpMax>;
-    using EdgeTree = RTree<N, Edge, EdgeRef, kMaxEntries, kGridExpMin, kGridExpMax>;
+    using ItemTree = RTree<N, Item, ItemRef, kMaxEntries, kGridExpMin>;
+    using EdgeTree = RTree<N, Edge, EdgeRef, kMaxEntries, kGridExpMin>;
     static Box<N> bbox(const ItemRef &item) { return static_cast<const Item *>(item.ptr())->bbox(); }
 
     BRTreeEdges() = default;
@@ -69,18 +68,16 @@ private:
  * @tparam ItemRef - Type to use for providing references to items held in this tree. Default is Rel<Item>.
  * @tparam kMaxEntries - Maximum number of entries per node. Defaults to 10.
  * @tparam kGridExpMin - Minimum node grid size (2 ^ min_grid_exp). Defaults to 2.
- * @tparam kGridExpMax - Initial grid size of the root. (2 ^ root_grid_exp). Defaults to 10.
  */
-template <U64 N, typename Item, typename ItemRef = Rel<Item>, U64 kMaxEntries = 10, U64 kGridExpMin = 2,
-          U64 kGridExpMax = 10>
+template <U64 N, typename Item, typename ItemRef = Rel<Item>, U64 kMaxEntries = 10, U64 kGridExpMin = 2>
     requires trait::HasBBox<Item>
-class BRTree : detail::BRTreeEdges<N, Item, ItemRef, kMaxEntries, kGridExpMin, kGridExpMax> {
+class BRTree : detail::BRTreeEdges<N, Item, ItemRef, kMaxEntries, kGridExpMin> {
 public:
     using Edge = nvl::Edge<N, I64>;
     using EdgeRef = Rel<Edge>;
-    using Parent = detail::BRTreeEdges<N, Item, ItemRef, kMaxEntries, kGridExpMin, kGridExpMax>;
-    using ItemTree = RTree<N, Item, ItemRef, kMaxEntries, kGridExpMin, kGridExpMax>;
-    using EdgeTree = RTree<N, Edge, EdgeRef, kMaxEntries, kGridExpMin, kGridExpMax>;
+    using Parent = detail::BRTreeEdges<N, Item, ItemRef, kMaxEntries, kGridExpMin>;
+    using ItemTree = RTree<N, Item, ItemRef, kMaxEntries, kGridExpMin>;
+    using EdgeTree = RTree<N, Edge, EdgeRef, kMaxEntries, kGridExpMin>;
     using Intersect = typename ItemTree::Intersect;
 
     BRTree() : Parent() {}
@@ -129,8 +126,8 @@ public:
 
     /// Returns the closest item which intersects with the line segment according to the distance function.
     /// Also returns the location and face of the intersection if it exists.
-    pure expand Maybe<Intersect> first_where(const Line<N> &line,
-                                             const std::function<Maybe<F64>(Intersect)> &dist) const {
+    template <typename DistanceFunc> // Intersect => Maybe<F64>
+    pure expand Maybe<Intersect> first_where(const Line<N> &line, DistanceFunc dist) const {
         return this->items_.first_where(line - loc, dist);
     }
 

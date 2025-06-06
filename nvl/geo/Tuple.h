@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iterator>
 #include <sstream>
 
 #include "nvl/data/Iterator.h"
@@ -306,6 +307,9 @@ public:
             sum += x;
         return sum;
     }
+
+    pure T max() const { return *std::max_element(std::begin(indices_), std::end(indices_)); }
+    pure T min() const { return *std::min_element(std::begin(indices_), std::end(indices_)); }
 
     pure Tuple strides() const {
         Tuple result;

@@ -6,7 +6,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 message(STATUS "CMAKE_MODULE_PATH: ${CMAKE_MODULE_PATH}")
 set(CMAKE_CXX_FLAGS " \
--Ofast \
+-O3 \
+-ffast-math \
+-Wno-nan-infinity-disabled \
 -Wall \
 -Wextra \
 -Wpedantic \

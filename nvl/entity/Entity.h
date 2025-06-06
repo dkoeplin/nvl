@@ -21,10 +21,9 @@ public:
     class_tag(Entity<N>, AbstractActor);
     static constexpr U64 kMaxEntries = 10;
     static constexpr U64 kGridExpMin = 2;
-    static constexpr U64 kGridExpMax = 10;
     using Part = nvl::Part<N>;
     using Edge = nvl::Edge<N, I64>;
-    using Tree = BRTree<N, Part, Rel<Part>, kMaxEntries, kGridExpMin, kGridExpMax>;
+    using Tree = BRTree<N, Part, Rel<Part>, kMaxEntries, kGridExpMin>;
     using Intersect = typename Tree::Intersect;
 
     explicit Entity(Pos<N> loc, Range<Rel<Part>> parts = {}) : parts_(loc, parts) {}
@@ -47,9 +46,7 @@ public:
     pure expand Maybe<Rel<Part>> first(const Pos<N> &pos) const { return parts_.first(pos); }
 
     /// Returns the first part along the given line, if one exists, along with the intersection location and face.
-    pure expand Maybe<Intersect> first(const Line<N> &line) const {
-        return parts_.first_where(line, [](const Intersect &x) { return x.dist; });
-    }
+    pure expand Maybe<Intersect> first(const Line<N> &line) const { return parts_.first_where(line); }
 
     /// Returns true if there are any items stored in the given volume.
     pure expand bool exists(const Box<N> &box) const { return parts_.exists(box); }

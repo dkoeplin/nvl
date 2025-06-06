@@ -37,9 +37,8 @@ public:
 
     static constexpr I64 kMaxEntries = 10;
     static constexpr I64 kGridExpMin = 2;
-    static constexpr I64 kGridExpMax = 10;
     static constexpr U64 kVerticalDim = 1;
-    using EntityTree = RTree<N, Entity<N>, Actor, kMaxEntries, kGridExpMin, kGridExpMax>;
+    using EntityTree = RTree<N, Entity<N>, Actor, kMaxEntries, kGridExpMin>;
 
     struct Intersect : nvl::Intersect<N> {
         Intersect(const nvl::Intersect<N> &init, Actor actor, Ref<Part<N>> part)

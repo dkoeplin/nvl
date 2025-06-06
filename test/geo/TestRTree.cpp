@@ -24,6 +24,7 @@ using nvl::Ref;
 using nvl::RTree;
 using nvl::Set;
 using nvl::Vec;
+using nvl::WalkResult;
 using nvl::test::LabeledBox;
 
 template <typename T>
@@ -44,18 +45,16 @@ template <U64 N, typename Item, typename ItemRef, U64 kMaxEntries>
 pure List<IDs> collect_ids(RTree<N, Item, ItemRef, kMaxEntries> &tree)
     requires HasID<Item>
 {
-    using Node = typename RTree<N, Item, ItemRef>::Node;
+    using Node = typename RTree<N, Item, ItemRef, kMaxEntries>::Node;
     List<IDs> list;
-    for (const auto &[node, pos] : tree.entries_in(tree.bbox())) {
-        if (auto *entry = node->get(pos); entry && entry->kind == Node::Entry::kList) {
-            const Box<N> box(pos, pos + node->grid);
-            Set<U64> ids;
-            for (const auto &item : entry->list) {
-                ids.insert(item->id());
-            }
-            list.emplace_back(box, ids);
+    tree.preorder_walk_nodes([&](Node *node) {
+        Set<U64> ids;
+        for (const auto &item : node->list) {
+            ids.insert(item->id());
         }
-    }
+        list.emplace_back(node->box(), ids);
+        return WalkResult::kRecurse;
+    });
     return list;
 }
 
@@ -80,7 +79,7 @@ TEST(TestRTree, divide) {
     tree.emplace(0, Box<2>({5, 5}, {100, 100}));
     tree.emplace(1, Box<2>({3000, 1200}, {3014, 1215}));
     EXPECT_EQ(tree.size(), 2);
-    EXPECT_EQ(tree.nodes(), 1);
+    EXPECT_EQ(tree.nodes(), 2);
 
     EXPECT_THAT(collect_ids(tree), UnorderedElementsAre(IDs{.box = {{0, 0}, {1024, 1024}}, .ids = {0}},
                                                         IDs{.box = {{2048, 1024}, {3072, 2048}}, .ids = {1}}));
@@ -192,6 +191,16 @@ TEST(TestRTree, first_where) {
     EXPECT_EQ(intersect->pt, Vec<3>(528, 973.5, 500));
 }
 
+TEST(TestRTree, move2d) {
+    RTree<2, LabeledBox> tree;
+    Ref<LabeledBox> box = tree.emplace(0, Box<2>{{-187, -448}, {1094, 983}});
+    tree.dump();
+    const Box<2> prev = box->bbox();
+    box->moveto({9444, 5599});
+    tree.move(box, prev);
+    tree.dump();
+}
+
 TEST(TestRTree, empty_components) {
     RTree<2, LabeledBox> tree;
     EXPECT_THAT(tree.components(), IsEmpty());
@@ -238,6 +247,16 @@ TEST(TestRTree, components_complex) {
     EXPECT_EQ(tree.components().size(), 1);
 }
 
+TEST(TestRTree, large_insertion) {
+    RTree<3, Box<3>> tree;
+    constexpr Box<3> size({-1'000'000, 0, -1'000'000}, {1'000'000, 1'000, 1'000'000});
+    for (const Box<3> &box : size.volumes(/*step*/ 100'000)) {
+        tree.emplace(box);
+    }
+    EXPECT_EQ(tree.root()->grid, 1 << nvl::ceil_log2(2'000'000));
+    tree.dump();
+}
+
 TEST(TestRTree, fuzz_insertion) {
     constexpr I64 kNumTests = 1E3;
     RTree<2, Box<2>> tree;
@@ -271,17 +290,20 @@ TEST_F(FuzzMove, move2d) {
         RTree<2, LabeledBox> tree;
         const Box<2> original(loc, loc + shape);
         auto lbox = tree.emplace(0, original);
-        // std::cout << "Moved box with shape " << shape << " from " << loc << " to " << loc2 << std::endl;
         lbox->moveto(loc2);
         tree.move(lbox, original);
         const Box<2> updated = lbox->bbox();
-        // std::cout << "  Original: " << original << std::endl;
-        // std::cout << "  Updated:  " << updated << std::endl;
         for (Box<2> b : original.diff(updated)) {
             ASSERT_THAT(tree[b], IsEmpty());
         }
         for (Box<2> b : updated.diff(original)) {
-            ASSERT_THAT(tree[b], UnorderedElementsAre(lbox));
+            ASSERT_THAT(tree[b], UnorderedElementsAre(lbox)) //
+                << "Expected to find box within " << b << " after moving: " << std::endl
+                << "  Shape: " << shape << std::endl
+                << "  Loc1:  " << loc << std::endl
+                << "  Loc2:  " << loc2 << std::endl
+                << "  Original: " << original << std::endl
+                << "  Updated:  " << updated << std::endl;
         }
         passed = true;
     });

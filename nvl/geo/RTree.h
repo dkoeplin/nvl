@@ -9,6 +9,7 @@
 #include "nvl/data/Ref.h"
 #include "nvl/data/Set.h"
 #include "nvl/data/UnionFind.h"
+#include "nvl/data/WalkResult.h"
 #include "nvl/geo/HasBBox.h"
 #include "nvl/geo/Line.h"
 #include "nvl/geo/Tuple.h"
@@ -25,73 +26,84 @@ namespace nvl {
 namespace detail {
 
 /**
+ * @struct Orthants
+ * @brief "Orthants" is the ND version of 2D quadrants!
+ * @tparam N - Number of dimensions
+ */
+template <U64 N>
+struct Orthants {
+    explicit Orthants(const Pos<N> &origin, const U64 size) : origin(origin), size(size) {}
+
+    pure Box<N> box() const { return {origin - size, origin + size}; }
+
+    /// Return a flattened index which addresses a specific 2^N orthant.
+    pure Maybe<I64> index(const Pos<N> &pos) const {
+        return_if(!box().contains(pos), None);
+
+        I64 flat_index = 0;
+        I64 stride = 1 << N;
+        for (U64 i = 0; i < N; ++i) {
+            I64 idx = pos[i] >= origin[i] ? 1 : 0;
+            return_if(idx < 0 || idx > 1, None);
+            flat_index += (idx == 0 ? 0 : stride);
+            stride = stride >> 1;
+        }
+        return flat_index;
+    }
+
+    Pos<N> origin;
+    U64 size;
+};
+
+/**
  * @class Node
  * @brief A node within an RTree.
  */
 template <U64 N, typename ItemRef>
-struct Node {
-    struct Parent {
-        Node *node; // The parent node
-        Box<N> box; // Bounds in reference to the parent's grid
-    };
+struct Node : Orthants<N> {
+    static constexpr U64 E = 1 << N; // Number of orthants, i.e. 2^N
 
-    struct Entry {
-        enum Kind { kNode, kList };
-        Kind kind = kList;
-        Node *node = nullptr;
-        List<ItemRef> list;
-    };
+    Node(Node *parent, const U64 id, const Pos<N> &origin, const U64 size)
+        : Orthants<N>(origin, size), parent(parent), id(id) {}
 
-    Node() = default;
     Node(const Node &) = delete;
     Node &operator=(const Node &) = delete;
 
     pure bool operator==(const Node &rhs) const { return id == rhs.id; }
     pure bool operator!=(const Node &rhs) const { return !(*this == rhs); }
 
-    pure Entry *get(const Pos<N> &pos) const { return map.get(pos.grid_min(grid)); }
-
-    pure Range<Pos<N>> indices(const Box<N> &vol) const { return vol.clamp(grid).indices(grid); }
-
-    U64 id = -1;
-    Maybe<Parent> parent;
-    I64 grid = -1;
-    Map<Pos<N>, Entry> map;
-};
-
-template <U64 N, typename ItemRef>
-struct Work {
-    using Node = Node<N, ItemRef>;
-
-    explicit Work(Node *node, const Box<N> &volume) : node(node), vol(volume) {}
-
-    pure const Pos<N> &pos() const { return *pair_range.begin(); }
-    pure const ItemRef &item() const { return *list_range; }
-
-    Node *node;
-    Box<N> vol;
-
-    Once<ItemRef> list_range; // 1) Iterating across items
-    Once<Pos<N>> pair_range;  // 2) Iterating within a node - (node, pos) pairs
-};
-
-template <U64 N, typename ItemRef>
-struct PreorderWork {
-    using Node = Node<N, ItemRef>;
-
-    PreorderWork(Node *node, const U64 depth) : node(node), depth(depth) {
-        ASSERT(node->parent.has_value(), "No parent defined for node #" << node->id);
-        const Box<N> &node_range = node->parent->box;
-        indented(depth - 1) << ">>[" << node->id << "] @ " << node->grid << std::endl;
-        pos_range = node_range.indices(node->grid).once();
+    pure Node *get(const Pos<N> &pos) const {
+        const auto index = get_index(pos);
+        return index ? children[*index] : nullptr;
     }
-    PreorderWork(Node *node, const Box<N> &bounds) : node(node), depth(0) {
-        indented(depth) << "[" << node->id << "] @ " << node->grid << std::endl;
-        pos_range = bounds.clamp(node->grid).indices(node->grid).once();
+
+    void remove_child(Node *child) {
+        simd for (U64 i = 0; i < E; ++i) { children[i] *= static_cast<int64_t>(children[i] == child); }
     }
-    Node *node;
-    U64 depth;
-    Once<Pos<N>> pos_range;
+
+    pure bool has_child() const {
+        for (U64 i = 0; i < E; ++i) {
+            return_if(children[i] != nullptr, true);
+        }
+        return false;
+    }
+
+    pure bool empty() const { return !has_child() && list.empty(); }
+
+    pure U64 depth() const {
+        U64 depth = 0;
+        Node *node = parent;
+        while (node) {
+            node = node->parent;
+            depth += 1;
+        }
+        return depth;
+    }
+
+    Node *parent;
+    U64 id;
+    List<ItemRef> list;
+    Tuple<E, Node *> children = Tuple<E, Node *>::fill(nullptr);
 };
 
 } // namespace detail
@@ -105,197 +117,21 @@ struct PreorderWork {
  * @tparam ItemRef - Type used for providing references to items held in this tree. Defaults to Ref<Item>.
  * @tparam kMaxEntries - Maximum number of entries per node. Defaults to 10.
  * @tparam kGridExpMin - Minimum node grid size (2 ^ min_grid_exp). Defaults to 2.
- * @tparam kGridExpMax - Initial grid size of the root. (2 ^ root_grid_exp). Defaults to 10.
  */
-template <U64 N, typename Item, typename ItemRef = Ref<Item>, U64 kMaxEntries = 10, U64 kGridExpMin = 2,
-          U64 kGridExpMax = 10>
+template <U64 N, typename Item, typename ItemRef = Ref<Item>, U64 kMaxEntries = 10, U64 kGridExpMin = 2>
     requires trait::HasBBox<Item>
-class RTree {
+class RTree : public detail::Node<N, ItemRef> {
 public:
-    using PreorderWork = detail::PreorderWork<N, ItemRef>;
-    using Work = detail::Work<N, ItemRef>;
     using Node = detail::Node<N, ItemRef>;
 
-    struct Point {
-        Node *node;
-        Pos<N> pos;
-    };
+    static constexpr I64 kGridMin = 0x1 << kGridExpMin;
 
     struct Intersect : nvl::Intersect<N> {
         explicit Intersect(const nvl::Intersect<N> &init, ItemRef ref) : nvl::Intersect<N>(init), item(ref) {}
         ItemRef item;
     };
 
-    enum class Traversal {
-        kPoints,  // All possible points in existing nodes
-        kEntries, // All existing entries
-        kItems    // All existing items
-    };
-    template <typename Concrete, Traversal mode, typename Value>
-    abstract struct abstract_iterator : AbstractIteratorCRTP<Concrete, Value> {
-        class_tag(abstract_iterator, AbstractIterator<Value>);
-
-        template <View Type = View::kImmutable>
-        static Iterator<Value, Type> begin(const RTree &tree, const Box<N> &box) {
-            std::shared_ptr<Concrete> iter = std::make_shared<Concrete>(&tree, box);
-            if (tree.root_ != nullptr) {
-                iter->worklist.emplace_back(tree.root_, box);
-                iter->increment();
-            }
-            return Iterator<Value, Type>(std::move(iter));
-        }
-
-        template <View Type = View::kImmutable>
-        static Iterator<Value, Type> end(const RTree &tree, const Box<N> &box) {
-            return make_iterator<Concrete, Type>(&tree, box);
-        }
-
-        explicit abstract_iterator(const RTree *tree, const Box<N> &box) : tree(tree), box(box) {}
-
-        bool skip_item(Work &current) {
-            ItemRef ref = current.item();
-            return visited.has(ref) || !bbox(ref).overlaps(box);
-        }
-
-        HOT bool visit_next_pair(Work &current) {
-            Node *node = current.node;
-
-            if (!current.pair_range.has_next()) {
-                worklist.pop_back();
-                return false;
-            }
-
-            const Pos<N> &pos = current.pos();
-
-            if (auto *entry = node->get(pos)) {
-                if (entry->kind == Node::Entry::kList) {
-                    if constexpr (mode == Traversal::kItems) {
-                        current.list_range = {entry->list.begin(), entry->list.end()};
-                        while (current.list_range.has_next() && skip_item(current)) {
-                            ++current.list_range;
-                        }
-                        if (current.list_range.has_next()) {
-                            // Start visiting this list if there is at least one valid item
-                            visited.insert(current.item());
-                            return true;
-                        }
-                        // Skip this list entirely if it had no new unique items
-                        return false;
-                    }
-                    // Visit this list or (node, pos)
-                    return true;
-                }
-                // ASSERT(entry->node->parent.has_value(), "Sub-node had no parent entry.");
-                if (auto range = entry->node->parent->box.intersect(box)) {
-                    // Continue to this child node by updating the worklist
-                    worklist.emplace_back(entry->node, *range);
-                }
-            } else {
-                // Visit this (currently unset) (node, pos) pair
-                if constexpr (mode == Traversal::kPoints) {
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        bool advance_list(Work &current) {
-            do {
-                ++current.list_range;
-            } while (current.list_range.has_next() && skip_item(current));
-
-            if (current.list_range.has_next()) {
-                visited.insert(current.item());
-                return true;
-            }
-            return false;
-        }
-
-        bool advance_pair(Work &current) {
-            ++current.pair_range;
-            return visit_next_pair(current);
-        }
-
-        bool advance_node(Work &current) {
-            current.pair_range = current.node->indices(current.vol).once();
-            return visit_next_pair(current);
-        }
-
-        /// Advances this iterator to either the next list item, next (node, pos) pair, or next child node.
-        void increment() override {
-            while (!worklist.empty()) {
-                auto &current = worklist.back();
-                if (current.list_range.has_next()) {
-                    return_if(advance_list(current));
-                } else if (current.pair_range.has_next()) {
-                    return_if(advance_pair(current));
-                } else {
-                    return_if(advance_node(current));
-                }
-            }
-        }
-
-        pure bool operator==(const Concrete &rhs) const override {
-            return tree == rhs.tree && worklist.get_back() == rhs.worklist.get_back();
-        }
-
-        // 3) Iterating across nodes
-        List<Work> worklist = {};
-        Set<ItemRef> visited;
-
-        const RTree *tree;
-        Box<N> box;
-    };
-
-    struct entry_iterator final : abstract_iterator<entry_iterator, Traversal::kEntries, Point> {
-        class_tag(entry_iterator, abstract_iterator<entry_iterator, Traversal::kEntries, Point>);
-        using parent = abstract_iterator<entry_iterator, Traversal::kEntries, Point>;
-        using parent::parent;
-
-        const Point *ptr() override {
-            if (!point.has_value()) {
-                auto &current = this->worklist.back();
-                point = {current.node, current.pos()};
-            }
-            return &point.value();
-        }
-
-        void increment() override {
-            parent::increment();
-            point = None;
-        }
-
-        Maybe<Point> point = None;
-    };
-
-    struct point_iterator final : abstract_iterator<point_iterator, Traversal::kPoints, Point> {
-        class_tag(point_iterator, abstract_iterator<point_iterator, Traversal::kPoints, Point>);
-        using parent = abstract_iterator<point_iterator, Traversal::kPoints, Point>;
-        using parent::parent;
-
-        const Point *ptr() override {
-            if (!point.has_value()) {
-                auto &current = this->worklist.back();
-                point = {current.node, current.pos()};
-            }
-            return &point.value();
-        }
-
-        void increment() override {
-            parent::increment();
-            point = None;
-        }
-
-        Maybe<Point> point = None;
-    };
-
-    struct window_iterator final : abstract_iterator<window_iterator, Traversal::kItems, ItemRef> {
-        class_tag(window_iterator, abstract_iterator<window_iterator, Traversal::kItems, ItemRef>);
-        using parent = abstract_iterator<window_iterator, Traversal::kItems, ItemRef>;
-        using parent::parent;
-        const ItemRef *ptr() override { return &this->worklist.back().item(); }
-    };
-
+    /// Allows iteration over all elements in the tree, viewing them as ItemRef (type wrapper).
     struct item_iterator final : AbstractIteratorCRTP<item_iterator, ItemRef> {
         class_tag(item_iterator, AbstractIterator<ItemRef>);
         using ItemMap = Map<U64, std::unique_ptr<Item>>;
@@ -332,12 +168,8 @@ public:
     };
 
     static Box<N> bbox(const ItemRef &item) { return static_cast<const Item *>(item.ptr())->bbox(); }
-    static bool should_increase_depth(const U64 size, const U64 grid) { return size > kMaxEntries && grid > grid_min; }
 
-    static constexpr I64 grid_min = 0x1 << kGridExpMin;
-    static constexpr I64 grid_max = 0x1 << kGridExpMax;
-
-    RTree() : root_(next_node(None, grid_max, {})) {}
+    RTree() : Node(nullptr, -1, Pos<N>::fill(0), kGridExpMin) {}
 
     RTree(std::initializer_list<Item> items) : RTree() {
         for (const auto &item : items) {
@@ -356,26 +188,22 @@ public:
 
     /// Inserts a copy of the item into the tree.
     /// Returns a reference to the copy held by the tree.
-    ItemRef insert(const Item &item) { return insert_over(item, item.bbox()); }
-    ItemRef insert(const ItemRef &item) { return insert_over(*item, bbox(item)); }
+    ItemRef insert(const Item &item) { return insert_over(item); }
+    ItemRef insert(const ItemRef &item) { return insert_over(*item); }
 
     /// Inserts a copy of each item into the tree.
     RTree &insert(const Range<Item> &items) {
         for (const Item &item : items)
-            insert_over(item, item.bbox());
+            insert_over(item);
         return *this;
     }
-
     RTree &insert(const Range<ItemRef> &items) {
         for (const ItemRef &item : items)
-            insert_over(item.raw(), item->bbox());
+            insert_over(item.raw());
         return *this;
     }
 
-    ItemRef take(std::unique_ptr<Item> item) {
-        const Box<N> box = item->bbox();
-        return take_over(std::move(item), box);
-    }
+    ItemRef take(std::unique_ptr<Item> item) { return take_over(std::move(item)); }
 
     /// Constructs a new item and adds it to this tree.
     /// Returns a reference to the new item held by the tree.
@@ -386,7 +214,6 @@ public:
 
     /// Removes the matching item from the tree, if it exists.
     RTree &remove(const ItemRef &item) { return remove_over(item, bbox(item), true); }
-
     RTree &remove(Range<ItemRef> items) {
         for (const ItemRef &item : items)
             remove_over(item, bbox(item), true);
@@ -395,13 +222,31 @@ public:
 
     /// Registers the matching item as having moved from the previous volume `prev` to its current volume.
     /// Does nothing if no matching item exists in the tree.
-    RTree &move(const ItemRef &item, const Box<N> &prev) { return move(item, bbox(item), prev); }
+    RTree &move(const ItemRef &item, const Box<N> &prev) { return move_from(item, prev); }
 
-    /// Returns a mutable range over all _possible_ points in the given volume, including those without Nodes.
-    MRange<Point> points_in(const Box<N> &box) { return make_range<point_iterator, View::kMutable>(*this, box); }
+    /// Calls [func] on all existing nodes in the given volume. Traversal is depth-first preorder.
+    template <typename VisitFunc> // Node* => WalkResult
+    void preorder_walk_nodes(VisitFunc func) const {
+        preorder_walk_nodes_in(bbox_, func);
+    }
 
-    /// Returns a mutable range over all existing nodes in the given volume.
-    MRange<Point> entries_in(const Box<N> &box) { return make_range<entry_iterator, View::kMutable>(*this, box); }
+    template <typename VisitFunc> // Node* => WalkResult
+    void preorder_walk_nodes_in(const Box<N> &box, VisitFunc func) const {
+        List<Node *> frontier{this};
+        while (!frontier.empty()) {
+            Node *current = frontier.back();
+            frontier.pop_back();
+            const WalkResult result = func(current);
+            return_if(result == WalkResult::kExit);
+            if (result == WalkResult::kRecurse) {
+                for (Node *child : current->children) {
+                    if (child && box.overlaps(child->box())) {
+                        frontier.push_back(child);
+                    }
+                }
+            }
+        }
+    }
 
     /// Returns a set of all stored items in the given volume.
     pure expand Set<ItemRef> operator[](const Box<N> &box) const { return collect(box); }
@@ -411,20 +256,28 @@ public:
     pure expand Maybe<ItemRef> first(const Box<N> &box) const { return collect_first(box); }
     pure expand Maybe<ItemRef> first(const Pos<N> &pos) const { return collect_first(Box<N>::unit(pos)); }
 
+    /// Returns the closest item which intersects with the line segment.
+    /// Also returns the location and face of the intersection, if it exists.
+    pure expand Maybe<Intersect> first(const Line<N> &line) const {
+        return first_where(line, [](const Intersect &intersect) { return intersect.dist; });
+    }
+
     /// Returns true if there are any items stored in the given volume.
     pure expand bool exists(const Box<N> &box) const { return collect_first(box).has_value(); }
     pure expand bool exists(const Pos<N> &pos) const { return collect_first(Box<N>::unit(pos)).has_value(); }
 
     /// Returns the closest item which intersects with the line segment according to the distance function.
-    /// Also returns the location and face of the intersection if it exists.
-    pure Maybe<Intersect> first_where(const Line<N> &line, const std::function<Maybe<F64>(Intersect)> &dist) const {
+    /// Also returns the location and face of the intersection, if it exists.
+    template <typename DistanceFunc> // Intersect => Maybe<F64>
+    pure Maybe<Intersect> first_where(const Line<N> &line, DistanceFunc dist) const {
         Maybe<Intersect> closest = None;
         Maybe<F64> distance = None;
         // TODO: Feels like we can improve this. Can potentially get a lot of volume which would not intersect.
         for (auto item : (*this)[{floor(line.a()), ceil(line.b())}]) {
             if (auto intersection = line.intersect(bbox(item))) {
                 Intersect inter(*intersection, item);
-                if (auto len = dist(inter); len && (!distance.has_value() || *len < *distance)) {
+                const Maybe<F64> len = dist(inter);
+                if (len && (!distance.has_value() || *len < *distance)) {
                     distance = len;
                     closest = inter;
                 }
@@ -487,14 +340,13 @@ public:
     /// Returns true if this tree is empty.
     pure bool empty() const { return items_.empty(); }
 
-    /// Returns the maximum depth, in nodes, of this tree.
+    /// Returns the maximum depth, in nodes, of this tree. O(N) with number of nodes in the tree.
     pure U64 depth() const {
-        const U64 root_grid = root_->grid;
-        U64 min_grid = root_grid;
+        U64 depth = 0;
         for (auto &[_, node] : nodes_) {
-            min_grid = (node.grid < min_grid) ? node.grid : min_grid;
+            depth = std::max(depth, node.depth());
         }
-        return ceil_log2(root_grid) - ceil_log2(min_grid) + 1;
+        return depth;
     }
 
     void clear() {
@@ -504,183 +356,140 @@ public:
         node_id_ = 0;
         item_id_ = 0;
         bbox_ = Box<N>::kEmpty;
-        root_ = next_node(None, grid_max, {});
+        root_ = nullptr;
     }
 
     /// Dumps a string representation of this tree to stdout.
     void dump() const {
-        const auto bounds = bbox();
-        std::cout << "[[RTree with bounds " << bounds << "]]" << std::endl;
-
-        List<PreorderWork> worklist;
-        worklist.emplace_back(root_, bounds);
-
-        while (!worklist.empty()) {
-            PreorderWork &current = worklist.back();
-            Node *node = current.node;
-            const U64 depth = current.depth;
-            bool found_node = false;
-            while (!found_node && current.pos_range.has_next()) {
-                Once<Pos<N>> &iter = current.pos_range;
-                const Pos<N> pos = *iter;
-                ++iter;
-                if (auto *entry = node->get(pos)) {
-                    const Box<N> range(pos, pos + node->grid);
-                    indented(depth) << "[" << node->id << "][" << range << "]:" << std::endl;
-                    if (entry->kind == Node::Entry::kList) {
-                        if (entry->list.empty()) {
-                            indented(depth) << ">> EMPTY LIST" << std::endl;
-                        }
-                        for (const auto item : entry->list) {
-                            indented(depth) << ">> " << item << std::endl;
-                        }
-                    } else {
-                        worklist.emplace_back(entry->node, depth + 1);
-                        found_node = true;
-                    }
-                }
+        std::cout << "[[RTree with bounds " << bbox() << "]]" << std::endl;
+        preorder_walk_nodes([&](Node *node) {
+            const U64 indent = node->depth();
+            indented(indent) << "[#" << node->id << "][" << node->grid << ": " << node->box() << "]:" << std::endl;
+            for (const ItemRef &item : node->list) {
+                indented(indent) << "> " << item << std::endl;
             }
-            if (!worklist.back().pos_range.has_next()) {
-                worklist.pop_back();
-            }
-        }
+            return WalkResult::kRecurse;
+        });
     }
 
 protected:
     struct Garbage {
         explicit Garbage(RTree *parent) : parent(parent) {}
         ~Garbage() {
-            for (const U64 removed_id : removed_nodes) {
-                parent->nodes_.erase(removed_id);
+            for (const Node *removed : removed_nodes) {
+                parent->nodes_.erase(removed->id);
             }
         }
-        List<U64> removed_nodes;
+        List<Node *> removed_nodes;
         RTree *parent;
     };
 
-    template <bool kFirstOnly = false>
     pure Set<ItemRef> collect(const Box<N> &box) const {
-        struct Work {
-            explicit Work(Box<N> box, Node *node) : box(box), node(node) {}
-            Box<N> box;
-            Node *node;
-        };
-        List<Work> worklist;
         Set<ItemRef> items;
-        worklist.emplace_back(box.clamp(root_->grid), root_);
-        while (!worklist.empty()) {
-            const auto [target, node] = worklist.back();
-            worklist.pop_back();
-            const U64 grid = node->grid;
-            const U64 box_offsets = target.num_volumes(grid);
-            const U64 map_offsets = node->map.size();
-            const Range<Pos<N>> offsets = box_offsets < map_offsets ? target.indices(grid) : node->map.keys();
-            const auto &map = node->map;
-            for (const Pos<N> &ofs : offsets) {
-                if (auto *entry = map.get(ofs)) {
-                    const Box<N> range(ofs, ofs + grid);
-                    if (range.overlaps(box)) {
-                        for (const ItemRef &item : entry->list) {
-                            if (box.overlaps(bbox(item))) {
-                                items.insert(item);
-                                if constexpr (kFirstOnly)
-                                    return items;
-                            }
-                        }
-                        if (auto *next = entry->node) {
-                            worklist.emplace_back(range, next);
-                        }
-                    }
+        preorder_walk_nodes_in(box, [&](Node *node) {
+            for (const ItemRef &item : node->list) {
+                if (box.overlaps(bbox(item))) {
+                    items.insert(item);
                 }
             }
-        }
+            return WalkResult::kRecurse;
+        });
         return items;
     }
 
     pure Maybe<ItemRef> collect_first(const Box<N> &box) const {
-        const auto set = collect<true>(box);
-        return set.empty() ? None : Some(*set.begin());
+        Maybe<ItemRef> result = None;
+        preorder_walk_nodes_in(box, [&](Node *node) {
+            for (const ItemRef &item : node->list) {
+                if (box.overlaps(bbox(item))) {
+                    result = item;
+                    return WalkResult::kExit;
+                }
+            }
+            return WalkResult::kRecurse;
+        });
+        return result;
     }
 
-    Node *next_node(const Maybe<typename Node::Parent> &parent, const I64 grid, const List<ItemRef> &items) {
-        const Pos<N> grid_fill = Pos<N>::fill(grid);
+    Node *next_node(Node *parent, const I64 grid, const Pos<N> &min) {
         const U64 id = node_id_++;
-        Node *node = &nodes_.emplace(std::piecewise_construct, std::forward_as_tuple(id), std::tuple{});
-        node->parent = parent;
-        node->id = id;
-        node->grid = grid;
-        for (const ItemRef &item : items) {
-            const Box<N> item_box = bbox(item);
-            Range<Box<N>> points; // empty iterable to start with
-            if (parent.has_value()) {
-                if (const Maybe<Box<N>> intersection = item_box.intersect(parent->box)) {
-                    points = intersection->clamp(grid_fill).volumes(grid_fill);
-                }
-            } else {
-                points = item_box.clamp(grid_fill).volumes(grid_fill);
-            }
-            for (const Box<N> &dest : points) {
-                if (dest.overlaps(item_box)) {
-                    typename Node::Entry &entry = node->map.get_or_add(dest.min, {});
-                    entry.list.push_back(item);
-                }
-            }
-        }
-        // Re-balance the newly created node. This may create more nodes!
-        balance(node);
-        return node;
+        return &nodes_.emplace(std::piecewise_construct, std::forward_as_tuple(id),
+                               std::forward_as_tuple(parent, id, grid, min));
     }
 
-    void balance_pos(Node *node, const Pos<N> &pos) {
-        if (auto *entry = node->get(pos)) {
-            if (entry->kind == Node::Entry::kList) {
-                if (should_increase_depth(entry->list.size(), node->grid)) {
-                    const Box<N> child_box(pos, pos + node->grid);
-                    const I64 child_grid = node->grid / 2;
-                    const typename Node::Parent parent{.node = node, .box = child_box};
-                    entry->node = next_node(parent, child_grid, entry->list);
-                    entry->kind = Node::Entry::kNode;
-                    entry->list.clear();
-                }
-            } else if (entry->kind == Node::Entry::kNode) {
-                balance(entry->node);
+    /// Pushes list entries down if [node] has exceeded the maximum entries, creating new children when necessary.
+    /// Returns the list of direct children of [node] that were updated.
+    List<Node *> balance_only(Node *node) {
+        return_if(node->grid <= kGridMin || node->list.size() < kMaxEntries, {}); // Can't further balance
+        List<ItemRef> move;
+        for (const auto &item : node->list) {
+            auto box = bbox(item);
+            auto min = box.shape().min();
+            // TODO: Maybe this should be `min <= grid / 2`?
+            if (min < node->grid) { // Only push down entries which are smaller than this node's granularity
+                move.push_back(item);
             }
         }
+        return_if(move.empty(), {});
+
+        static constexpr Box<N> counter{Tuple<N, I64>::fill(0), Tuple<N, I64>::fill(2)};
+        const I64 child_grid = node->grid / 2;
+
+        U64 i = 0;
+        List<Node *> updated;
+        for (const Pos<N> &index : counter.indices()) {
+            const Pos<N> child_min = node->min + index * child_grid;
+            const Pos<N> child_end = child_min + child_grid;
+            const Box<N> child_box{child_min, child_end};
+            List<ItemRef> child_items;
+            for (auto &item : move) {
+                if (bbox(item).overlaps(child_box)) {
+                    child_items.push_back(item);
+                }
+            }
+            if (!child_items.empty()) {
+                Node *child = node->children[i];
+                if (child == nullptr) {
+                    child = next_node(node, child_grid, child_min);
+                }
+                child->list.append(child_items);
+                updated.push_back(child);
+            }
+            ++i;
+        }
+        return updated;
     }
 
+    /// Recursively balances all nodes at and below [node], starting with [node].
     void balance(Node *node) {
-        return_if(node->grid <= grid_min); // Can't further balance
-        for (auto &[pos, _] : node->map) {
-            balance_pos(node, pos);
+        List<Node *> frontier{node};
+        while (!frontier.empty()) {
+            Node *current = frontier.back();
+            frontier.pop_back();
+            frontier.append(balance_only(current));
         }
     }
 
-    void balance(Node *node, const Pos<N> &pos) {
-        return_if(node->grid <= grid_min); // Can't further balance
-        balance_pos(node, pos);
-    }
-
-    void remove(Garbage &garbage, Node *node, const Pos<N> &pos) {
-        if (auto *entry = node->get(pos)) {
-            if (entry->kind == Node::Entry::kNode) {
-                Node *child = entry->node;
-                garbage.removed_nodes.push_back(child->id);
-            }
-            node->map.remove(pos);
-        }
-        if (node->map.empty() && node->parent.has_value()) {
-            remove(garbage, node->parent->node, node->parent->box.min);
+    /// Removes all empty nodes above and including [node].
+    void remove_if_empty(Garbage &garbage, Node *node) {
+        while (node) {
+            Node *parent = node->parent;
+            return_if(!node->empty() || !parent);
+            garbage.removed_nodes.push_back(node);
+            parent->remove_child(node);
+            node = parent;
         }
     }
 
-    void remove(Garbage &garbage, Node *node, const Pos<N> &pos, const ItemRef &item) {
-        if (auto *entry = node->get(pos)) {
-            ASSERT(entry->kind == Node::Entry::kList, "Cannot remove from non-list entry");
-            entry->list.remove(item); // TODO: O(N) with number of items here
-            if (entry->list.empty()) {
-                remove(garbage, node, pos);
-            }
+    /// Removes [item] from [node], if it exists.
+    /// Then recursively removes any empty nodes above and including [node].
+    bool remove(Garbage &garbage, Node *node, const ItemRef &item) {
+        // TODO: O(N) with number of items here
+        const bool changed = node->list.remove(item);
+        if (changed) {
+            remove_if_empty(garbage, node);
         }
+        return changed;
     }
 
     Maybe<std::pair<U64, ItemRef>> get_item(const ItemRef &item) {
@@ -690,54 +499,76 @@ protected:
         return None;
     }
 
-    RTree &move(const ItemRef &item, const Box<N> &new_box, const Box<N> &old_box) {
-        bbox_ = bounding_box(bbox_, new_box);
+    void add_to_bbox(const Box<N> &added) {
+        bbox_ = bounding_box(bbox_, added);
+        const I64 max_shape = bbox_.shape().max();
+        // Add one to the ceil(log2(shape)). Box may not be aligned with the grid, this should account for that.
+        const I64 max_exp = std::max<I64>(ceil_log2(max_shape) + 1, kGridMin);
+
+        if (!root_) {
+            const U64 grid_max = 0x1 << max_exp;
+            root_ = next_node(nullptr, grid_max, bbox_.clamp(grid_max).min);
+        } else {
+            // Rebalance the root to match the new desired maximum grid size. Skip if already sufficiently sized.
+            const I64 root_exp = root_ ? ceil_log2(root_->grid) : kGridMin;
+            return_if(root_exp >= max_exp);
+
+            Node *prev = root_;
+            for (I64 grid_exp = root_exp + 1; grid_exp <= max_exp; ++grid_exp) {
+                const I64 grid_size = 0x1 << grid_exp;
+                const Pos<N> grid_min = prev->min.grid_min(grid_size);
+                root_ = next_node(nullptr, grid_size, grid_min);
+                prev->parent = root_;
+                const auto index = root_->get_index(prev->min);
+                root_->children[*index] = prev;
+                prev = root_;
+            }
+        }
+    }
+
+    void add_and_balance(const ItemRef &ref) {
+        add_to_bbox(bbox(ref));
+        root_->list.push_back(ref);
+        balance(root_);
+    }
+
+    RTree &move_from(const ItemRef &item, const Box<N> &old_box) {
         if (auto pair = get_item(item)) {
             auto [_, ref] = *pair;
             Garbage garbage(this);
-            for (const Box<N> &removed : old_box.diff(new_box)) {
-                for (auto [node, pos] : entries_in(removed)) {
-                    if (!new_box.overlaps({pos, pos + node->grid})) {
-                        remove(garbage, node, pos, ref);
-                    }
-                }
-            }
-            for (const Box<N> &added : new_box.diff(old_box)) {
+            remove_over(ref, old_box, /*remove_all*/ false);
+            add_and_balance(ref);
+
+            /*for (const Box<N> &added : new_box.diff(old_box)) {
+                preorder_walk_nodes_in([&](Node *node) {
+
+                });
                 for (auto [node, pos] : points_in(added)) {
                     if (!old_box.overlaps({pos, pos + node->grid})) {
                         node->map[pos].list.emplace_back(ref);
                         balance(node, pos);
                     }
                 }
-            }
+            }*/
         }
         return *this;
     }
 
-    void populate_over(const ItemRef &ref, const Box<N> &box) {
-        for (auto [node, pos] : points_in(box)) {
-            node->map[pos].list.emplace_back(ref);
-            balance(node, pos);
-        }
-    }
-
-    ItemRef insert_over(const Item &item, const Box<N> &box) {
-        bbox_ = bounding_box(bbox_, box);
+    ItemRef insert_over(const Item &item) {
         const U64 id = ++item_id_;
         auto &unique = items_[id] = std::make_unique<Item>(item); // Copy constructor
         ItemRef ref(unique.get());
         item_ids_[ref] = id;
-        populate_over(ref, box);
+        add_and_balance(ref);
         return ref;
     }
 
-    ItemRef take_over(std::unique_ptr<Item> item, const Box<N> &box) {
-        bbox_ = bounding_box(bbox_, box);
+    ItemRef take_over(std::unique_ptr<Item> item) {
         const U64 id = ++item_id_;
         auto &unique = items_[id] = std::move(item);
         ItemRef ref(unique.get());
         item_ids_[ref] = id;
-        populate_over(ref, box);
+        add_and_balance(ref);
         return ref;
     }
 
@@ -745,20 +576,21 @@ protected:
     ItemRef emplace_over(Args &&...args) {
         const U64 id = ++item_id_;
         auto &unique = items_[id] = std::move(std::make_unique<T>(std::forward<Args>(args)...));
-        bbox_ = bounding_box(bbox_, unique->bbox());
         ItemRef ref(unique.get());
         item_ids_[ref] = id;
-        populate_over(ref, unique->bbox());
+        add_and_balance(ref);
         return ref;
     }
 
     RTree &remove_over(const ItemRef item, const Box<N> &box, const bool remove_all) {
+        // TODO: Update bounds?
         if (auto pair = get_item(item)) {
-            // TODO: Update bounds?
             Garbage garbage(this);
-            for (auto [node, pos] : entries_in(box)) {
-                remove(garbage, node, pos, pair->second);
-            }
+            const ItemRef &ptr = pair->second;
+            preorder_walk_nodes_in(box, [&](Node *node) {
+                // Don't continue to recurse if item was found in this node
+                return remove(garbage, node, ptr) ? WalkResult::kNoRecurse : WalkResult::kRecurse;
+            });
             if (remove_all) {
                 items_.remove(pair->first);
             }
@@ -777,7 +609,7 @@ protected:
     Map<ItemRef, U64> item_ids_;
 
     Map<U64, Node> nodes_;
-    Node *root_;
+    Node *root_ = nullptr;
 };
 
 } // namespace nvl

@@ -40,12 +40,14 @@ WorldA2::WorldA2(AbstractScreen *parent)
 
     const Material bulwark = Material::get<Bulwark>(Color::kDarkGreen);
     List<Part<3>> ground_parts;
-    constexpr Box<3> ground_size({-50_m, 0, -50_m}, {50_m, 1_m, 50_m});
+    constexpr Box<3> ground_size({-1000_m, 0, -1000_m}, {1000_m, 1_m, 1000_m});
     for (const Box<3> &box : ground_size.volumes(/*step*/ 100_m)) {
         ground_parts.emplace_back(box, bulwark);
     }
     std::cout << "Creating ground with " << ground_parts.size() << " parts" << std::endl;
+    std::cout << "  over " << ground_size << std::endl;
     spawn<Block<3>>(Pos<3>{0, 0, 0}, ground_parts);
+    std::cout << "Created ground!" << std::endl;
 
     constexpr Pos<3> start{0, -2_m, 0};
     player = spawn<Player>(start);
