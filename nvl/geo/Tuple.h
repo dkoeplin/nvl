@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdlib>
 #include <iterator>
 #include <sstream>
 
@@ -417,6 +418,13 @@ Tuple<N, T> operator+(const C a, const Tuple<N, T> &b) {
 template <U64 N, typename C, typename T>
 Tuple<N, T> operator-(const C a, const Tuple<N, T> &b) {
     return -b + a;
+}
+
+template <U64 N, typename V>
+Tuple<N, V> abs(const Tuple<N, V> &tuple) {
+    Tuple<N, V> result;
+    simd for (U64 i = 0; i < N; ++i) { result[i] = std::abs(tuple[i]); }
+    return result;
 }
 
 template <U64 N>

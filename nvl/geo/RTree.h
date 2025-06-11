@@ -4,7 +4,6 @@
 
 #include "nvl/data/List.h"
 #include "nvl/data/Map.h"
-#include "nvl/data/Once.h"
 #include "nvl/data/Range.h"
 #include "nvl/data/Ref.h"
 #include "nvl/data/Set.h"
@@ -12,10 +11,10 @@
 #include "nvl/data/WalkResult.h"
 #include "nvl/geo/HasBBox.h"
 #include "nvl/geo/Line.h"
+#include "nvl/geo/Orthants.h"
 #include "nvl/geo/Tuple.h"
 #include "nvl/geo/Volume.h"
 #include "nvl/io/IO.h"
-#include "nvl/macros/Abstract.h"
 #include "nvl/macros/Aliases.h"
 #include "nvl/macros/Hot.h"
 #include "nvl/macros/ReturnIf.h"
@@ -26,36 +25,6 @@ namespace nvl {
 namespace detail {
 
 /**
- * @struct Orthants
- * @brief "Orthants" is the ND version of 2D quadrants!
- * @tparam N - Number of dimensions
- */
-template <U64 N>
-struct Orthants {
-    explicit Orthants(const Pos<N> &origin, const U64 size) : origin(origin), size(size) {}
-
-    pure Box<N> box() const { return {origin - size, origin + size}; }
-
-    /// Return a flattened index which addresses a specific 2^N orthant.
-    pure Maybe<I64> index(const Pos<N> &pos) const {
-        return_if(!box().contains(pos), None);
-
-        I64 flat_index = 0;
-        I64 stride = 1 << N;
-        for (U64 i = 0; i < N; ++i) {
-            I64 idx = pos[i] >= origin[i] ? 1 : 0;
-            return_if(idx < 0 || idx > 1, None);
-            flat_index += (idx == 0 ? 0 : stride);
-            stride = stride >> 1;
-        }
-        return flat_index;
-    }
-
-    Pos<N> origin;
-    U64 size;
-};
-
-/**
  * @class Node
  * @brief A node within an RTree.
  */
@@ -63,8 +32,8 @@ template <U64 N, typename ItemRef>
 struct Node : Orthants<N> {
     static constexpr U64 E = 1 << N; // Number of orthants, i.e. 2^N
 
-    Node(Node *parent, const U64 id, const Pos<N> &origin, const U64 size)
-        : Orthants<N>(origin, size), parent(parent), id(id) {}
+    Node(Node *parent, const U64 id, const Pos<N> &origin, const I64 grid_size)
+        : Orthants<N>(origin, grid_size), parent(parent), id(id) {}
 
     Node(const Node &) = delete;
     Node &operator=(const Node &) = delete;
@@ -78,7 +47,7 @@ struct Node : Orthants<N> {
     }
 
     void remove_child(Node *child) {
-        simd for (U64 i = 0; i < E; ++i) { children[i] *= static_cast<int64_t>(children[i] == child); }
+        simd for (U64 i = 0; i < E; ++i) { children[i] = children[i] == child ? nullptr : children[i]; }
     }
 
     pure bool has_child() const {
@@ -106,6 +75,42 @@ struct Node : Orthants<N> {
     Tuple<E, Node *> children = Tuple<E, Node *>::fill(nullptr);
 };
 
+template <U64 N, typename ItemRef, typename VisitFunc> // Node* => WalkResult
+void preorder_walk_nodes_in(const Node<N, ItemRef> *top, const Box<N> &box, VisitFunc func) {
+    List<const Node<N, ItemRef> *> frontier{top};
+    while (!frontier.empty()) {
+        const Node<N, ItemRef> *current = frontier.back();
+        frontier.pop_back();
+        const WalkResult result = func(current);
+        return_if(result == WalkResult::kExit);
+        if (result == WalkResult::kRecurse) {
+            for (const Node<N, ItemRef> *child : current->children) {
+                if (child && box.overlaps(child->bbox())) {
+                    frontier.push_back(child);
+                }
+            }
+        }
+    }
+}
+
+template <U64 N, typename ItemRef, typename VisitFunc> // Node* => WalkResult
+void preorder_walk_nodes_in(Node<N, ItemRef> *top, const Box<N> &box, VisitFunc func) {
+    List<Node<N, ItemRef> *> frontier{top};
+    while (!frontier.empty()) {
+        Node<N, ItemRef> *current = frontier.back();
+        frontier.pop_back();
+        const WalkResult result = func(current);
+        return_if(result == WalkResult::kExit);
+        if (result == WalkResult::kRecurse) {
+            for (Node<N, ItemRef> *child : current->children) {
+                if (child && box.overlaps(child->bbox())) {
+                    frontier.push_back(child);
+                }
+            }
+        }
+    }
+}
+
 } // namespace detail
 
 /**
@@ -125,6 +130,7 @@ public:
     using Node = detail::Node<N, ItemRef>;
 
     static constexpr I64 kGridMin = 0x1 << kGridExpMin;
+    static constexpr U64 E = 1 << N; // Number of orthants, i.e. 2^N
 
     struct Intersect : nvl::Intersect<N> {
         explicit Intersect(const nvl::Intersect<N> &init, ItemRef ref) : nvl::Intersect<N>(init), item(ref) {}
@@ -169,7 +175,7 @@ public:
 
     static Box<N> bbox(const ItemRef &item) { return static_cast<const Item *>(item.ptr())->bbox(); }
 
-    RTree() : Node(nullptr, -1, Pos<N>::fill(0), kGridExpMin) {}
+    RTree() : Node(nullptr, 0, Pos<N>::fill(0), kGridExpMin) {}
 
     RTree(std::initializer_list<Item> items) : RTree() {
         for (const auto &item : items) {
@@ -227,25 +233,22 @@ public:
     /// Calls [func] on all existing nodes in the given volume. Traversal is depth-first preorder.
     template <typename VisitFunc> // Node* => WalkResult
     void preorder_walk_nodes(VisitFunc func) const {
-        preorder_walk_nodes_in(bbox_, func);
+        detail::preorder_walk_nodes_in(this, bbox_, func);
     }
 
     template <typename VisitFunc> // Node* => WalkResult
     void preorder_walk_nodes_in(const Box<N> &box, VisitFunc func) const {
-        List<Node *> frontier{this};
-        while (!frontier.empty()) {
-            Node *current = frontier.back();
-            frontier.pop_back();
-            const WalkResult result = func(current);
-            return_if(result == WalkResult::kExit);
-            if (result == WalkResult::kRecurse) {
-                for (Node *child : current->children) {
-                    if (child && box.overlaps(child->box())) {
-                        frontier.push_back(child);
-                    }
-                }
-            }
-        }
+        detail::preorder_walk_nodes_in(this, box, func);
+    }
+
+    template <typename VisitFunc> // Node* => WalkResult
+    void preorder_walk_nodes(VisitFunc func) {
+        detail::preorder_walk_nodes_in(this, bbox_, func);
+    }
+
+    template <typename VisitFunc> // Node* => WalkResult
+    void preorder_walk_nodes_in(const Box<N> &box, VisitFunc func) {
+        detail::preorder_walk_nodes_in(this, box, func);
     }
 
     /// Returns a set of all stored items in the given volume.
@@ -334,8 +337,8 @@ public:
     /// Returns the total number of distinct items stored in this tree.
     pure U64 size() const { return items_.size(); }
 
-    /// Returns the total number of nodes in this tree.
-    pure U64 nodes() const { return nodes_.size(); }
+    /// Returns the total number of nodes in this tree, including the root which always exists.
+    pure U64 nodes() const { return nodes_.size() + 1; }
 
     /// Returns true if this tree is empty.
     pure bool empty() const { return items_.empty(); }
@@ -349,22 +352,27 @@ public:
         return depth;
     }
 
+    /// Resets this tree, dropping all items and nodes.
     void clear() {
         item_ids_.clear();
         nodes_.clear();
         items_.clear();
-        node_id_ = 0;
+        node_id_ = 1;
         item_id_ = 0;
         bbox_ = Box<N>::kEmpty;
-        root_ = nullptr;
+        this->grid_size = kGridMin;
+        this->origin = Pos<N>::fill(0);
+        this->list.clear();
+        this->children = Tuple<E, Node *>::fill(nullptr);
     }
 
     /// Dumps a string representation of this tree to stdout.
     void dump() const {
-        std::cout << "[[RTree with bounds " << bbox() << "]]" << std::endl;
-        preorder_walk_nodes([&](Node *node) {
+        indented(0) << "[[RTree with bounds " << bbox() << "]]" << std::endl;
+        preorder_walk_nodes([&](const Node *node) {
             const U64 indent = node->depth();
-            indented(indent) << "[#" << node->id << "][" << node->grid << ": " << node->box() << "]:" << std::endl;
+            indented(indent) << "[#" << node->id << "][" << node->origin << "+/-" << node->grid_size
+                             << "]:" << std::endl;
             for (const ItemRef &item : node->list) {
                 indented(indent) << "> " << item << std::endl;
             }
@@ -386,7 +394,7 @@ protected:
 
     pure Set<ItemRef> collect(const Box<N> &box) const {
         Set<ItemRef> items;
-        preorder_walk_nodes_in(box, [&](Node *node) {
+        preorder_walk_nodes_in(box, [&](const Node *node) {
             for (const ItemRef &item : node->list) {
                 if (box.overlaps(bbox(item))) {
                     items.insert(item);
@@ -399,7 +407,7 @@ protected:
 
     pure Maybe<ItemRef> collect_first(const Box<N> &box) const {
         Maybe<ItemRef> result = None;
-        preorder_walk_nodes_in(box, [&](Node *node) {
+        preorder_walk_nodes_in(box, [&](const Node *node) {
             for (const ItemRef &item : node->list) {
                 if (box.overlaps(bbox(item))) {
                     result = item;
@@ -411,38 +419,35 @@ protected:
         return result;
     }
 
-    Node *next_node(Node *parent, const I64 grid, const Pos<N> &min) {
+    Node *next_node(Node *parent, const Pos<N> &origin, const I64 grid_size) {
         const U64 id = node_id_++;
         return &nodes_.emplace(std::piecewise_construct, std::forward_as_tuple(id),
-                               std::forward_as_tuple(parent, id, grid, min));
+                               std::forward_as_tuple(parent, id, origin, grid_size));
     }
 
     /// Pushes list entries down if [node] has exceeded the maximum entries, creating new children when necessary.
     /// Returns the list of direct children of [node] that were updated.
     List<Node *> balance_only(Node *node) {
-        return_if(node->grid <= kGridMin || node->list.size() < kMaxEntries, {}); // Can't further balance
+        return_if(node->grid_size <= kGridMin || node->list.size() <= kMaxEntries, {}); // Skip balancing
         List<ItemRef> move;
-        for (const auto &item : node->list) {
+        List<ItemRef> keep;
+        for (const ItemRef &item : node->list) {
             auto box = bbox(item);
-            auto min = box.shape().min();
-            // TODO: Maybe this should be `min <= grid / 2`?
-            if (min < node->grid) { // Only push down entries which are smaller than this node's granularity
-                move.push_back(item);
-            }
+            const I64 min = box.shape().min();
+            // Only push down entries which are smaller than this node's granularity
+            List<ItemRef> &list = min < node->grid_size ? move : keep;
+            list.push_back(item);
         }
         return_if(move.empty(), {});
 
-        static constexpr Box<N> counter{Tuple<N, I64>::fill(0), Tuple<N, I64>::fill(2)};
-        const I64 child_grid = node->grid / 2;
-
-        U64 i = 0;
         List<Node *> updated;
-        for (const Pos<N> &index : counter.indices()) {
-            const Pos<N> child_min = node->min + index * child_grid;
-            const Pos<N> child_end = child_min + child_grid;
-            const Box<N> child_box{child_min, child_end};
+        const U64 child_size = node->grid_size / 2;
+        Orthants<N>::walk([&](const Pos<N> &delta, const U64 i) {
+            const Pos<N> child_origin = node->origin + delta * child_size;
+            const Box<N> child_box{child_origin - child_size, child_origin + child_size};
+
             List<ItemRef> child_items;
-            for (auto &item : move) {
+            for (const ItemRef &item : move) {
                 if (bbox(item).overlaps(child_box)) {
                     child_items.push_back(item);
                 }
@@ -450,13 +455,13 @@ protected:
             if (!child_items.empty()) {
                 Node *child = node->children[i];
                 if (child == nullptr) {
-                    child = next_node(node, child_grid, child_min);
+                    child = node->children[i] = next_node(node, child_origin, child_size);
                 }
                 child->list.append(child_items);
                 updated.push_back(child);
             }
-            ++i;
-        }
+        });
+        node->list = keep;
         return updated;
     }
 
@@ -499,37 +504,34 @@ protected:
         return None;
     }
 
-    void add_to_bbox(const Box<N> &added) {
-        bbox_ = bounding_box(bbox_, added);
-        const I64 max_shape = bbox_.shape().max();
-        // Add one to the ceil(log2(shape)). Box may not be aligned with the grid, this should account for that.
-        const I64 max_exp = std::max<I64>(ceil_log2(max_shape) + 1, kGridMin);
-
-        if (!root_) {
-            const U64 grid_max = 0x1 << max_exp;
-            root_ = next_node(nullptr, grid_max, bbox_.clamp(grid_max).min);
-        } else {
-            // Rebalance the root to match the new desired maximum grid size. Skip if already sufficiently sized.
-            const I64 root_exp = root_ ? ceil_log2(root_->grid) : kGridMin;
-            return_if(root_exp >= max_exp);
-
-            Node *prev = root_;
-            for (I64 grid_exp = root_exp + 1; grid_exp <= max_exp; ++grid_exp) {
-                const I64 grid_size = 0x1 << grid_exp;
-                const Pos<N> grid_min = prev->min.grid_min(grid_size);
-                root_ = next_node(nullptr, grid_size, grid_min);
-                prev->parent = root_;
-                const auto index = root_->get_index(prev->min);
-                root_->children[*index] = prev;
-                prev = root_;
-            }
-        }
-    }
-
     void add_and_balance(const ItemRef &ref) {
-        add_to_bbox(bbox(ref));
-        root_->list.push_back(ref);
-        balance(root_);
+        bbox_ = bounding_box(bbox_, bbox(ref));
+        const I64 cur_size = this->grid_size;
+        // Possible optimization: Use the shape of the bounding box, not its coordinates, to set the grid size.
+        // This would require changing the origins. Unclear how to do this without changing every node.
+        I64 max_exp = std::max<I64>(kGridMin, ceil_log2(abs(bbox_.min).max()));
+        max_exp = std::max<I64>(max_exp, ceil_log2(abs(bbox_.end).max()));
+        const I64 max_size = 1 << max_exp;
+        if (cur_size < max_size) {
+            Orthants<N>::walk([&](const Pos<N> &delta, const U64 i) {
+                // Rebalance children to match the new desired maximum grid size. Skip if already sufficiently sized.
+                if (Node *prev = this->children[i]) {
+                    for (I64 next_size = cur_size << 1; next_size <= max_size; next_size = next_size << 1) {
+                        const Pos<N> origin = this->origin + delta * next_size;
+                        Node *next = next_node(this, origin, next_size);
+                        const U64 index = *next->index(prev->origin);
+                        next->children[index] = prev;
+                        this->children[i] = next;
+                        prev->parent = next;
+                        prev = next;
+                    }
+                }
+            });
+            this->grid_size = max_size;
+        }
+
+        this->list.push_back(ref);
+        balance(this);
     }
 
     RTree &move_from(const ItemRef &item, const Box<N> &old_box) {
@@ -599,7 +601,7 @@ protected:
     }
 
     Box<N> bbox_ = Box<N>::kEmpty;
-    U64 node_id_ = 0;
+    U64 node_id_ = 1;
     U64 item_id_ = 0;
 
     // Nodes keep references to the items stored in the items_ map to avoid storing two copies of each item.
@@ -609,7 +611,6 @@ protected:
     Map<ItemRef, U64> item_ids_;
 
     Map<U64, Node> nodes_;
-    Node *root_ = nullptr;
 };
 
 } // namespace nvl

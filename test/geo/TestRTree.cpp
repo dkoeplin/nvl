@@ -31,14 +31,19 @@ template <typename T>
 concept HasID = requires(T a) { a.id(); };
 
 struct IDs {
-    pure bool operator==(const IDs &rhs) const { return box == rhs.box && ids == rhs.ids; }
+    pure bool operator==(const IDs &rhs) const {
+        return origin == rhs.origin && grid_size == rhs.grid_size && ids == rhs.ids;
+    }
     pure bool operator!=(const IDs &rhs) const { return !(*this == rhs); }
 
-    Box<2> box;
+    Pos<2> origin;
+    I64 grid_size;
     Set<U64> ids;
 };
 
-std::ostream &operator<<(std::ostream &os, const IDs &ids) { return os << "{" << ids.box << ", " << ids.ids << "}"; }
+std::ostream &operator<<(std::ostream &os, const IDs &ids) {
+    return os << "{" << ids.origin << "+/-" << ids.grid_size << ", " << ids.ids << "}";
+}
 
 /// Returns a Map from the lowest level volume buckets to all IDs contained in that bucket.
 template <U64 N, typename Item, typename ItemRef, U64 kMaxEntries>
@@ -47,12 +52,14 @@ pure List<IDs> collect_ids(RTree<N, Item, ItemRef, kMaxEntries> &tree)
 {
     using Node = typename RTree<N, Item, ItemRef, kMaxEntries>::Node;
     List<IDs> list;
-    tree.preorder_walk_nodes([&](Node *node) {
+    tree.preorder_walk_nodes([&](const Node *node) {
         Set<U64> ids;
-        for (const auto &item : node->list) {
+        for (const ItemRef &item : node->list) {
             ids.insert(item->id());
         }
-        list.emplace_back(node->box(), ids);
+        if (!ids.empty()) {
+            list.emplace_back(node->origin, node->grid_size, ids);
+        }
         return WalkResult::kRecurse;
     });
     return list;
@@ -62,7 +69,8 @@ TEST(TestRTree, create) {
     RTree<2, LabeledBox> tree;
     tree.insert({0, {{0, 5}, {5, 10}}});
     EXPECT_EQ(tree.size(), 1);
-    EXPECT_EQ(tree.nodes(), 1);
+    EXPECT_EQ(tree.nodes(), 1); // RTree is the root, no children are created yet
+    EXPECT_EQ(tree.grid_size, 16);
     tree.dump();
 }
 
@@ -71,18 +79,23 @@ TEST(TestRTree, create_high_loc) {
     tree.emplace(0, Box<2>({10000, 10000}, {10005, 10005}));
     EXPECT_EQ(tree.size(), 1);
     EXPECT_EQ(tree.nodes(), 1);
+    EXPECT_EQ(tree.grid_size, 16384);
     tree.dump();
 }
 
-TEST(TestRTree, divide) {
+TEST(TestRTree, grow_root) {
     RTree<2, LabeledBox> tree;
     tree.emplace(0, Box<2>({5, 5}, {100, 100}));
+    EXPECT_EQ(tree.size(), 1);
+    EXPECT_EQ(tree.nodes(), 1);
+    EXPECT_EQ(tree.grid_size, 128);
+
     tree.emplace(1, Box<2>({3000, 1200}, {3014, 1215}));
     EXPECT_EQ(tree.size(), 2);
-    EXPECT_EQ(tree.nodes(), 2);
+    EXPECT_EQ(tree.nodes(), 1);
+    EXPECT_EQ(tree.grid_size, 4096);
 
-    EXPECT_THAT(collect_ids(tree), UnorderedElementsAre(IDs{.box = {{0, 0}, {1024, 1024}}, .ids = {0}},
-                                                        IDs{.box = {{2048, 1024}, {3072, 2048}}, .ids = {1}}));
+    EXPECT_THAT(collect_ids(tree), UnorderedElementsAre(IDs{.origin = {0, 0}, .grid_size = 4096, .ids = {0, 1}}));
     tree.dump();
 }
 
@@ -93,11 +106,10 @@ TEST(TestRTree, subdivide) {
     const auto b2 = tree.emplace(2, Box<2>({100, 200}, {202, 202}));
 
     EXPECT_EQ(tree.size(), 3);  // Number of values
-    EXPECT_EQ(tree.nodes(), 4); // Number of nodes
-
-    EXPECT_THAT(collect_ids(tree), UnorderedElementsAre(IDs{.box = {{0, 0}, {128, 128}}, .ids = {0, 1}},
-                                                        IDs{.box = {{0, 128}, {128, 256}}, .ids = {2}},
-                                                        IDs{.box = {{128, 128}, {256, 256}}, .ids = {2}}));
+    EXPECT_EQ(tree.nodes(), 5); // Number of nodes
+    EXPECT_THAT(collect_ids(tree), UnorderedElementsAre(IDs{.origin = {192, 192}, .grid_size = 64, .ids = {2}},
+                                                        IDs{.origin = {64, 192}, .grid_size = 64, .ids = {2}},
+                                                        IDs{.origin = {64, 64}, .grid_size = 64, .ids = {0, 1}}));
 
     // Check that we find all values when iterating over the bounding box, but each value is returned exactly once.
     const Set<Ref<LabeledBox>> elements = tree[tree.bbox()];
@@ -151,21 +163,20 @@ TEST(TestRTree, keep_buckets_after_subdivide) {
     }
 
     EXPECT_THAT(collect_ids(tree),
-                UnorderedElementsAre(IDs{.box = {{1024, 0}, {2048, 1024}}, .ids = {1}},
-                                     IDs{.box = {{0, 1024}, {1024, 2048}}, .ids = {2}},
-                                     IDs{.box = {{512, 512}, {1024, 1024}}, .ids = {0, 1, 2, 3, 4, 5, 6, 7, 8}},
-                                     IDs{.box = {{0, 512}, {512, 1024}}, .ids = {1}},
-                                     IDs{.box = {{512, 0}, {1024, 512}}, .ids = {8, 9}}));
+                UnorderedElementsAre(IDs{.origin = {1536, 512}, .grid_size = 512, .ids = {1}},
+                                     IDs{.origin = {512, 1536}, .grid_size = 512, .ids = {2}},
+                                     IDs{.origin = {768, 768}, .grid_size = 256, .ids = {0, 1, 2, 3, 4, 5, 6, 7, 8}},
+                                     IDs{.origin = {256, 768}, .grid_size = 256, .ids = {1}},
+                                     IDs{.origin = {768, 256}, .grid_size = 256, .ids = {8, 9}}));
 }
 
 TEST(TestRTree, negative_buckets) {
-    RTree<2, LabeledBox> tree;
+    RTree<2, LabeledBox, Ref<LabeledBox>, 1> tree;
     tree.insert({0, Box<2>({0, 882}, {1512, 982})});
     tree.insert({1, Box<2>({346, -398}, {666, -202})});
 
-    EXPECT_THAT(collect_ids(tree), UnorderedElementsAre(IDs{.box = {{0, -1024}, {1024, 0}}, .ids = {1}},
-                                                        IDs{.box = {{0, 0}, {1024, 1024}}, .ids = {0}},
-                                                        IDs{.box = {{1024, 0}, {2048, 1024}}, .ids = {0}}));
+    EXPECT_THAT(collect_ids(tree), UnorderedElementsAre(IDs{.origin = {1024, 1024}, .grid_size = 1024, .ids = {0}},
+                                                        IDs{.origin = {1024, -1024}, .grid_size = 1024, .ids = {1}}));
 }
 
 TEST(TestRTree, fetch) {
@@ -253,8 +264,13 @@ TEST(TestRTree, large_insertion) {
     for (const Box<3> &box : size.volumes(/*step*/ 100'000)) {
         tree.emplace(box);
     }
-    EXPECT_EQ(tree.root()->grid, 1 << nvl::ceil_log2(2'000'000));
-    tree.dump();
+    for (const Box<3> &box : size.volumes(/*step*/ 100'000)) {
+        auto items = tree[box];
+        ASSERT_EQ(items.size(), 1);
+        EXPECT_EQ(items.begin()->raw(), box);
+    }
+    EXPECT_EQ(tree.size(), 400);
+    EXPECT_EQ(tree.grid_size, 1 << nvl::ceil_log2(1'000'000));
 }
 
 TEST(TestRTree, fuzz_insertion) {
