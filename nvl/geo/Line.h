@@ -23,10 +23,14 @@ public:
     constexpr Line(const Vec<N> &x, const Vec<N> &y) : a_(x), b_(y) {}
 
     template <typename T>
-    pure Line operator+(const Tuple<N, T> &rhs) const { return Line(a_ + real(rhs), b_ + real(rhs)); }
+    pure Line operator+(const Tuple<N, T> &rhs) const {
+        return Line(a_ + real(rhs), b_ + real(rhs));
+    }
 
     template <typename T>
-    pure Line operator-(const Tuple<N, T> &rhs) const { return Line(a_ - real(rhs), b_ - real(rhs)); }
+    pure Line operator-(const Tuple<N, T> &rhs) const {
+        return Line(a_ - real(rhs), b_ - real(rhs));
+    }
 
     /// Returns the point closest to `a` which overlaps with the given box, if one exists.
     pure Maybe<Intersect<N>> intersect(const Box<N> &box) const;
@@ -109,7 +113,7 @@ pure Maybe<Intersect<N>> intersect(const Line<N> &line, const Box<N> &box) {
     // Iterate over faces of the box
     // If the line intersects with the box, and the point a is outside the box,
     // the closest point to a should be on one of the faces of the box.
-    unroll for (U64 d = 0; d < N * 2; ++d) {
+    for (U64 d = 0; d < N * 2; ++d) {
         const Vec<N> &vec = (d & 0x1) ? max : min;
         if (const auto pt = line.interpolate(d / 2, vec[d / 2])) {
             if (pt->dist >= 0 && pt->dist < closest_dist && box.contains(pt->pt)) {

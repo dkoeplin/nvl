@@ -46,7 +46,7 @@ public:
     pure expand Maybe<Rel<Part>> first(const Pos<N> &pos) const { return parts_.first(pos); }
 
     /// Returns the first part along the given line, if one exists, along with the intersection location and face.
-    pure expand Maybe<Intersect> first(const Line<N> &line) const { return parts_.first_where(line); }
+    pure expand Maybe<Intersect> first(const Line<N> &line) const { return parts_.first(line); }
 
     /// Returns true if there are any items stored in the given volume.
     pure expand bool exists(const Box<N> &box) const { return parts_.exists(box); }

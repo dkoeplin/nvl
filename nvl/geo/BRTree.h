@@ -123,6 +123,7 @@ public:
     /// Returns the first item stored in the given volume, if one exists.
     pure expand Maybe<ItemRef> first(const Box<N> &box) const { return this->items_.first(box - loc); }
     pure expand Maybe<ItemRef> first(const Pos<N> &pos) const { return this->items_.first(pos - loc); }
+    pure expand Maybe<Intersect> first(const Line<N> &line) const { return this->items_.first(line - loc); }
 
     /// Returns the closest item which intersects with the line segment according to the distance function.
     /// Also returns the location and face of the intersection if it exists.

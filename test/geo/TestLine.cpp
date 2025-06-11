@@ -78,6 +78,16 @@ TEST(TestLine, intersect) {
     EXPECT_EQ(intersect->pt, Vec<3>(528, 973.5, 500));
 }
 
+TEST(TestLine, intersect2) {
+    constexpr Box<2> box{{-7, -14}, {9, 1}};
+    constexpr Line<2> line{Vec<2>{5.55365, 4.1611}, {8.95303, -4.20195}};
+    const auto intersect = line.intersect(box);
+    std::cout << (intersect.has_value() ? intersect->pt.to_string() : "N/A") << std::endl;
+    // 31.7 dist, -2.0098, 6.12694
+    std::cout << line.length() << std::endl;
+    std::cout << line.interpolate(3.5) << std::endl;
+}
+
 TEST(TestLine, interpolate) {
     const Line<2> line{{1, 1}, {4, 5}};
     EXPECT_EQ(line.interpolate(-5), Vec<2>(-2, -3)); // Not on the line segment

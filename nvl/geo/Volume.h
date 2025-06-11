@@ -304,7 +304,9 @@ public:
     pure Vec<N> max_f64() const {
         Vec<N> result;
         for (U64 i = 0; i < N; ++i) {
-            result[i] = std::nextafter(static_cast<F64>(end[i]), -std::numeric_limits<F64>::infinity());
+            // use of INFINITY is not compatible with clang's -ffast-math
+            // result[i] = std::nextafter(static_cast<F64>(end[i]), -INFINITY);
+            result[i] = std::nextafter(static_cast<F64>(end[i]), std::numeric_limits<F64>::lowest());
         }
         return result;
     }

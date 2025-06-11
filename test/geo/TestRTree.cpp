@@ -273,6 +273,7 @@ TEST(TestRTree, large_insertion) {
     EXPECT_EQ(tree.grid_size, 1 << nvl::ceil_log2(1'000'000));
 }
 
+// Current best is ~1.9us / call
 TEST(TestRTree, fuzz_insertion) {
     constexpr I64 kNumTests = 1E3;
     RTree<2, Box<2>> tree;
@@ -293,6 +294,7 @@ struct FuzzMove : nvl::test::FuzzingTestFixture<bool, Pos<2>, Pos<2>, Pos<2>> {
     FuzzMove() = default;
 };
 
+// Current best is ~2us / call
 TEST_F(FuzzMove, move2d) {
     using nvl::Distribution;
     using nvl::Random;
@@ -327,6 +329,7 @@ TEST_F(FuzzMove, move2d) {
 
 struct FuzzComponents : nvl::test::FuzzingTestFixture<bool, Pos<2>, Pos<2>, Pos<2>> {};
 
+// Current best is ~9.2us / call
 TEST_F(FuzzComponents, components2d) {
     this->num_tests = 1E3;
     this->in[0] = Distribution::Uniform<I64>(100, 400);

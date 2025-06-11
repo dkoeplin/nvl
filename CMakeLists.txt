@@ -7,14 +7,15 @@ set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 message(STATUS "CMAKE_MODULE_PATH: ${CMAKE_MODULE_PATH}")
 set(CMAKE_CXX_FLAGS " \
 -O3 \
--ffast-math \
--Wno-nan-infinity-disabled \
 -Wall \
 -Wextra \
 -Wpedantic \
 -Wshadow \
 -Werror \
 ")
+# Disabled for now - not found significantly faster, and potential issues with using +/-INF
+# -ffast-math \
+# -Wno-nan-infinity-disabled \
 
 add_library(nvl SHARED
         nvl/actor/Actor.h
