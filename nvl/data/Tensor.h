@@ -30,7 +30,8 @@ public:
     pure Range<Idx> indices() const { return Volume<N, I64>(Idx::zero, shape_).indices(); }
 
     /// Returns the first index where the given predicate is true. Returns None otherwise.
-    pure Maybe<Idx> index_where(const std::function<bool(T)> &predicate) const {
+    template <typename PredicateFunc>
+    pure Maybe<Idx> index_where(PredicateFunc predicate) const {
         for (const auto &idx : indices()) {
             return_if(predicate((*this)[idx]), idx);
         }

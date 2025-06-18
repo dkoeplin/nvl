@@ -171,19 +171,19 @@ public:
     }
 
     pure const V &get_or(const K &key, const V &v) const {
-        auto iter = find(key);
-        return iter != end() ? iter->second : v;
+        auto iter = parent::find(key);
+        return iter != parent::end() ? iter->second : v;
     }
 
     V &get_or_add(const K &key, V v) {
-        if (auto iter = find(key); iter != end()) {
+        if (auto iter = parent::find(key); iter != parent::end()) {
             return iter->second;
         }
         return parent::emplace(key, v).first->second;
     }
 
     V &get_or_lazily_add(const K &key, const std::function<V()> &func) {
-        if (auto iter = find(key); iter != end()) {
+        if (auto iter = parent::find(key); iter != parent::end()) {
             return iter->second;
         }
         return parent::emplace(key, func()).first->second;

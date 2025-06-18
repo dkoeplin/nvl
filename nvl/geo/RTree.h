@@ -95,7 +95,9 @@ void preorder_walk_nodes_in(const Node<N, ItemRef> *top, const Box<N> &box, Visi
 
 template <U64 N, typename ItemRef, typename VisitFunc> // Node* => WalkResult
 void preorder_walk_nodes_in(Node<N, ItemRef> *top, const Box<N> &box, VisitFunc func) {
-    List<Node<N, ItemRef> *> frontier{top};
+    List<Node<N, ItemRef> *> frontier;
+    if (top->bbox().overlaps(box))
+        frontier.push_back(top);
     while (!frontier.empty()) {
         Node<N, ItemRef> *current = frontier.back();
         frontier.pop_back();
@@ -232,22 +234,22 @@ public:
 
     /// Calls [func] on all existing nodes in the given volume. Traversal is depth-first preorder.
     template <typename VisitFunc> // Node* => WalkResult
-    void preorder_walk_nodes(VisitFunc func) const {
+    expand void preorder_walk_nodes(VisitFunc func) const {
         detail::preorder_walk_nodes_in(this, bbox_, func);
     }
 
     template <typename VisitFunc> // Node* => WalkResult
-    void preorder_walk_nodes_in(const Box<N> &box, VisitFunc func) const {
+    expand void preorder_walk_nodes_in(const Box<N> &box, VisitFunc func) const {
         detail::preorder_walk_nodes_in(this, box, func);
     }
 
     template <typename VisitFunc> // Node* => WalkResult
-    void preorder_walk_nodes(VisitFunc func) {
+    expand void preorder_walk_nodes(VisitFunc func) {
         detail::preorder_walk_nodes_in(this, bbox_, func);
     }
 
     template <typename VisitFunc> // Node* => WalkResult
-    void preorder_walk_nodes_in(const Box<N> &box, VisitFunc func) {
+    expand void preorder_walk_nodes_in(const Box<N> &box, VisitFunc func) {
         detail::preorder_walk_nodes_in(this, box, func);
     }
 
@@ -369,7 +371,7 @@ public:
     /// Dumps a string representation of this tree to stdout.
     void dump() const {
         indented(0) << "[[RTree with bounds " << bbox() << "]]" << std::endl;
-        preorder_walk_nodes([&](const Node *node) {
+        preorder_walk_nodes_in(bbox_, [&](const Node *node) {
             const U64 indent = node->depth();
             indented(indent) << "[#" << node->id << "][" << node->origin << "+/-" << node->grid_size
                              << "]:" << std::endl;
@@ -411,10 +413,9 @@ protected:
             for (const ItemRef &item : node->list) {
                 if (box.overlaps(bbox(item))) {
                     result = item;
-                    return WalkResult::kExit;
                 }
             }
-            return WalkResult::kRecurse;
+            return result.has_value() ? WalkResult::kExit : WalkResult::kRecurse;
         });
         return result;
     }
@@ -540,18 +541,6 @@ protected:
             Garbage garbage(this);
             remove_over(ref, old_box, /*remove_all*/ false);
             add_and_balance(ref);
-
-            /*for (const Box<N> &added : new_box.diff(old_box)) {
-                preorder_walk_nodes_in([&](Node *node) {
-
-                });
-                for (auto [node, pos] : points_in(added)) {
-                    if (!old_box.overlaps({pos, pos + node->grid})) {
-                        node->map[pos].list.emplace_back(ref);
-                        balance(node, pos);
-                    }
-                }
-            }*/
         }
         return *this;
     }

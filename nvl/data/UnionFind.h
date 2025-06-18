@@ -23,55 +23,71 @@ public:
     using Group = Set<Item, Hash>;
 
     /// Inserts a single element into its own set.
-    UnionFind &add(const Item &a) {
+    U64 add(const Item &a) {
         const U64 id_a = ids_.get_or(a, 0);
-        if (id_a == 0) {
-            ++count_;
-            groups_[count_].insert(a);
-            ids_[a] = count_;
-        }
-        return *this;
+        return_if(id_a != 0, id_a);
+        ++count_;
+        groups_[count_].insert(a);
+        make(count_);
+        return ids_[a] = count_;
     }
 
     /// Marks elements `a` and `b` as equivalent, inserting them into a new set or combining their existing sets
     /// if either are already present.
     UnionFind &add(const Item &a, const Item &b) {
-        const U64 id_a = ids_.get_or(a, 0);
-        const U64 id_b = ids_.get_or(b, 0);
-        return_if(id_a == id_b && id_a > 0, *this);
-        U64 id = std::min(id_a, id_b);
-        if (id == 0) {
-            ++count_;
-            id = count_;
-        }
-        auto &group = groups_[id];
-        move_to_current_group(id, id_a, group, a);
-        move_to_current_group(id, id_b, group, b);
+        merge(add(a), add(b));
         return *this;
     }
 
     pure bool has(const Item &item) const { return ids_.contains(item); }
 
-    pure Range<Group> sets() const { return groups_.values(); }
+    pure Range<Group> sets() const {
+        update_groups();
+        return groups_.values();
+    }
 
 private:
-    void move_to_current_group(const U64 dst, const U64 src, Group &group, const Item &item) {
-        return_if(src == dst);
-        if (auto iter = groups_.find(src); iter != groups_.end()) {
-            for (const Item &member : iter->second) {
-                group.insert(member);
-                ids_[member] = dst;
-            }
-            groups_.erase(src);
-        } else {
-            group.insert(item);
-            ids_[item] = dst;
+    void update_groups() const {
+        groups_.clear();
+        for (const auto &[item, id] : ids_) {
+            const U64 set = find(id);
+            groups_[set].insert(item);
+        }
+    }
+
+    // Internals adapted from https://cp-algorithms.com/data_structures/disjoint_set_union.html
+    U64 find(const U64 v) const {
+        U64 value = v;
+        while (value != parent_.at(value)) {
+            value = parent_.at(value);
+        }
+        // "Path compression" - memoize the root to avoid traversing the whole path each time
+        parent_[v] = value;
+        return value;
+    }
+
+    void make(U64 v) {
+        parent_[v] = v;
+        size_[v] = 1;
+    }
+
+    void merge(U64 a, U64 b) {
+        a = find(a);
+        b = find(b);
+        if (a != b) {
+            // Union by size
+            if (size_[a] < size_[b])
+                std::swap(a, b);
+            parent_[b] = a;
+            size_[a] += size_[b];
         }
     }
 
     U64 count_ = 0;
-    Map<U64, Group> groups_;
+    mutable Map<U64, Group> groups_;
     Map<Item, U64, Hash> ids_;
+    mutable Map<U64, U64> parent_;
+    Map<U64, U64> size_;
 };
 
 } // namespace nvl
