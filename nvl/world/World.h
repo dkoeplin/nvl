@@ -112,7 +112,6 @@ public:
         const auto message = Message::get<Msg>(src.ptr(), std::forward<Args>(args)...);
         if (entities_.has(dst)) {
             messages_[dst].push_back(std::move(message));
-            std::cout << "Send " << message << " to " << dst.ptr() << " from " << src.ptr() << std::endl;
         }
     }
 
@@ -122,7 +121,6 @@ public:
         for (const Actor &actor : dst) {
             if (entities_.has(actor)) {
                 messages_[actor].push_back(message);
-                std::cout << "Send " << message << " to " << actor.ptr() << " from " << src.ptr() << std::endl;
             }
         }
     }

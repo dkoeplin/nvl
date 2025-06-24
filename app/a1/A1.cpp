@@ -192,13 +192,7 @@ int main() {
     auto *world = window.open<nvl::A1>();
     window.open<nvl::PlayerControls>(world);
 
-    Time prev_tick = Clock::now();
-    while (!window.should_close()) {
-        if (const Time now = Clock::now(); Duration(now - prev_tick) >= world->kNanosPerTick) {
-            prev_tick = now;
-            window.tick();
-        }
-        window.react();
-        window.draw();
-    }
+    const Duration kNanosPerTick(world->kNanosPerTick);
+    const Duration kNanosPerDraw(3e7);
+    window.loop(kNanosPerTick, kNanosPerDraw);
 }

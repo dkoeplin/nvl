@@ -113,6 +113,9 @@ public:
     const Duration &last_draw_time() const { return last_draw_time_; }
     const Duration &last_tick_time() const { return last_tick_time_; }
 
+    /// Runs the outer game loop (tick, react, draw) on this window and all children.
+    void loop(const Duration &nanos_per_tick, const Duration &nanos_per_draw);
+
 protected:
     virtual List<InputEvent> detect_events() = 0;
     virtual void set_view_offset(const ViewOffset &offset) = 0;
