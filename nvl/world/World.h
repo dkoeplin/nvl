@@ -112,6 +112,7 @@ public:
         const auto message = Message::get<Msg>(src.ptr(), std::forward<Args>(args)...);
         if (entities_.has(dst)) {
             messages_[dst].push_back(std::move(message));
+            std::cout << "Send " << message << " to " << dst.ptr() << " from " << src.ptr() << std::endl;
         }
     }
 
@@ -121,6 +122,7 @@ public:
         for (const Actor &actor : dst) {
             if (entities_.has(actor)) {
                 messages_[actor].push_back(message);
+                std::cout << "Send " << message << " to " << actor.ptr() << " from " << src.ptr() << std::endl;
             }
         }
     }
@@ -219,17 +221,23 @@ void World<N>::tick() {
         }
     }
 
-    Set<Actor> idled;
-    for (Actor actor : awake_) {
-        if (auto *entity = actor.dyn_cast<Entity<N>>()) {
-            tick_entity(idled, Ref(entity));
-        }
-    }
     awake_.remove(died_.values());
-    awake_.remove(idled.values());
     entities_.remove(died_.values());
     messages_.remove(died_.values());
     died_.clear();
+
+    Set<Actor> idled;
+    for (Actor actor : awake_) {
+        if (entities_.has(actor)) {
+            if (auto *entity = actor.dyn_cast<Entity<N>>()) {
+                tick_entity(idled, Ref(entity));
+            }
+        } else {
+            idled.insert(actor);
+        }
+    }
+
+    awake_.remove(idled.values());
     msgs_max_ = std::max(msgs_max_, msgs_last_);
 }
 

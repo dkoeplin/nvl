@@ -24,6 +24,7 @@ public:
     pure constexpr Dir operator-() const { return Dir(-value); }
     pure bool operator==(const Dir &rhs) const { return value == rhs.value; }
     pure bool operator!=(const Dir &rhs) const { return value != rhs.value; }
+    pure std::string to_string() const { return value == -1 ? "-" : "+"; }
 
 private:
     explicit constexpr Dir(const I64 v) : value(v) {}

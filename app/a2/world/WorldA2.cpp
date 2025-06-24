@@ -39,15 +39,7 @@ WorldA2::WorldA2(AbstractScreen *parent)
     std::cout << "G: " << kGravityAccel << std::endl;
 
     const Material bulwark = Material::get<Bulwark>(Color::kDarkGreen);
-    List<Part<3>> ground_parts;
-    constexpr Box<3> ground_size({-1000_m, 0, -1000_m}, {1000_m, 1_m, 1000_m});
-    for (const Box<3> &box : ground_size.volumes(/*step*/ 100_m)) {
-        ground_parts.emplace_back(box, bulwark);
-    }
-    std::cout << "Creating ground with " << ground_parts.size() << " parts" << std::endl;
-    std::cout << "  over " << ground_size << std::endl;
-    spawn<Block<3>>(Pos<3>{0, 0, 0}, ground_parts);
-    std::cout << "Created ground!" << std::endl;
+    spawn<Block<3>>(Pos<3>{-10_km, 0, -10_km}, Pos<3>{20_km, 1_m, 20_km}, bulwark);
 
     constexpr Pos<3> start{0, -2_m, 0};
     player = spawn<Player>(start);
@@ -74,7 +66,7 @@ WorldA2::WorldA2(AbstractScreen *parent)
     }
 
     on_key_down[Key::P] = [this] { open<PauseScreen>(this); };
-    on_key_down[Key::N] = [this] { spawn_random_cube(); };
+    on_key_down[Key::N] = [this] { cube_rain = !cube_rain; };
 }
 
 void WorldA2::remove(const Actor &actor) {
@@ -103,7 +95,7 @@ void WorldA2::spawn_random_cube() {
 void WorldA2::tick() {
     return_if(paused);
 
-    if (ticks() - prev_generated >= ticks_per_gen) {
+    if (cube_rain && ticks() - prev_generated >= ticks_per_gen) {
         spawn_random_cube();
     }
 

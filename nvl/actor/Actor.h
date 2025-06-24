@@ -27,6 +27,8 @@ struct Actor final : CastablePtr<Actor, AbstractActor> {
     pure bool operator!=(const Actor &rhs) const { return ptr() != rhs.ptr(); }
 };
 
+inline std::ostream &operator<<(std::ostream &os, const Actor &actor) { return os << actor.ptr(); }
+
 } // namespace nvl
 
 template <>

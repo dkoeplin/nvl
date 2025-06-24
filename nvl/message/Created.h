@@ -11,6 +11,7 @@ namespace nvl {
 struct Created final : AbstractMessage {
     class_tag(Created, AbstractMessage);
     using AbstractMessage::AbstractMessage;
+    pure std::string to_string() const override { return "Created"; }
 };
 
 } // namespace nvl

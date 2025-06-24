@@ -20,6 +20,8 @@ struct Notify final : AbstractMessage {
     };
     explicit Notify(AbstractActor *src, const Cause cause) : AbstractMessage(src), cause(cause) {}
 
+    pure std::string to_string() const override { return "Notify"; }
+
     Cause cause;
 };
 

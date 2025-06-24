@@ -15,6 +15,8 @@ struct Destroy final : AbstractMessage {
 
     explicit Destroy(AbstractActor *src, Cause cause) : AbstractMessage(src), cause(cause) {}
 
+    pure std::string to_string() const override { return "Destroy"; }
+
     Cause cause;
 };
 

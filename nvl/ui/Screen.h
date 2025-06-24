@@ -52,6 +52,8 @@ public:
 
     void update();
 
+    pure Window *window() const { return window_; }
+
 protected:
     /// Mark the current input event being processed as propagated to other siblings and/or children.
     void propagate_event() { propagated_event_ = true; }

@@ -12,6 +12,10 @@ struct Hit final : AbstractMessage {
     explicit Hit(AbstractActor *src, const Box<N> box, const I64 strength)
         : AbstractMessage(src), box(box), strength(strength) {}
 
+    pure std::string to_string() const override {
+        return "Hit(" + box.to_string() + ", " + std::to_string(strength) + ")";
+    }
+
     Box<N> box;
     I64 strength = 0;
 };

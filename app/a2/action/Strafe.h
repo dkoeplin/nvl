@@ -10,6 +10,7 @@ struct Strafe final : PlayerAction {
     class_tag(Strafe, PlayerAction);
     explicit Strafe(AbstractActor *src, const Dir dir) : PlayerAction(src), dir(dir) {}
     Status act(Player &player) const override;
+    pure std::string to_string() const override { return "Strafe(" + dir.to_string() + ")"; }
     Dir dir;
 };
 

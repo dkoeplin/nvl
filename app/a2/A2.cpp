@@ -20,7 +20,7 @@ int main() {
     window.open<PlayerControls>(world);
     window.open<DebugScreen>(world);
 
-    const Duration kNanosPerDraw(3e7);
+    const Duration kNanosPerDraw(3e7); // 30ms, ~33 fps
     const Duration kNanosPerTick(world->kNanosPerTick);
 
     Time prev_tick = Clock::now();

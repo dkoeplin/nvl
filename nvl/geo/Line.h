@@ -4,10 +4,8 @@
 #include "nvl/geo/Tuple.h"
 #include "nvl/geo/Volume.h"
 #include "nvl/macros/Aliases.h"
-#include "nvl/macros/Hot.h"
 #include "nvl/macros/Pure.h"
 #include "nvl/macros/ReturnIf.h"
-#include "nvl/macros/Unroll.h"
 
 namespace nvl {
 

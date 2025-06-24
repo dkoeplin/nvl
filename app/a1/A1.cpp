@@ -12,15 +12,18 @@ namespace nvl {
 struct Jump final : AbstractMessage {
     class_tag(Jump, AbstractMessage);
     explicit Jump(AbstractActor *src) : AbstractMessage(src) {}
+    pure std::string to_string() const override { return "Jump"; }
 };
 struct Move final : AbstractMessage {
     class_tag(Move, AbstractMessage);
     explicit Move(AbstractActor *src, const Dir dir) : AbstractMessage(src), dir(dir) {}
+    pure std::string to_string() const override { return "Move(" + dir.to_string() + ")"; }
     Dir dir;
 };
 struct Brake final : AbstractMessage {
     class_tag(Brake, AbstractMessage);
     explicit Brake(AbstractActor *src) : AbstractMessage(src) {}
+    pure std::string to_string() const override { return "Brake"; }
 };
 
 struct Player final : Entity<2> {
@@ -89,7 +92,7 @@ struct Player final : Entity<2> {
 struct A1 final : World<2> {
     class_tag(A1, World<2>);
 
-    explicit A1(AbstractScreen *window) : World(window, {.gravity_accel = 3}) {
+    explicit A1(AbstractScreen *window) : World(window, {.maximum_y = window->window()->height()}) {
         const Material bulwark = Material::get<Bulwark>();
         const Pos<2> min = {0, window_->height() - 50};
         const Pos<2> max = {window_->width(), window_->height()};
@@ -119,7 +122,6 @@ struct A1 final : World<2> {
         World::tick();
         const auto diff = player->loc() - prev_player_loc;
         view.offset += diff;
-
         if (ticks() - prev_generated >= ticks_per_gen) {
             const auto slots = ceil_div(window_->width(), 50);
             const auto left = random.uniform<I64, I64>(-4, slots);
@@ -144,7 +146,7 @@ struct A1 final : World<2> {
     }
 
     Player *player;
-    U64 paused = 1;
+    U64 paused = 0;
     Dir pause_dir = Dir::Pos;
     U64 prev_generated = 0;
     U64 ticks_per_gen = 10;

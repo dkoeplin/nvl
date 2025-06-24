@@ -584,6 +584,7 @@ protected:
             });
             if (remove_all) {
                 items_.remove(pair->first);
+                item_ids_.remove(pair->second);
             }
         }
         return *this;

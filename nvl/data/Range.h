@@ -99,8 +99,8 @@ MRange<typename IterType::value_type> make_mrange(Args &&...args) {
     return Range<Value, View::kMutable>(i0, i1);
 }
 
-template <typename Value>
-std::ostream &operator<<(std::ostream &os, const Range<Value> &range) {
+template <typename Value, View Type>
+std::ostream &operator<<(std::ostream &os, const Range<Value, Type> &range) {
     os << "{";
     auto iter = range.begin();
     const auto end = range.end();

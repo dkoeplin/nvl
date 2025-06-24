@@ -29,6 +29,7 @@ struct WorldA2 final : World<3> {
     U64 prev_generated = 0;
     U64 ticks_per_gen = 2;
     bool paused = false;
+    bool cube_rain = false;
 
     std::vector<Material> materials;
 };
