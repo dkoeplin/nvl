@@ -52,7 +52,6 @@ void Window::pop_view() {
 }
 
 void Window::loop(const Duration &nanos_per_tick, const Duration &nanos_per_draw) {
-
     Time prev_tick = Clock::now();
     Time prev_draw = Clock::now();
     while (!should_close()) {

@@ -1,7 +1,19 @@
 
+add_library(a0-lib SHARED
+        a0/tool/BlockBreaker.cpp
+        a0/tool/BlockBreaker.h
+        a0/tool/BlockCreator.cpp
+        a0/tool/BlockCreator.h
+        a0/tool/BlockRemover.cpp
+        a0/tool/BlockRemover.h
+        a0/tool/Tool.h
+        a0/tool/ToolBelt.h
+)
+target_link_libraries(a0-lib PUBLIC nvl)
+target_include_directories(a0-lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+
 add_executable(a0 ${CMAKE_CURRENT_SOURCE_DIR}/a0/A0.cpp)
-target_link_libraries(a0 PRIVATE nvl)
-target_include_directories(a0 PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(a0 PRIVATE a0-lib)
 
 add_executable(a1 ${CMAKE_CURRENT_SOURCE_DIR}/a1/A1.cpp)
 target_link_libraries(a1 PRIVATE nvl)

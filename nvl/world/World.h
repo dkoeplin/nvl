@@ -4,8 +4,10 @@
 #include <utility>
 
 #include "nvl/actor/Actor.h"
+#include "nvl/actor/Part.h"
 #include "nvl/data/Map.h"
 #include "nvl/data/Set.h"
+#include "nvl/entity/Entity.h"
 #include "nvl/geo/RTree.h"
 #include "nvl/geo/Volume.h"
 #include "nvl/math/Random.h"
@@ -67,7 +69,7 @@ public:
           kGravity(Pos<N>::unit(kVerticalDim, kGravityAccel)), // Gravity as a vector
           kMaxY(params.maximum_y) {
 
-        on_mouse_move[{}] = on_mouse_move[{Mouse::Any}] = [this] {
+        on_mouse_move[{Mouse::Any}] = [this] {
             propagate_event(); // Don't prevent children from seeing the mouse movement event
             if constexpr (N == 2) {
                 auto *view2d = view_.dyn_cast<View2D>();

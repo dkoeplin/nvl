@@ -49,9 +49,7 @@ bool AbstractScreen::consume_event(const InputEvent &event) {
         func = func ? func : on_mouse_down.get(Mouse::Any);
     } else if (auto *mouse_move = event.dyn_cast<MouseMove>()) {
         func = on_mouse_move.get(mouse_move->buttons);
-        if (!window_->pressed_mouse().empty()) {
-            func = func ? func : on_mouse_move.get({Mouse::Any});
-        }
+        func = func ? func : on_mouse_move.get({Mouse::Any});
     } else if (auto *mouse_scroll = event.dyn_cast<MouseScroll>()) {
         func = on_mouse_scroll.get(mouse_scroll->scroll);
     }
