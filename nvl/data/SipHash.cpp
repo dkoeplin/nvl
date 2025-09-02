@@ -42,7 +42,7 @@ U64 SipHash<U, F>::finalize() {
 }
 
 template <int U, int F>
-void SipHash<U, F>::compress(U64 rounds) {
+void SipHash<U, F>::compress(const U64 rounds) {
     for (size_t i = 0; i < rounds; ++i) {
         // ARX network: add, rotate, exclusive-or.
         v0 += v1;

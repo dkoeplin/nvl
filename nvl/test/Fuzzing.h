@@ -84,6 +84,6 @@ private:
 };
 
 template <typename Result, typename... Args>
-class FuzzingTestFixture : public Fuzzer<Result, Args...>, public ::testing::Test {};
+class FuzzingTestFixture : public Fuzzer<Result, Args...>, public testing::Test {};
 
 } // namespace nvl::test

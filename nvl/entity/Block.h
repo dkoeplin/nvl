@@ -19,8 +19,8 @@ template <U64 N>
 class Block : public Entity<N> {
 public:
     class_tag(Block<N>, Entity<N>);
-    using Edge = typename Entity<N>::Edge;
-    using Part = typename Entity<N>::Part;
+    using Edge = Entity<N>::Edge;
+    using Part = Entity<N>::Part;
 
     /**
      * Creates a Block of [material] at location [loc] with [shape].

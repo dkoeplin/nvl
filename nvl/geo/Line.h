@@ -112,12 +112,12 @@ pure Maybe<Intersect<N>> intersect(const Line<N> &line, const Box<N> &box) {
     // If the line intersects with the box, and the point a is outside the box,
     // the closest point to a should be on one of the faces of the box.
     for (U64 d = 0; d < N * 2; ++d) {
-        const Vec<N> &vec = (d & 0x1) ? max : min;
+        const Vec<N> &vec = d & 0x1 ? max : min;
         if (const auto pt = line.interpolate(d / 2, vec[d / 2])) {
             if (pt->dist >= 0 && pt->dist < closest_dist && box.contains(pt->pt)) {
                 closest_dist = pt->dist;
                 closest_pt = pt->pt;
-                closest_face = Face((d & 0x1) ? Dir::Pos : Dir::Neg, d);
+                closest_face = Face(d & 0x1 ? Dir::Pos : Dir::Neg, d);
             }
         }
     }

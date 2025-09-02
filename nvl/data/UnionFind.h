@@ -66,7 +66,7 @@ private:
         return value;
     }
 
-    void make(U64 v) {
+    void make(const U64 v) {
         parent_[v] = v;
         size_[v] = 1;
     }

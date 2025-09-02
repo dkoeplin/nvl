@@ -126,7 +126,7 @@ void RayWindow::line(const Color &color, const Line<3> &line) {
     DrawLine3D(start, end, raycolor(color));
 }
 
-void RayWindow::text(const Color &color, const Pos<2> &pos, I64 font_size, std::string_view text) {
+void RayWindow::text(const Color &color, const Pos<2> &pos, const I64 font_size, std::string_view text) {
     DrawText(text.data(), pos[0], pos[1], font_size, raycolor(color));
 }
 
@@ -169,10 +169,10 @@ void RayWindow::set_view_offset(const ViewOffset &view) {
     }
 }
 
-void RayWindow::end_view_offset(const ViewOffset &offset) {
-    if (offset.isa<View2D>()) {
+void RayWindow::end_view_offset(const ViewOffset &view) {
+    if (view.isa<View2D>()) {
         EndMode2D();
-    } else if (offset.isa<View3D>()) {
+    } else if (view.isa<View3D>()) {
         EndMode3D();
         scale_ = 1.0;
     } else {

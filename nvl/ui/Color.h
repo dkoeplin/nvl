@@ -46,10 +46,10 @@ struct Color {
 
     /// Returns a scaled version of this color that multiplies the R, G, and B channels by (highlight / 1024).
     pure constexpr Color highlight(const Color &highlight) const {
-        return {.r = std::min<U64>((r * highlight.r) / 1024, 0xFF),
-                .g = std::min<U64>((g * highlight.g) / 1024, 0xFF),
-                .b = std::min<U64>((b * highlight.b) / 1024, 0xFF),
-                .a = std::min<U64>((a * highlight.a) / 1024, 0xFF)};
+        return {.r = std::min<U64>(r * highlight.r / 1024, 0xFF),
+                .g = std::min<U64>(g * highlight.g / 1024, 0xFF),
+                .b = std::min<U64>(b * highlight.b / 1024, 0xFF),
+                .a = std::min<U64>(a * highlight.a / 1024, 0xFF)};
     }
 
     pure constexpr bool operator==(const Color &rhs) const {

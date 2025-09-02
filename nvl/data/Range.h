@@ -85,7 +85,7 @@ using MRange = Range<Value, View::kMutable>;
  */
 template <typename IterType, View Type = View::kImmutable, typename... Args>
 Range<typename IterType::value_type, Type> make_range(Args &&...args) {
-    using Value = typename IterType::value_type;
+    using Value = IterType::value_type;
     Iterator<Value, Type> i0 = IterType::template begin<Type>(std::forward<Args>(args)...);
     Iterator<Value, Type> i1 = IterType::template end<Type>(std::forward<Args>(args)...);
     return Range<Value, Type>(i0, i1);
@@ -93,7 +93,7 @@ Range<typename IterType::value_type, Type> make_range(Args &&...args) {
 
 template <typename IterType, typename... Args>
 MRange<typename IterType::value_type> make_mrange(Args &&...args) {
-    using Value = typename IterType::value_type;
+    using Value = IterType::value_type;
     Iterator<Value, View::kMutable> i0 = IterType::template begin<View::kMutable>(std::forward<Args>(args)...);
     Iterator<Value, View::kMutable> i1 = IterType::template end<View::kMutable>(std::forward<Args>(args)...);
     return Range<Value, View::kMutable>(i0, i1);

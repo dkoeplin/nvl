@@ -327,8 +327,8 @@ private:
                     Tuple<N, T> result_end;
                     for (U64 d = 0; d < N; ++d) {
                         if (i == d) {
-                            result_min[d] = (dir == Dir::Neg) ? min[d] : both.end[d];
-                            result_end[d] = (dir == Dir::Neg) ? both.min[d] : end[d];
+                            result_min[d] = dir == Dir::Neg ? min[d] : both.end[d];
+                            result_end[d] = dir == Dir::Neg ? both.min[d] : end[d];
                         } else if (d > i) {
                             result_min[d] = min[d];
                             result_end[d] = end[d];
@@ -427,8 +427,8 @@ struct Volume<N, T>::face_iterator final : AbstractIteratorCRTP<face_iterator, E
     void update_face() {
         const U64 i = face_.dim;
         return_if(i >= N);
-        face_.box.min = (face_.dir == Dir::Neg) ? box_.min : box_.min.with(i, box_.end[i]);
-        face_.box.end = (face_.dir == Dir::Neg) ? box_.end.with(i, box_.min[i]) : box_.end;
+        face_.box.min = face_.dir == Dir::Neg ? box_.min : box_.min.with(i, box_.end[i]);
+        face_.box.end = face_.dir == Dir::Neg ? box_.end.with(i, box_.min[i]) : box_.end;
     }
 
     Volume box_;
@@ -456,8 +456,8 @@ Edge<N, T> Volume<N, T>::edge(const Dir dir, const U64 dim, const I64 width, con
     auto unit = Tuple<N, T>::unit(dim);
     auto inner = unit * dist;
     auto outer = unit * width;
-    auto edge_min = (dir == Dir::Neg) ? min - outer - inner : min.with(dim, end[dim]) + inner;
-    auto edge_end = (dir == Dir::Neg) ? end.with(dim, min[dim]) - inner : end + outer + inner;
+    auto edge_min = dir == Dir::Neg ? min - outer - inner : min.with(dim, end[dim]) + inner;
+    auto edge_end = dir == Dir::Neg ? end.with(dim, min[dim]) - inner : end + outer + inner;
     return Edge<N, T>(dir, dim, Volume(edge_min, edge_end));
 }
 

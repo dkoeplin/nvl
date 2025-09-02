@@ -13,7 +13,7 @@ struct Destroy final : AbstractMessage {
 
     enum Cause { kOutOfBounds, kRemoved };
 
-    explicit Destroy(AbstractActor *src, Cause cause) : AbstractMessage(src), cause(cause) {}
+    explicit Destroy(AbstractActor *src, const Cause cause) : AbstractMessage(src), cause(cause) {}
 
     pure std::string to_string() const override { return "Destroy"; }
 

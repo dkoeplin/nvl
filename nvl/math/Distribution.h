@@ -83,23 +83,22 @@ Distribution Distribution::Custom(const std::function<T(Random &)> &func) {
 
 template <typename T>
 T Distribution::next(Random &random) const {
-    if (const auto *uniform_bool = dyn_cast<UniformDistribution<bool>>()) {
+    if (const auto *uniform_bool = dyn_cast<UniformDistribution<bool>>())
         return random.uniform<T, bool>(uniform_bool->min, uniform_bool->max);
-    } else if (const auto *uniform_u64 = dyn_cast<UniformDistribution<U64>>()) {
+    if (const auto *uniform_u64 = dyn_cast<UniformDistribution<U64>>())
         return random.uniform<T, U64>(uniform_u64->min, uniform_u64->max);
-    } else if (const auto *uniform_i64 = dyn_cast<UniformDistribution<I64>>()) {
+    if (const auto *uniform_i64 = dyn_cast<UniformDistribution<I64>>())
         return random.uniform<T, I64>(uniform_i64->min, uniform_i64->max);
-    } else if (const auto *uniform_f64 = dyn_cast<UniformDistribution<F64>>()) {
+    if (const auto *uniform_f64 = dyn_cast<UniformDistribution<F64>>())
         return random.uniform<T, F64>(uniform_f64->min, uniform_f64->max);
-    } else if (const auto *normal_u64 = dyn_cast<NormalDistribution<U64>>()) {
+    if (const auto *normal_u64 = dyn_cast<NormalDistribution<U64>>())
         return random.normal<T, U64>(normal_u64->mean, normal_u64->stddev);
-    } else if (const auto *normal_i64 = dyn_cast<NormalDistribution<I64>>()) {
+    if (const auto *normal_i64 = dyn_cast<NormalDistribution<I64>>())
         return random.normal<T, I64>(normal_i64->mean, normal_i64->stddev);
-    } else if (const auto *normal_f64 = dyn_cast<NormalDistribution<F64>>()) {
+    if (const auto *normal_f64 = dyn_cast<NormalDistribution<F64>>())
         return random.normal<T, F64>(normal_f64->mean, normal_f64->stddev);
-    } else if (const auto *custom = dyn_cast<CustomDistribution<T>>()) {
+    if (const auto *custom = dyn_cast<CustomDistribution<T>>())
         return custom->func(random);
-    }
     UNREACHABLE;
 }
 

@@ -44,9 +44,9 @@ struct ViewOffset final : CastableShared<ViewOffset, AbstractViewOffset> {
     template <U64 N>
     static ViewOffset zero() {
         if constexpr (N == 2) {
-            return ViewOffset::get<View2D>();
+            return get<View2D>();
         } else if constexpr (N == 3) {
-            return ViewOffset::get<View3D>();
+            return get<View3D>();
         } else {
             UNREACHABLE;
         }

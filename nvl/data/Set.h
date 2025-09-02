@@ -12,7 +12,7 @@ template <typename Value, typename Hash = std::hash<Value>>
 class Set final : std::unordered_set<Value, Hash> {
 public:
     using parent = std::unordered_set<Value, Hash>;
-    using value_type = typename parent::value_type;
+    using value_type = parent::value_type;
 
     struct iterator final : AbstractIteratorCRTP<iterator, Value>, parent::const_iterator {
         class_tag(Set::iterator, AbstractIterator<Value>);
@@ -24,11 +24,11 @@ public:
         static Iterator<Value, Type> end(const Set &set) {
             return make_iterator<iterator, Type>(set._end());
         }
-        explicit iterator(typename parent::const_iterator iter) : parent::const_iterator(iter) {}
+        explicit iterator(parent::const_iterator iter) : parent::const_iterator(iter) {}
         void increment() override { parent::const_iterator::operator++(); }
         pure const Value *ptr() override { return &parent::const_iterator::operator*(); }
         pure bool operator==(const iterator &rhs) const override {
-            return *static_cast<const typename parent::const_iterator *>(this) == rhs;
+            return *static_cast<const parent::const_iterator *>(this) == rhs;
         }
     };
 
@@ -97,8 +97,8 @@ public:
     pure bool operator!=(const Set &rhs) const { return !(*this == rhs); }
 
 protected:
-    pure typename parent::const_iterator _begin() const { return parent::begin(); }
-    pure typename parent::const_iterator _end() const { return parent::end(); }
+    pure parent::const_iterator _begin() const { return parent::begin(); }
+    pure parent::const_iterator _end() const { return parent::end(); }
 };
 
 template <typename Value, typename Hash>

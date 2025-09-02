@@ -13,7 +13,7 @@ template <typename Value>
 class List : std::vector<Value> {
 public:
     using parent = std::vector<Value>;
-    using value_type = typename parent::value_type;
+    using value_type = parent::value_type;
 
     struct iterator final : AbstractIteratorCRTP<iterator, Value>, parent::const_iterator {
         class_tag(List::iterator, AbstractIterator<Value>);
@@ -25,7 +25,7 @@ public:
         static Iterator<Value, Type> end(const List &list) {
             return make_iterator<iterator, Type>(list._end());
         }
-        explicit iterator(typename parent::const_iterator iter) : parent::const_iterator(iter) {}
+        explicit iterator(parent::const_iterator iter) : parent::const_iterator(iter) {}
         void increment() override { parent::const_iterator::operator++(); }
         pure const Value *ptr() override { return &parent::const_iterator::operator*(); }
         pure U64 operator-(const iterator &rhs) const override { return this->base() - rhs.base(); }
@@ -42,8 +42,7 @@ public:
         static Iterator<Value, Type> end(const List &list) {
             return make_iterator<reverse_iterator, Type>(list._rend());
         }
-        explicit reverse_iterator(typename parent::const_reverse_iterator iter)
-            : parent::const_reverse_iterator(iter) {}
+        explicit reverse_iterator(parent::const_reverse_iterator iter) : parent::const_reverse_iterator(iter) {}
         void increment() override { parent::const_reverse_iterator::operator++(); }
         pure const Value *ptr() override { return &parent::const_reverse_iterator::operator*(); }
         pure U64 operator-(const reverse_iterator &rhs) const override { return this->base() - rhs.base(); }
@@ -117,10 +116,10 @@ public:
 
 private:
     friend struct iterator;
-    typename std::vector<Value>::const_iterator _begin() const { return parent::begin(); }
-    typename std::vector<Value>::const_iterator _end() const { return parent::end(); }
-    typename std::vector<Value>::const_reverse_iterator _rbegin() const { return parent::rbegin(); }
-    typename std::vector<Value>::const_reverse_iterator _rend() const { return parent::rend(); }
+    std::vector<Value>::const_iterator _begin() const { return parent::begin(); }
+    std::vector<Value>::const_iterator _end() const { return parent::end(); }
+    std::vector<Value>::const_reverse_iterator _rbegin() const { return parent::rbegin(); }
+    std::vector<Value>::const_reverse_iterator _rend() const { return parent::rend(); }
 
     using std::vector<Value>::insert;
 };

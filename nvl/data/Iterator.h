@@ -168,14 +168,14 @@ using MIterator = Iterator<Value, View::kMutable>;
 
 template <typename IterType, View Type = View::kImmutable, typename... Args>
 Iterator<typename IterType::value_type, Type> make_iterator(Args &&...args) {
-    using Value = typename IterType::value_type;
+    using Value = IterType::value_type;
     std::shared_ptr<AbstractIterator<Value>> ptr = std::make_shared<IterType>(std::forward<Args>(args)...);
     return Iterator<Value, Type>(ptr);
 }
 
 template <typename IterType, typename... Args>
 MIterator<typename IterType::value_type> make_miterator(Args &&...args) {
-    using Value = typename IterType::value_type;
+    using Value = IterType::value_type;
     std::shared_ptr<AbstractIterator<Value>> ptr = std::make_shared<IterType>(std::forward<Args>(args)...);
     return Iterator<Value, View::kMutable>(ptr);
 }

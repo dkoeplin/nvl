@@ -25,7 +25,7 @@ protected:
     explicit BRTreeEdges(Range<Item> items) : items_(items), changed_(true) {}
     explicit BRTreeEdges(Range<ItemRef> items) : items_(items), changed_(true) {}
 
-    void mark_changed() { changed_ = true; }
+    void mark_changed() const { changed_ = true; }
 
     EdgeTree &get_edges() const {
         if (changed_) {
@@ -67,7 +67,7 @@ private:
  * @tparam Item - Value type being stored.
  * @tparam ItemRef - Type to use for providing references to items held in this tree. Default is Rel<Item>.
  * @tparam kMaxEntries - Maximum number of entries per node. Defaults to 10.
- * @tparam kGridExpMin - Minimum node grid size (2 ^ min_grid_exp). Defaults to 2.
+ * @tparam kGridExpMin - Minimum node grid size (2 ** min_grid_exp). Defaults to 2.
  */
 template <U64 N, typename Item, typename ItemRef = Rel<Item>, U64 kMaxEntries = 10, U64 kGridExpMin = 2>
     requires trait::HasBBox<Item>
@@ -78,7 +78,7 @@ public:
     using Parent = detail::BRTreeEdges<N, Item, ItemRef, kMaxEntries, kGridExpMin>;
     using ItemTree = RTree<N, Item, ItemRef, kMaxEntries, kGridExpMin>;
     using EdgeTree = RTree<N, Edge, EdgeRef, kMaxEntries, kGridExpMin>;
-    using Intersect = typename ItemTree::Intersect;
+    using Intersect = ItemTree::Intersect;
 
     BRTree() : Parent() {}
     BRTree(std::initializer_list<Item> items) : Parent(items) {}

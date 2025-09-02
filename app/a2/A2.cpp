@@ -10,7 +10,7 @@ using namespace nvl;
 using namespace a2;
 
 int main() {
-    nvl::register_signal_handlers();
+    register_signal_handlers();
 
     RayWindow window("App", {1000, 1000});
     window.set_mouse_mode(Window::MouseMode::kViewport);

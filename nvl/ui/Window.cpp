@@ -9,14 +9,14 @@ Window::Window(const std::string &, Tuple<2, I64>) : AbstractScreen(nullptr) { w
 void Window::draw() {
     const Time start = Clock::now();
     predraw();
-    AbstractScreen::fwd(this, [](Screen screen) { screen->draw(); });
+    fwd(this, [](Screen screen) { screen->draw(); });
     postdraw();
     last_draw_time_ = Clock::now() - start;
 }
 
 void Window::tick() {
     const Time start = Clock::now();
-    AbstractScreen::bwd(this, [](Screen screen) {
+    bwd(this, [](Screen screen) {
         screen->tick();
         screen->update();
     });
@@ -26,7 +26,7 @@ void Window::tick() {
 
 void Window::react() {
     List<InputEvent> events = detect_events();
-    AbstractScreen::bwd(this, [&](Screen screen) {
+    bwd(this, [&](Screen screen) {
         events.remove_if([&](const InputEvent &event) { return !screen->consume_event(event); });
         screen->react();
         screen->update();

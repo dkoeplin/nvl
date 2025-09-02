@@ -57,7 +57,7 @@ struct Player final : Entity<2> {
             window->fill_box(color, part.bbox(loc));
         }
         if (digging) {
-            const auto color = Color::kBlue.highlight({.a = 100});
+            constexpr auto color = Color::kBlue.highlight({.a = 100});
             const auto bbox = this->bbox();
             const Box<2> dig_box{bbox.min - 10, {bbox.end[0] + 10, bbox.end[1]}};
             window->fill_box(color, dig_box);
@@ -105,7 +105,7 @@ struct A1 final : World<2> {
         player = spawn<Player>(start);
         view_ = ViewOffset::at(start - window_->shape() / 2);
 
-        on_key_down[Key::P] = [this] { paused = (paused > 0) ? 0 : 255; };
+        on_key_down[Key::P] = [this] { paused = paused > 0 ? 0 : 255; };
     }
 
     View2D &view2d() { return *view_.dyn_cast<View2D>(); }

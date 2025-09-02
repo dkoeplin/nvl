@@ -39,7 +39,7 @@ public:
 
     /// Returns the delta between current and previous mouse position, in window coordinates.
     pure Pos<2> mouse_delta() const {
-        return (curr_mouse_.has_value() && prev_mouse_.has_value()) ? *curr_mouse_ - *prev_mouse_ : Pos<2>::zero;
+        return curr_mouse_.has_value() && prev_mouse_.has_value() ? *curr_mouse_ - *prev_mouse_ : Pos<2>::zero;
     }
 
     pure F64 scroll_x() const { return scroll_[0]; }

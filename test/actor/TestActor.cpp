@@ -27,7 +27,7 @@ struct SimpleActor final : AbstractActor {
 
 TEST(TestActor, construct) {
     auto actor = SimpleActor(Box<2>({0, 0}, {32, 32}));
-    auto status = actor.tick({});
+    const auto status = actor.tick({});
     EXPECT_EQ(status, nvl::Status::kNone);
 }
 

@@ -50,7 +50,7 @@ template <U64 N, typename Item, typename ItemRef, U64 kMaxEntries>
 pure List<IDs> collect_ids(RTree<N, Item, ItemRef, kMaxEntries> &tree)
     requires HasID<Item>
 {
-    using Node = typename RTree<N, Item, ItemRef, kMaxEntries>::Node;
+    using Node = RTree<N, Item, ItemRef, kMaxEntries>::Node;
     List<IDs> list;
     tree.preorder_walk_nodes([&](const Node *node) {
         Set<U64> ids;
@@ -339,9 +339,9 @@ TEST_F(FuzzComponents, components2d) {
     fuzz([](bool &result, const Pos<2> &shape0, const Pos<2> &shape1, const Pos<2> &loc) {
         const Box<2> box(Pos<2>::zero, shape0);
         const Box<2> rem(loc, loc + shape1);
-        const auto diff = box.diff(rem);
+        const List<Box<2>> diff = box.diff(rem);
         RTree<2, Box<2>> tree;
-        tree.insert(diff.range());
+        tree.insert(diff);
         EXPECT_EQ(tree.components().size(), 1);
         result = true;
     });

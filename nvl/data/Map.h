@@ -47,13 +47,13 @@ public:
             return make_iterator<entry_iterator, Type>(map._end());
         }
 
-        explicit entry_iterator(typename parent::const_iterator iter) : parent::const_iterator(iter) {}
+        explicit entry_iterator(parent::const_iterator iter) : parent::const_iterator(iter) {}
 
         void increment() override { parent::const_iterator::operator++(); }
         const Entry *ptr() override { return &parent::const_iterator::operator*(); }
 
         pure bool operator==(const entry_iterator &rhs) const override {
-            return *static_cast<const typename parent::const_iterator *>(this) == rhs;
+            return *static_cast<const parent::const_iterator *>(this) == rhs;
         }
     };
 
@@ -74,13 +74,13 @@ public:
             return make_iterator<value_iterator, Type>(map._end());
         }
 
-        explicit value_iterator(typename parent::const_iterator iter) : parent::const_iterator(iter) {}
+        explicit value_iterator(parent::const_iterator iter) : parent::const_iterator(iter) {}
 
         void increment() override { parent::const_iterator::operator++(); }
         const V *ptr() override { return &parent::const_iterator::operator->()->second; }
 
         pure bool operator==(const value_iterator &rhs) const override {
-            return *static_cast<const typename parent::const_iterator *>(this) == rhs;
+            return *static_cast<const parent::const_iterator *>(this) == rhs;
         }
     };
 
@@ -102,13 +102,13 @@ public:
             return make_iterator<key_iterator, Type>(map._end());
         }
 
-        explicit key_iterator(typename parent::const_iterator iter) : parent::const_iterator(iter) {}
+        explicit key_iterator(parent::const_iterator iter) : parent::const_iterator(iter) {}
 
         void increment() override { parent::const_iterator::operator++(); }
         const K *ptr() override { return &parent::const_iterator::operator->()->first; }
 
         pure bool operator==(const key_iterator &rhs) const override {
-            return *static_cast<const typename parent::const_iterator *>(this) == rhs;
+            return *static_cast<const parent::const_iterator *>(this) == rhs;
         }
     };
 
@@ -222,8 +222,8 @@ public:
     pure Iterator<K> keys_end() const { return key_iterator::template end<View::kImmutable>(*this); }
 
 protected:
-    pure typename parent::const_iterator _begin() const { return parent::begin(); }
-    pure typename parent::const_iterator _end() const { return parent::end(); }
+    pure parent::const_iterator _begin() const { return parent::begin(); }
+    pure parent::const_iterator _end() const { return parent::end(); }
 };
 
 template <typename K, typename V, typename Hash, typename Equal, typename Allocator>

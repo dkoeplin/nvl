@@ -43,7 +43,7 @@ public:
     using EntityTree = RTree<N, Entity<N>, Actor, kMaxEntries, kGridExpMin>;
 
     struct Intersect : nvl::Intersect<N> {
-        Intersect(const nvl::Intersect<N> &init, Actor actor, Ref<Part<N>> part)
+        Intersect(const nvl::Intersect<N> &init, const Actor actor, Ref<Part<N>> part)
             : nvl::Intersect<N>(init), actor(actor), part(part) {}
         Actor actor;
         Ref<Part<N>> part;
@@ -131,7 +131,7 @@ public:
     /// Returns a reference to the resulting copy.
     Actor reify(std::unique_ptr<Entity<N>> entity) {
         Actor result = entities_.take(std::move(entity));
-        Entity<N> *copy = result.template dyn_cast<Entity<N>>();
+        Entity<N> *copy = result.dyn_cast<Entity<N>>();
         awake_.emplace(copy);
         copy->bind(this);
         return result;
@@ -140,7 +140,7 @@ public:
     template <typename T, typename... Args>
     T *spawn(Args &&...args) {
         Actor actor = entities_.template emplace<T>(std::forward<Args>(args)...);
-        if (Entity<N> *entity = actor.template dyn_cast<Entity<N>>()) {
+        if (Entity<N> *entity = actor.dyn_cast<Entity<N>>()) {
             awake_.emplace(entity);
             entity->bind(this);
         }
@@ -150,7 +150,7 @@ public:
     template <typename T, typename... Args>
     T *spawn_by(const Actor src, Args &&...args) {
         Actor actor = entities_.template emplace<T>(std::forward<Args>(args)...);
-        if (Entity<N> *entity = actor.template dyn_cast<Entity<N>>()) {
+        if (Entity<N> *entity = actor.dyn_cast<Entity<N>>()) {
             awake_.emplace(entity);
             entity->bind(this);
         }
@@ -191,14 +191,14 @@ protected:
 };
 
 template <U64 N>
-pure Maybe<typename World<N>::Intersect> World<N>::first_except(const Line<N> &line, const Actor &act) const {
+pure Maybe<typename World<N>::Intersect> World<N>::first_except(const Line<N> &line, const Actor &actor) const {
     Maybe<Intersect> closest = None;
-    for (Actor actor : entities({floor(line.a()), ceil(line.b())})) {
-        if (auto *entity = actor.dyn_cast<Entity<N>>(); entity && actor != act) {
+    for (Actor other : entities({floor(line.a()), ceil(line.b())})) {
+        if (auto *entity = other.dyn_cast<Entity<N>>(); entity && other != actor) {
             if (auto int0 = line.intersect(entity->bbox())) {
                 if (auto int1 = entity->first(line)) {
                     if (!closest.has_value() || int1->dist < closest->dist) {
-                        closest = Intersect(*int1, actor, int1->item);
+                        closest = Intersect(*int1, other, int1->item);
                     }
                 }
             }

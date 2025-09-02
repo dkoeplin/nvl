@@ -24,7 +24,7 @@ public:
     using Part = nvl::Part<N>;
     using Edge = nvl::Edge<N, I64>;
     using Tree = BRTree<N, Part, Rel<Part>, kMaxEntries, kGridExpMin>;
-    using Intersect = typename Tree::Intersect;
+    using Intersect = Tree::Intersect;
 
     explicit Entity(Pos<N> loc, Range<Rel<Part>> parts = {}) : parts_(loc, parts) {}
     explicit Entity(Pos<N> loc, Range<Part> parts) : parts_(loc, parts) {}
@@ -148,14 +148,14 @@ Pos<N> Entity<N>::next_velocity() const {
         if (v != 0 || a != 0) {
             for (const Rel<Part> &part : parts()) {
                 const Box<N> box = part->box + loc();
-                const I64 x = (v >= 0) ? box.end[i] : box.min[i];
+                const I64 x = v >= 0 ? box.end[i] : box.min[i];
                 const Box<N> trj = box.with(i, x, x + v_next);
                 for (Actor actor : world_->entities(trj)) {
                     if (auto *entity = actor.dyn_cast<Entity<N>>(); entity && entity != this) {
                         const I64 entity_x = entity->loc()[i];
                         for (const Rel<Part> &other : entity->parts(trj)) {
-                            v_next = (v >= 0) ? std::clamp<I64>(other->box.min[i] + entity_x - x, 0, v_next)
-                                              : std::clamp<I64>(x - entity_x - other->box.end[i], v_next, 0);
+                            v_next = v >= 0 ? std::clamp<I64>(other->box.min[i] + entity_x - x, 0, v_next)
+                                            : std::clamp<I64>(x - entity_x - other->box.end[i], v_next, 0);
                         }
                     }
                 }
