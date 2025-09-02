@@ -94,7 +94,7 @@ add_library(nvl SHARED
         nvl/world/World.h
 )
 
-set(RAYLIB_VERSION 5.0)
+set(RAYLIB_VERSION 5.5)
 find_package(raylib ${RAYLIB_VERSION} REQUIRED)
 
 target_include_directories(nvl PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
@@ -121,5 +121,3 @@ target_link_libraries(nvl-test PUBLIC nvl gmock gtest_main)
 
 add_subdirectory(app)
 add_subdirectory(test)
-
-

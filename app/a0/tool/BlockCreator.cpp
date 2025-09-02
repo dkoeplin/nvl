@@ -14,17 +14,18 @@ namespace nvl {
 
 BlockCreator::BlockCreator(AbstractScreen *parent, World<2> *world) : Tool(parent, world) {
     on_mouse_down[Mouse::Left] = [this] {
+        const auto color = world_->random.uniform<Color>(0, 255);
+        const auto material = Material::get<TestMaterial>(color);
+        init_ = world_->window_to_world(window_->center());
+        pending_ = std::make_unique<Block<2>>(Pos<2>::zero, Box<2>(init_, init_), material);
+    };
+    on_mouse_up[Mouse::Left] = [this] {
         if (pending_) {
             world_->reify(std::move(pending_));
             pending_ = nullptr;
-        } else {
-            const auto color = world_->random.uniform<Color>(0, 255);
-            const auto material = Material::get<TestMaterial>(color);
-            init_ = world_->window_to_world(window_->center());
-            pending_ = std::make_unique<Block<2>>(Pos<2>::zero, Box<2>(init_, init_), material);
         }
     };
-    on_mouse_move[{Mouse::Any}] = [this] {
+    on_mouse_move[{Mouse::Left}] = [this] {
         propagate_event(); // Still allow world coordinates to change on mouse move
         if (pending_) {
             const Pos<2> pt = world_->window_to_world(window_->center());

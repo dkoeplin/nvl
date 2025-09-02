@@ -14,6 +14,8 @@ public:
 
 private:
     I64 radius_ = 20;
+    I64 miss_ = 0;
+    I64 attacks_ = 0;
 };
 
 } // namespace nvl

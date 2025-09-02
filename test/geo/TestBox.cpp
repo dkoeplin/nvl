@@ -211,6 +211,12 @@ TEST(TestBox, diff) {
                                                         Box<2>({1, 3}, {2, 15}),  // +0
                                                         Box<2>({2, 12}, {7, 15}), // -1
                                                         Box<2>({2, 3}, {7, 7}))); // +1
+
+    constexpr Box<2> box_e({856, 930}, {1142, 1150});
+    constexpr Box<2> box_f({988, 1019}, {1028, 1059});
+    EXPECT_THAT(box_e.diff(box_f),
+                UnorderedElementsAre(Box<2>({856, 930}, {988, 1150}), Box<2>({1028, 930}, {1142, 1150}),
+                                     Box<2>({988, 1059}, {1028, 1150}), Box<2>({988, 930}, {1028, 1019})));
 }
 
 TEST(TestBox, diff2) {

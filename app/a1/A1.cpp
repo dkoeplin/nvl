@@ -1,10 +1,12 @@
 #include <utility>
 
+#include "nvl/entity/Block.h"
 #include "nvl/entity/Entity.h"
 #include "nvl/material/Bulwark.h"
+#include "nvl/material/TestMaterial.h"
 #include "nvl/reflect/Backtrace.h"
-#include "nvl/tool/ToolBelt.h"
 #include "nvl/ui/RayWindow.h"
+#include "nvl/ui/Screen.h"
 #include "nvl/world/World.h"
 
 namespace nvl {
@@ -124,7 +126,7 @@ struct A1 final : World<2> {
         view.offset += diff;
         if (ticks() - prev_generated >= ticks_per_gen) {
             const auto slots = ceil_div(window_->width(), 50);
-            const auto left = random.uniform<I64, I64>(-4, slots);
+            const auto left = random.uniform<I64, I64>(-4, static_cast<I64>(slots));
             const auto width = random.uniform<I64, I64>(1, 5);
             const auto height = random.uniform<I64, I64>(1, 3);
             const auto top = std::min(view.offset[1], entities_.bbox().min[1]) - height * 50 - 200;
@@ -152,22 +154,22 @@ struct A1 final : World<2> {
     U64 ticks_per_gen = 10;
 };
 
-struct PlayerControls final : Tool<2> {
-    explicit PlayerControls(AbstractScreen *window, A1 *world) : Tool(window, world), g0(world) {
+struct PlayerControls final : AbstractScreen {
+    explicit PlayerControls(AbstractScreen *window, A1 *world) : AbstractScreen(window), g0(world) {
         on_key_down[Key::J] = [this] { g0->player->digging = true; };
         on_key_up[Key::J] = [this] { g0->player->digging = false; };
     }
     void tick() override {
         Actor player(g0->player);
         if (window_->pressed(Key::Space)) {
-            world_->send<Jump>(nullptr, player);
+            g0->send<Jump>(nullptr, player);
         }
         if (!window_->pressed(Key::A) && !window_->pressed(Key::D)) {
-            world_->send<Brake>(nullptr, player);
+            g0->send<Brake>(nullptr, player);
         } else if (window_->pressed(Key::A)) {
-            world_->send<Move>(nullptr, player, Dir::Neg);
+            g0->send<Move>(nullptr, player, Dir::Neg);
         } else if (window_->pressed(Key::D)) {
-            world_->send<Move>(nullptr, player, Dir::Pos);
+            g0->send<Move>(nullptr, player, Dir::Pos);
         }
     }
     void draw() override {}
@@ -180,7 +182,6 @@ using nvl::Clock;
 using nvl::Duration;
 using nvl::RayWindow;
 using nvl::Time;
-using nvl::ToolBelt;
 using nvl::Window;
 using nvl::World;
 
