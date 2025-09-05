@@ -44,7 +44,7 @@ public:
     using parent::size;
 
     Set &operator=(const Set &rhs) {
-        parent::operator==(rhs);
+        parent::operator=(rhs);
         return *this;
     }
 

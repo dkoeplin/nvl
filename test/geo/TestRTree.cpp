@@ -329,7 +329,7 @@ TEST_F(FuzzMove, move2d) {
 
 struct FuzzComponents : nvl::test::FuzzingTestFixture<bool, Pos<2>, Pos<2>, Pos<2>> {};
 
-// Current best is ~8.2us / call
+// Current best is ~6.5us / call
 TEST_F(FuzzComponents, components2d) {
     this->num_tests = 1E6;
     this->in[0] = Distribution::Uniform<I64>(100, 400);

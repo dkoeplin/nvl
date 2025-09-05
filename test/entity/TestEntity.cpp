@@ -6,14 +6,17 @@
 #include "nvl/geo/Volume.h"
 #include "nvl/material/TestMaterial.h"
 #include "nvl/message/Hit.h"
+#include "nvl/test/Fuzzing.h"
 
 namespace {
 
 using nvl::Block;
 using nvl::Box;
 using nvl::Color;
+using nvl::Distribution;
 using nvl::Entity;
 using nvl::Hit;
+using nvl::List;
 using nvl::Material;
 using nvl::Message;
 using nvl::Pos;

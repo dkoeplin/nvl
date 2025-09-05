@@ -201,8 +201,8 @@ Status Entity<N>::hit(const List<Hit<N>> &hits) {
     Set<Actor> neighbors;
     bool was_hit = false;
     for (const Hit<N> &hit : hits) {
+        const Set<Rel<Part>> hit_parts = parts(hit.box);
         const Box<N> local_box = hit.box - parts_.loc;
-        const Set<Rel<Part>> hit_parts = parts(local_box);
         was_hit = was_hit || !hit_parts.empty();
         for (const Rel<Part> &part : hit_parts) {
             const Box<N> area = part->bbox().widened(1);
