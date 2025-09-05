@@ -29,7 +29,7 @@ public:
     explicit Entity(Pos<N> loc, Range<Rel<Part>> parts = {}) : parts_(loc, parts) {}
     explicit Entity(Pos<N> loc, Range<Part> parts) : parts_(loc, parts) {}
 
-    pure Pos<N> loc() const { return parts_.loc; }
+    pure const Pos<N> &loc() const { return parts_.loc; }
     pure Box<N> bbox() const { return parts_.bbox(); }
     pure const Tree &tree() const { return parts_; }
     pure const Pos<N> &velocity() const { return velocity_; }

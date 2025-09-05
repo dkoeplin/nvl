@@ -76,8 +76,27 @@ struct Node : Orthants<N> {
 };
 
 template <U64 N, typename ItemRef, typename VisitFunc> // Node* => WalkResult
+void unconditional_preorder_walk_nodes_in(const Node<N, ItemRef> *top, const Box<N> &box, VisitFunc func) {
+    List<const Node<N, ItemRef> *> frontier;
+    if (top->bbox().overlaps(box))
+        frontier.push_back(top);
+    while (!frontier.empty()) {
+        const Node<N, ItemRef> *current = frontier.back();
+        frontier.pop_back();
+        func(current);
+        for (const Node<N, ItemRef> *child : current->children) {
+            if (child && box.overlaps(child->bbox())) {
+                frontier.push_back(child);
+            }
+        }
+    }
+}
+
+template <U64 N, typename ItemRef, typename VisitFunc> // Node* => WalkResult
 void preorder_walk_nodes_in(const Node<N, ItemRef> *top, const Box<N> &box, VisitFunc func) {
-    List<const Node<N, ItemRef> *> frontier{top};
+    List<const Node<N, ItemRef> *> frontier;
+    if (top->bbox().overlaps(box))
+        frontier.push_back(top);
     while (!frontier.empty()) {
         const Node<N, ItemRef> *current = frontier.back();
         frontier.pop_back();
@@ -126,7 +145,7 @@ void preorder_walk_nodes_in(Node<N, ItemRef> *top, const Box<N> &box, VisitFunc 
  * @tparam kGridExpMin - Minimum node grid size (2 ^ min_grid_exp). Defaults to 2.
  */
 template <U64 N, typename Item, typename ItemRef = Ref<Item>, U64 kMaxEntries = 10, U64 kGridExpMin = 2>
-    requires trait::HasBBox<Item>
+    requires trait::HasBBox<N, I64, Item>
 class RTree : public detail::Node<N, ItemRef> {
 public:
     using Node = detail::Node<N, ItemRef>;
@@ -331,7 +350,7 @@ public:
 
     /// Returns the current bounding box for this tree, if defined.
     /// Returns an empty box otherwise.
-    pure Box<N> bbox() const { return bbox_; }
+    pure const Box<N> &bbox() const { return bbox_; }
 
     /// Returns the shape of the bounding box for this tree.
     pure Pos<N> shape() const { return bbox().shape(); }
@@ -396,18 +415,22 @@ protected:
 
     pure Set<ItemRef> collect(const Box<N> &box) const {
         Set<ItemRef> items;
-        preorder_walk_nodes_in(box, [&](const Node *node) {
+        return_if(!bbox().overlaps(box), items);
+
+        detail::unconditional_preorder_walk_nodes_in(this, box, [&](const Node *node) {
             for (const ItemRef &item : node->list) {
                 if (box.overlaps(bbox(item))) {
                     items.insert(item);
                 }
             }
-            return WalkResult::kRecurse;
         });
+
         return items;
     }
 
     pure Maybe<ItemRef> collect_first(const Box<N> &box) const {
+        return_if(!bbox().overlaps(box), None);
+
         Maybe<ItemRef> result = None;
         preorder_walk_nodes_in(box, [&](const Node *node) {
             for (const ItemRef &item : node->list) {

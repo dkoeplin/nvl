@@ -262,7 +262,7 @@ public:
     }
 
     template <typename Value>
-        requires trait::HasBBox<Value>
+        requires trait::HasBBox<N, T, Value>
     pure List<Volume> diff(const Range<Value> &range) const {
         List<Volume> result{*this};
         for (const auto &value : range) {
@@ -275,7 +275,11 @@ public:
         return result;
     }
 
-    pure List<Volume> diff(const List<Volume> &boxes) const { return diff(Range(boxes.begin(), boxes.end())); }
+    template <typename Value>
+        requires trait::HasBBox<N, T, Value>
+    pure List<Volume> diff(const List<Value> &list) const {
+        return diff(list.range());
+    }
 
     /// Returns a range over the faces of this volume.
     /// Faces have a "thickness" of zero.
@@ -369,8 +373,8 @@ struct Edge : Face {
     }
 
     template <typename Value>
-        requires trait::HasBBox<Value>
-    pure List<Edge> diff(Range<Value> range) const {
+        requires trait::HasBBox<N, T, Value>
+    pure List<Edge> diff(const Range<Value> &range) const {
         List<Edge> result;
         for (const Volume<N, T> &b : box.diff(range)) {
             result.emplace_back(dir, dim, b);
@@ -378,11 +382,17 @@ struct Edge : Face {
         return result;
     }
 
+    template <typename Value>
+        requires trait::HasBBox<N, T, Value>
+    pure List<Edge> diff(const List<Value> &list) const {
+        return diff(list.range());
+    }
+
     pure bool operator==(const Edge &rhs) const { return dim == rhs.dim && dir == rhs.dir && box == rhs.box; }
     pure bool operator!=(const Edge &rhs) const { return !(*this == rhs); }
 
     pure U64 thickness() const { return box.shape(dim); }
-    pure Volume<N, T> bbox() const { return box; }
+    pure const Volume<N, T> &bbox() const { return box; }
 
     pure Face face() const { return Face(dir, dim); }
 

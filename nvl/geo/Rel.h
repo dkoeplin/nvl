@@ -23,7 +23,7 @@ public:
     using Ref<Value>::Ref;
 
     template <U64 N>
-        requires trait::HasBBox<Value>
+        requires trait::HasBBox<N, I64, Value>
     pure Box<N> bbox(const Pos<N> &offset) const {
         return this->ptr_->bbox() + offset;
     }

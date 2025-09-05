@@ -11,6 +11,7 @@ namespace nvl {
 namespace detail {
 
 template <U64 N, typename Item, typename ItemRef = Rel<Item>, U64 kMaxEntries = 10, U64 kGridExpMin = 2>
+    requires trait::HasBBox<N, I64, Item>
 class BRTreeEdges {
 protected:
     using Edge = nvl::Edge<N, I64>;
@@ -70,7 +71,7 @@ private:
  * @tparam kGridExpMin - Minimum node grid size (2 ** min_grid_exp). Defaults to 2.
  */
 template <U64 N, typename Item, typename ItemRef = Rel<Item>, U64 kMaxEntries = 10, U64 kGridExpMin = 2>
-    requires trait::HasBBox<Item>
+    requires trait::HasBBox<N, I64, Item>
 class BRTree : detail::BRTreeEdges<N, Item, ItemRef, kMaxEntries, kGridExpMin> {
 public:
     using Edge = nvl::Edge<N, I64>;
