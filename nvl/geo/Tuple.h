@@ -434,6 +434,11 @@ Tuple<N, F64> real(const Tuple<N, I64> &tuple) {
 }
 
 template <U64 N>
+Tuple<N, F64> real(const Tuple<N, F64> &tuple) {
+    return tuple;
+}
+
+template <U64 N>
 Tuple<N, I64> round(const Tuple<N, F64> &tuple) {
     Tuple<N, I64> result;
     simd for (U64 i = 0; i < N; ++i) { result[i] = static_cast<I64>(std::round(tuple[i])); }

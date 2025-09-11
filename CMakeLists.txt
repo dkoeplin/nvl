@@ -44,6 +44,7 @@ add_library(nvl SHARED
         nvl/geo/Dir.h
         nvl/geo/HasBBox.h
         nvl/geo/RTree.h
+        nvl/geo/Triangle.h
         nvl/geo/Tuple.h
         nvl/io/HasPrint.h
         nvl/io/IO.h
@@ -60,6 +61,8 @@ add_library(nvl SHARED
         nvl/material/TestMaterial.h
         nvl/math/Bitwise.h
         nvl/math/Distribution.h
+        nvl/math/FastTrig.cpp
+        nvl/math/FastTrig.h
         nvl/math/Grid.h
         nvl/math/Random.h
         nvl/message/Destroy.h
@@ -110,6 +113,7 @@ find_package(GoogleTest REQUIRED)
 
 # nvl-test
 add_library(nvl-test SHARED
+        nvl/test/Expect.h
         nvl/test/Fuzzing.h
         nvl/test/LabeledBox.h
         nvl/test/NullWindow.h

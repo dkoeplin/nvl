@@ -9,6 +9,8 @@ namespace nvl {
 
 BlockBreaker::BlockBreaker(AbstractScreen *parent, World<2> *world) : Tool(parent, world) {
     on_mouse_down[Mouse::Left] = on_mouse_move[{Mouse::Left}] = [this] {
+        propagate_event(); // Allow moving the world while dragging
+
         const Pos<2> pt = world_->window_to_world(window_->center());
         const Box<2> box(pt - radius_, pt + radius_);
         const Set<Actor> entities = world_->entities(box);
