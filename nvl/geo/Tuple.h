@@ -403,18 +403,22 @@ Tuple<N, T> max(const Tuple<N, T> &a, const Tuple<N, T> &b) {
 }
 
 template <U64 N, typename C, typename T>
+    requires std::is_arithmetic_v<C>
 Tuple<N, T> operator*(const C a, const Tuple<N, T> &b) {
     return b * a;
 }
 template <U64 N, typename C, typename T>
+    requires std::is_arithmetic_v<C>
 Tuple<N, T> operator/(const C a, const Tuple<N, T> &b) {
     return Tuple<N, T>::fill(a) / b;
 }
 template <U64 N, typename C, typename T>
+    requires std::is_arithmetic_v<C>
 Tuple<N, T> operator+(const C a, const Tuple<N, T> &b) {
     return b + a;
 }
 template <U64 N, typename C, typename T>
+    requires std::is_arithmetic_v<C>
 Tuple<N, T> operator-(const C a, const Tuple<N, T> &b) {
     return -b + a;
 }

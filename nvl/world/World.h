@@ -195,7 +195,7 @@ pure Maybe<typename World<N>::Intersect> World<N>::first_except(const Line<N> &l
     Maybe<Intersect> closest = None;
     for (Actor other : entities({floor(line.a()), ceil(line.b())})) {
         if (auto *entity = other.dyn_cast<Entity<N>>(); entity && other != actor) {
-            if (auto int0 = line.intersect(entity->bbox())) {
+            if (auto int0 = intersect(line, entity->bbox())) {
                 if (auto int1 = entity->first(line)) {
                     if (!closest.has_value() || int1->dist < closest->dist) {
                         closest = Intersect(*int1, other, int1->item);

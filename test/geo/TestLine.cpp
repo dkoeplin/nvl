@@ -1,11 +1,13 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "nvl/geo/Intersect.h"
 #include "nvl/geo/Line.h"
 #include "nvl/geo/Tuple.h"
 #include "nvl/geo/Volume.h"
 #include "nvl/math/Distribution.h"
 #include "nvl/math/Random.h"
+#include "nvl/test/Expect.h"
 #include "nvl/test/Fuzzing.h"
 
 namespace nvl {
@@ -52,11 +54,6 @@ using nvl::Line;
 using nvl::Maybe;
 using nvl::Vec;
 
-#define EXPECT_VEC_NEAR(actual, expected, error)                                                                       \
-    for (U64 i = 0; i < actual.rank(); ++i) {                                                                          \
-        EXPECT_NEAR(actual[i], expected[i], error);                                                                    \
-    }
-
 TEST(TestLine, length) {
     const Line<2> a(Vec<2>(1, 3), Vec<2>(3, 6));
     const F64 expected_len = std::sqrt(2 * 2 + 3 * 3);
@@ -73,7 +70,7 @@ TEST(TestLine, slope) {
 TEST(TestLine, intersect) {
     constexpr Box<3> box{{500, 950, 500}, {550, 1000, 550}};
     const Line<3> line{Vec<3>{528, 969, 410}, Vec<3>{528, 974, 510}};
-    const auto intersect = line.intersect(box);
+    const auto intersect = nvl::intersect(line, box);
     ASSERT_TRUE(intersect.has_value());
     EXPECT_EQ(intersect->pt, Vec<3>(528, 973.5, 500));
 }
@@ -81,7 +78,7 @@ TEST(TestLine, intersect) {
 TEST(TestLine, intersect2) {
     constexpr Box<2> box{{-7, -14}, {9, 1}};
     constexpr Line<2> line{Vec<2>{5.55365, 4.1611}, {8.95303, -4.20195}};
-    const auto intersect = line.intersect(box);
+    const auto intersect = nvl::intersect(line, box);
     std::cout << (intersect.has_value() ? intersect->pt.to_string() : "N/A") << std::endl;
     // 31.7 dist, -2.0098, 6.12694
     std::cout << line.length() << std::endl;
@@ -115,7 +112,7 @@ TEST(TestLine, profile_intersect) {
     results.reserve(kNumTests);
     const auto start = nvl::Clock::now();
     for (U64 i = 0; i < kNumTests; ++i) {
-        results.push_back(lines[i].intersect(boxes[i]));
+        results.push_back(nvl::intersect(lines[i], boxes[i]));
     }
     const auto stop = nvl::Clock::now();
     const auto time = nvl::Duration(stop - start);
@@ -129,7 +126,8 @@ struct FuzzLineIntersect : nvl::test::FuzzingTestFixture<Maybe<Intersect<N>>, Li
         this->num_tests = 1E6;
         this->in[0] = nvl::Distribution::Uniform<F64>(-20, 20);
         this->in[1] = nvl::Distribution::Uniform<I64>(-15, 15);
-        this->fuzz([](Maybe<Intersect<N>> &x, const Line<N> &line, const Box<N> &box) { x = line.intersect(box); });
+        this->fuzz(
+            [](Maybe<Intersect<N>> &x, const Line<N> &line, const Box<N> &box) { x = nvl::intersect(line, box); });
 
         this->verify(
             [](const Maybe<Intersect<N>> &x, const Line<N> &line, const Box<N> &box) {

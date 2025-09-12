@@ -52,9 +52,9 @@ pure Maybe<Intersect<N>> intersect(const AbstractLine<N, Concrete> &line, const 
     for (U64 d = 0; d < N * 2; ++d) {
         const Vec<N> &vec = d & 0x1 ? max : min;
         if (const auto pt = line.interpolate(d / 2, vec[d / 2])) {
-            if (pt->dist >= 0 && pt->dist < closest_dist && box.contains(pt->pt)) {
-                closest_dist = pt->dist;
-                closest_pt = pt->pt;
+            if (pt->distance >= 0 && pt->distance < closest_dist && box.contains(pt->point)) {
+                closest_dist = pt->distance;
+                closest_pt = pt->point;
                 closest_face = Face(d & 0x1 ? Dir::Pos : Dir::Neg, d);
             }
         }

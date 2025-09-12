@@ -10,6 +10,7 @@
 #include "nvl/data/UnionFind.h"
 #include "nvl/data/WalkResult.h"
 #include "nvl/geo/HasBBox.h"
+#include "nvl/geo/Intersect.h"
 #include "nvl/geo/Line.h"
 #include "nvl/geo/Orthants.h"
 #include "nvl/geo/Tuple.h"
@@ -298,7 +299,7 @@ public:
         Maybe<F64> distance = None;
         // TODO: Feels like we can improve this. Can potentially get a lot of volume which would not intersect.
         for (auto item : (*this)[{floor(line.a()), ceil(line.b())}]) {
-            if (auto intersection = line.intersect(bbox(item))) {
+            if (auto intersection = intersect(line, bbox(item))) {
                 Intersect inter(*intersection, item);
                 const Maybe<F64> len = dist(inter);
                 if (len && (!distance.has_value() || *len < *distance)) {

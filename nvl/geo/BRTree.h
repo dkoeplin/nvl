@@ -1,6 +1,7 @@
 #pragma once
 
 #include "nvl/geo/HasBBox.h"
+#include "nvl/geo/Line.h"
 #include "nvl/geo/Rel.h"
 #include "nvl/geo/RTree.h"
 #include "nvl/geo/Volume.h"

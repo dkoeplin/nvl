@@ -5,11 +5,10 @@
 #include "nvl/geo/Tuple.h"
 
 namespace nvl::test {
-#define EXPECT_ABOUT(actual, expected, error)                                                                          \
-    do {                                                                                                               \
-        for (size_t i = 0; i < actual.rank(); ++i) {                                                                   \
-            EXPECT_NEAR(actual[i], expected[i], error);                                                                \
-        }                                                                                                              \
-    } while (false)
+
+#define EXPECT_VEC_NEAR(actual, expected, error)                                                                       \
+    for (U64 i = 0; i < actual.rank(); ++i) {                                                                          \
+        EXPECT_NEAR(actual[i], expected[i], error);                                                                    \
+    }
 
 } // namespace nvl::test
