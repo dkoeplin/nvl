@@ -32,7 +32,7 @@ public:
     /// Returns a copy of this line, shifted by x.
     template <typename T>
     pure constexpr Line<N> operator+(const Tuple<N, T> &x) const {
-        const Tuple<N, T> shift = real(x);
+        const Tuple<N, F64> shift = real(x);
         return make_line(a() + shift, b() + shift);
     }
 

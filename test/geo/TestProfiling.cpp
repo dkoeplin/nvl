@@ -9,6 +9,7 @@
 #include "nvl/time/Clock.h"
 #include "nvl/time/Duration.h"
 
+namespace {
 using namespace nvl;
 
 pure U64 num_sides(const Range<Rel<Edge<2, I64>>> &edges) {
@@ -50,3 +51,5 @@ TEST(TestProfiling, profile_components) {
     std::cout << "Part 2: " << part2 << std::endl;
     std::cout << "Time: " << Duration(end - start) << std::endl;
 }
+
+} // namespace

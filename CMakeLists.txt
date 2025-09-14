@@ -38,6 +38,7 @@ add_library(nvl SHARED
         nvl/data/Tensor.h
         nvl/data/UnionFind.h
         nvl/entity/Entity.h
+        nvl/geo/RBox.h
         nvl/geo/Rel.h
         nvl/geo/Volume.h
         nvl/geo/BRTree.h
@@ -60,11 +61,12 @@ add_library(nvl SHARED
         nvl/material/Material.h
         nvl/material/TestMaterial.h
         nvl/math/Bitwise.h
+        nvl/math/Deg.cpp
+        nvl/math/Deg.h
         nvl/math/Distribution.h
-        nvl/math/FastTrig.cpp
-        nvl/math/FastTrig.h
         nvl/math/Grid.h
         nvl/math/Random.h
+        nvl/math/Trig.h
         nvl/message/Destroy.h
         nvl/message/Hit.h
         nvl/message/Message.h

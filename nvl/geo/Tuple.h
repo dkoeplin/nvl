@@ -113,7 +113,7 @@ public:
     pure T get_or(const U64 i, const T v) const { return i < N ? indices_[i] : v; }
 
     /// Returns the element at `i`.
-    pure constexpr T operator[](const U64 i) const { return indices_[i]; }
+    pure constexpr const T &operator[](const U64 i) const { return indices_[i]; }
 
     /// Returns a reference to the element at `i`.
     pure constexpr T &operator[](const U64 i) { return indices_[i]; }
