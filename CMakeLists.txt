@@ -22,6 +22,7 @@ add_library(nvl SHARED
         nvl/actor/Part.h
         nvl/actor/Status.cpp
         nvl/actor/Status.h
+        nvl/data/Counter.h
         nvl/data/HasEquality.h
         nvl/data/Iterator.h
         nvl/data/List.h
@@ -37,52 +38,73 @@ add_library(nvl SHARED
         nvl/data/Tensor.cpp
         nvl/data/Tensor.h
         nvl/data/UnionFind.h
+        nvl/data/WalkResult.h
+        nvl/entity/Block.h
         nvl/entity/Entity.h
-        nvl/geo/RBox.h
-        nvl/geo/Rel.h
-        nvl/geo/Volume.h
+        nvl/file/Lines.cpp
+        nvl/file/Lines.h
         nvl/geo/BRTree.h
         nvl/geo/Dir.h
+        nvl/geo/Face.h
         nvl/geo/HasBBox.h
+        nvl/geo/Intersect.h
+        nvl/geo/Line.h
+        nvl/geo/Orthants.h
+        nvl/geo/Polar.h
+        nvl/geo/RBox.h
+        nvl/geo/Rel.h
         nvl/geo/RTree.h
         nvl/geo/Triangle.h
         nvl/geo/Tuple.h
+        nvl/geo/Volume.h
         nvl/io/HasPrint.h
         nvl/io/IO.h
         nvl/macros/Abstract.h
         nvl/macros/Aliases.h
         nvl/macros/Assert.h
-        nvl/macros/Implicit.h
         nvl/macros/Expand.h
+        nvl/macros/Hot.h
+        nvl/macros/Implicit.h
         nvl/macros/Pure.h
         nvl/macros/ReturnIf.h
+        nvl/macros/SIMD.h
         nvl/macros/Unreachable.h
+        nvl/macros/Unroll.h
         nvl/material/Bulwark.h
         nvl/material/Material.h
         nvl/material/TestMaterial.h
+        nvl/math/Bitwise.cpp
         nvl/math/Bitwise.h
+        nvl/math/Combinations.h
         nvl/math/Deg.cpp
         nvl/math/Deg.h
         nvl/math/Distribution.h
         nvl/math/Grid.h
+        nvl/math/Plane.h
         nvl/math/Random.h
+        nvl/math/Rotation.h
         nvl/math/Trig.h
+        nvl/message/Created.h
         nvl/message/Destroy.h
         nvl/message/Hit.h
+        nvl/message/Message.cpp
         nvl/message/Message.h
         nvl/message/Notify.h
         nvl/reflect/Backtrace.cpp
         nvl/reflect/Backtrace.h
         nvl/reflect/CastablePtr.h
+        nvl/reflect/CastableShared.h
         nvl/reflect/Casting.h
         nvl/reflect/ClassTag.cpp
         nvl/reflect/ClassTag.h
         nvl/reflect/PrimitiveTypes.h
+        nvl/time/Clock.h
         nvl/time/Duration.cpp
         nvl/time/Duration.h
         nvl/time/TimeScale.h
         nvl/ui/Color.cpp
         nvl/ui/Color.h
+        nvl/ui/GlowEffect.h
         nvl/ui/InputEvent.h
         nvl/ui/Key.cpp
         nvl/ui/Key.h

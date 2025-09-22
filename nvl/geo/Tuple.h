@@ -221,21 +221,13 @@ public:
 
     /// Returns true if every element is strictly less than the corresponding element in `rhs`.
     pure bool all_lt(const Tuple &rhs) const {
-        simd for (U64 i = 0; i < N; ++i) {
-            if (indices_[i] >= rhs.indices_[i]) {
-                return false;
-            }
-        }
+        simd for (U64 i = 0; i < N; ++i) { return_if(indices_[i] >= rhs.indices_[i], false); }
         return true;
     }
 
     /// Returns true if every element is less than or equal to the corresponding element in `rhs`.
     pure bool all_lte(const Tuple &rhs) const {
-        simd for (U64 i = 0; i < N; ++i) {
-            if (indices_[i] > rhs.indices_[i]) {
-                return false;
-            }
-        }
+        simd for (U64 i = 0; i < N; ++i) { return_if(indices_[i] > rhs.indices_[i], false); }
         return true;
     }
 
@@ -244,6 +236,18 @@ public:
 
     /// Returns true if every element is greater than or equal to the corresponding element in `rhs`.
     pure bool all_gte(const Tuple &rhs) const { return rhs.all_lte(*static_cast<const Tuple *>(this)); }
+
+    template <typename Cond>
+    pure bool all_of(Cond cond) const {
+        simd for (U64 i = 0; i < N; ++i) { return_if(!cond(indices_[i]), false); }
+        return true;
+    }
+
+    template <typename Cond>
+    pure bool exists(Cond cond) const {
+        simd for (U64 i = 0; i < N; ++i) { return_if(cond(indices_[i]), true); }
+        return false;
+    }
 
     /// Returns a new instance with the result of element-wise clamping to the given grid.
     /// Elements are rounded up to the grid in each dimension.

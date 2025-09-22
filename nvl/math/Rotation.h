@@ -44,6 +44,7 @@ struct Rotation {
         return *this;
     }
 
+    pure constexpr expand Rotation operator-() const { return Rot(-theta); }
     pure constexpr expand Rotation operator+(const Rotation &rhs) const { return Rot(theta + rhs.theta); }
     pure constexpr expand Rotation operator-(const Rotation &rhs) const { return Rot(theta - rhs.theta); }
 
