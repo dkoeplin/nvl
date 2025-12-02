@@ -23,7 +23,7 @@ public:
 protected:
     void next();
     void increment() override { next(); }
-    std::ifstream file;
+    std::shared_ptr<std::fstream> file;
     Maybe<std::string> line;
 };
 
