@@ -9,7 +9,6 @@
 #include "nvl/data/SipHash.h"
 #include "nvl/macros/Aliases.h"
 #include "nvl/macros/SIMD.h"
-#include "nvl/math/Bitwise.h"
 #include "nvl/math/Grid.h"
 #include "nvl/reflect/ClassTag.h"
 
