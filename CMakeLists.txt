@@ -56,6 +56,7 @@ add_library(nvl SHARED
         nvl/geo/RTree.h
         nvl/geo/Triangle.h
         nvl/geo/Tuple.h
+        nvl/geo/Util.h
         nvl/geo/Volume.h
         nvl/io/HasPrint.h
         nvl/io/IO.h

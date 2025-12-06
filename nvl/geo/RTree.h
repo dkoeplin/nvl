@@ -330,10 +330,19 @@ public:
         for (const std::unique_ptr<Item> &a : items_.values()) {
             ItemRef a_ref(a.get());
             bool had_neighbors = false;
+            // Add overlapping boxes to the same component
+            const U64 a_id = item_ids_.get_or(a_ref, 0);
+            for (const ItemRef &b : collect(a->bbox())) {
+                if (item_ids_.get_or(b, 0) != a_id) {
+                    had_neighbors = true;
+                    components.add(a_ref, b);
+                }
+            }
+            // Adds neighboring boxes to the same component
             for (const auto &edge : a->bbox().edges()) {
                 for (const ItemRef &b : collect(edge.bbox())) {
                     had_neighbors = true;
-                    components.add(a_ref, b); // Adds neighboring boxes to the same component
+                    components.add(a_ref, b);
                 }
             }
             // Add this item to its own component if it had no neighbors
