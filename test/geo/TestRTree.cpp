@@ -270,7 +270,7 @@ TEST(TestRTree, large_insertion) {
         EXPECT_EQ(items.begin()->raw(), box);
     }
     EXPECT_EQ(tree.size(), 400);
-    EXPECT_EQ(tree.grid_size, 1 << nvl::ceil_log2(1'000'000));
+    EXPECT_EQ(tree.grid_size, 1 << nvl::bit_width(1'000'000));
 }
 
 // Current best is ~1.9us / call

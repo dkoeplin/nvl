@@ -534,9 +534,9 @@ protected:
         const I64 cur_size = this->grid_size;
         // Possible optimization: Use the shape of the bounding box, not its coordinates, to set the grid size.
         // This would require changing the origins. Unclear how to do this without changing every node.
-        I64 max_exp = std::max<I64>(kGridMin, ceil_log2(abs(bbox_.min).max()));
-        max_exp = std::max<I64>(max_exp, ceil_log2(abs(bbox_.end).max()));
-        const I64 max_size = 1 << max_exp;
+        I64 max_exp = std::max<I64>(kGridMin, bit_width(abs(bbox_.min).max()));
+        max_exp = std::max<I64>(max_exp, bit_width(abs(bbox_.end).max()));
+        const I64 max_size = static_cast<I64>(1) << max_exp;
         if (cur_size < max_size) {
             Orthants<N>::walk([&](const Pos<N> &delta, const U64 i) {
                 // Rebalance children to match the new desired maximum grid size. Skip if already sufficiently sized.

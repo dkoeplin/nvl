@@ -48,12 +48,12 @@ pure Maybe<Intersect<N>> intersect(const AbstractLine<N, Concrete> &line, const 
                 closest_dist = pt->distance;
                 closest_pt = pt->point;
                 closest_face = Face(d & 0x1 ? Dir::Pos : Dir::Neg, d);
-                return_if(!closest, Intersect<N>{.pt = closest_pt, .face = closest_face, .dist = closest_dist});
+                return_if(!closest, Intersect<N>{.pt = closest_pt, .dist = closest_dist, .face = closest_face});
             }
         }
     }
     if (closest_face.has_value())
-        return Intersect<N>{.pt = closest_pt, .face = closest_face, .dist = closest_dist};
+        return Intersect<N>{.pt = closest_pt, .dist = closest_dist, .face = closest_face};
     return None;
 }
 

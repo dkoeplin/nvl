@@ -18,8 +18,8 @@ pure expand U64 rotate_left(const U64 v) {
     return left | right;
 }
 
-/// Returns ceil(log2(v)), which is the same as the number of bits required to represent v.
-pure expand U64 ceil_log2(const U64 v) { return std::bit_width(v); }
+/// Returns the number of bits required to represent the given unsigned number.
+pure expand U64 bit_width(const U64 v) { return std::bit_width(v); }
 
 pure expand U64 ceil_div(const U64 a, const U64 b) { return (a + b - 1) / b; }
 
