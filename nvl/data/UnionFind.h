@@ -24,6 +24,7 @@ public:
 
     /// Inserts a single element into its own set.
     U64 add(const Item &a) {
+        changed_ = true;
         const U64 id_a = ids_.get_or(a, 0);
         return_if(id_a != 0, id_a);
         ++count_;
@@ -39,19 +40,33 @@ public:
         return *this;
     }
 
+    /// Returns true if the given item was added to any set.
     pure bool has(const Item &item) const { return ids_.contains(item); }
 
+    /// Returns an iterator over all disjoint sets.
     pure Range<Group> sets() const {
         update_groups();
         return groups_.values();
     }
 
+    /// Returns the current number of sets.
+    pure U64 num_sets() const {
+        Set<U64> sets;
+        for (const auto &[item, id] : ids_) {
+            sets.insert(find(id));
+        }
+        return sets.size();
+    }
+
 private:
     void update_groups() const {
-        groups_.clear();
-        for (const auto &[item, id] : ids_) {
-            const U64 set = find(id);
-            groups_[set].insert(item);
+        if (changed_) {
+            changed_ = false;
+            groups_.clear();
+            for (const auto &[item, id] : ids_) {
+                const U64 set = find(id);
+                groups_[set].insert(item);
+            }
         }
     }
 
@@ -84,6 +99,7 @@ private:
     }
 
     U64 count_ = 0;
+    mutable bool changed_ = false;
     mutable Map<U64, Group> groups_;
     Map<Item, U64, Hash> ids_;
     mutable Map<U64, U64> parent_;
