@@ -176,8 +176,10 @@ public:
     /// Registers `min` and `end` fields to be the min and max in each dimension, respectively.
     /// Minimum is exclusive, maximum (end) is exclusive.
     constexpr Volume(const Idx &a, const Idx &b) {
-        min = nvl::min(a, b);
-        end = nvl::max(a, b);
+        for (U64 i = 0; i < N; ++i) {
+            min[i] = std::min(a[i], b[i]);
+            end[i] = std::max(a[i], b[i]);
+        }
     }
 
     /// Returns the number of dimensions in this box.
