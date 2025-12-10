@@ -30,18 +30,28 @@ class Volume {
 public:
     using Idx = Tuple<N, T>;
 
-    /// Returns a Volume with `min` and `max` if min is strictly less than or equal to max.
+    /// Returns a Volume with `min` and `end` if min is strictly less end.
     /// Returns None otherwise.
     /// Used to detect cases e.g. where intersection results in an empty Volume.
-    static Maybe<Volume> get(const Idx &min, const Idx &max) {
-        if (min.all_lt(max)) {
-            return Volume(min, max);
+    static Maybe<Volume> get(const Idx &min, const Idx &end) {
+        if (min.all_lt(end)) {
+            return Volume(min, end);
         }
         return None;
     }
 
+    /// Returns a Volume from a and b, inclusive.
+    /// Only defined for integer volumes.
+    static Volume inclusive(const Idx &a, const Idx &b)
+        requires std::is_same_v<T, I64>
+    {
+        auto min = nvl::min(a, b);
+        auto end = nvl::max(a, b) + Idx::ones;
+        return Volume(min, end);
+    }
+
     /// Returns a volume with exactly one point.
-    /// Only available for integer volumes.
+    /// Only defined for integer volumes.
     static Volume unit(const Idx &pt)
         requires std::is_same_v<T, I64>
     {
@@ -162,14 +172,12 @@ public:
 
     explicit Volume() = default;
 
-    /// Returns a Volume from points `a` to `b`.
+    /// Returns a bounding box Volume from a to b, exclusive.
     /// Registers `min` and `end` fields to be the min and max in each dimension, respectively.
     /// Minimum is exclusive, maximum (end) is exclusive.
     constexpr Volume(const Idx &a, const Idx &b) {
-        for (U64 i = 0; i < N; i++) {
-            min[i] = std::min(a[i], b[i]);
-            end[i] = std::max(a[i], b[i]);
-        }
+        min = nvl::min(a, b);
+        end = nvl::max(a, b);
     }
 
     /// Returns the number of dimensions in this box.
