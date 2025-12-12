@@ -276,9 +276,10 @@ public:
     pure List<Volume> diff(const Range<Value> &range) const {
         List<Volume> result{*this};
         for (const auto &value : range) {
+            const Volume value_bbox = nvl::bbox<N, T, Value>(value);
             List<Volume> next;
             for (const Volume &lhs : result) {
-                lhs.push_diff(next, value.bbox());
+                lhs.push_diff(next, value_bbox);
             }
             result = next;
         }

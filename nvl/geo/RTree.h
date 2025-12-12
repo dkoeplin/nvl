@@ -195,7 +195,7 @@ public:
         Iterator<std::unique_ptr<Item>> iter;
     };
 
-    static Box<N> bbox(const ItemRef &item) { return static_cast<const Item *>(item.ptr())->bbox(); }
+    expand static Box<N> bbox(const ItemRef &item) { return nvl::bbox<N, I64, ItemRef>(item); }
 
     RTree() : Node(nullptr, 0, Pos<N>::fill(0), kGridExpMin) {}
 
