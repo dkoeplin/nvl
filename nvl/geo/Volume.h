@@ -266,24 +266,24 @@ public:
     /// Returns the result of removing all points in `rhs` from this Volume.
     /// This may result in anywhere between 1 and N*N - 1 boxes, depending on the nature of the intersection.
     pure List<Volume> diff(const Volume &rhs) const {
-        List<Volume> result;
+        std::vector<Volume> result;
         push_diff(result, rhs);
-        return result;
+        return List<Volume>(std::move(result));
     }
 
     template <typename Value>
         requires trait::HasBBox<N, T, Value>
     pure List<Volume> diff(const Range<Value> &range) const {
-        List<Volume> result{*this};
+        std::vector<Volume> result{*this};
         for (const auto &value : range) {
             const Volume value_bbox = nvl::bbox<N, T, Value>(value);
-            List<Volume> next;
+            std::vector<Volume> next;
             for (const Volume &lhs : result) {
                 lhs.push_diff(next, value_bbox);
             }
-            result = next;
+            result = std::move(next);
         }
-        return result;
+        return List<Volume>(std::move(result));
     }
 
     template <typename Value>
@@ -332,7 +332,7 @@ public:
 private:
     friend struct idx_iterator;
 
-    void push_diff(List<Volume> &result, const Volume &rhs) const {
+    void push_diff(std::vector<Volume> &result, const Volume &rhs) const {
         const Maybe<Volume> intersect = this->intersect(rhs);
         if (intersect.has_value()) {
             const Volume &both = *intersect;

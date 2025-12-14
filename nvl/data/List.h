@@ -51,6 +51,7 @@ public:
 
     using parent::parent;
     List() = default;
+    explicit List(const std::vector<Value> &rhs) : parent(rhs) {}
 
     explicit List(Range<Value> range) : List(range.begin(), range.end()) {}
 
