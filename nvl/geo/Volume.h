@@ -302,10 +302,10 @@ public:
         worklist.emplace_back(*this, range.begin().copy());
         while (!worklist.empty()) {
             auto [lhs, iter] = worklist.back();
+            const Volume rhs = nvl::bbox<N, T, Value>(*iter);
             auto iter2 = iter.copy();
-            worklist.pop_back();
-            const Volume rhs = nvl::bbox<N, T, Value>(*iter2);
             ++iter2; // Increment to next value in range
+            worklist.pop_back();
             if (lhs.overlaps(rhs)) {
                 const Volume both(nvl::max(min, rhs.min), nvl::min(end, rhs.end));
                 for (U64 i = 0; i < N; ++i) {
@@ -326,7 +326,7 @@ public:
                         }
                         if (result_min.all_lt(result_end)) {
                             if (iter != range.end()) {
-                                worklist.emplace_back(Volume(result_min, result_end), iter2);
+                                worklist.emplace_back(Volume(result_min, result_end), iter2.copy());
                             } else {
                                 result.emplace_back(result_min, result_end);
                             }
@@ -335,7 +335,7 @@ public:
                 }
             } else {
                 if (iter != range.end()) {
-                    worklist.emplace_back(lhs, iter2);
+                    worklist.emplace_back(lhs, iter2.copy());
                 } else {
                     result.push_back(lhs);
                 }
