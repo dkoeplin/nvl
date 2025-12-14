@@ -273,7 +273,7 @@ public:
 
     template <typename Value>
         requires trait::HasBBox<N, T, Value>
-    pure List<Volume> diff(const Range<Value> &range) const {
+    pure List<Volume> diffXXX(const Range<Value> &range) const {
         std::vector<Volume> result{*this};
         for (const auto &value : range) {
             const Volume value_bbox = nvl::bbox<N, T, Value>(value);
@@ -284,6 +284,63 @@ public:
             result = std::move(next);
         }
         return List<Volume>(std::move(result));
+    }
+
+    template <typename Value>
+        requires trait::HasBBox<N, T, Value>
+    pure List<Volume> diff(const Range<Value> &range) const {
+        if (range.empty())
+            return {*this};
+
+        struct Work {
+            Work(Volume vol, Iterator<Value> iter) : vol(vol), iter(iter) {}
+            Volume vol;
+            Iterator<Value> iter;
+        };
+        List<Volume> result;
+        std::vector<Work> worklist;
+        worklist.emplace_back(*this, range.begin().copy());
+        while (!worklist.empty()) {
+            auto [lhs, iter] = worklist.back();
+            worklist.pop_back();
+            const Volume rhs = nvl::bbox<N, T, Value>(*iter);
+            ++iter; // Increment to next value in range
+            if (lhs.overlaps(rhs)) {
+                const Volume both(nvl::max(min, rhs.min), nvl::min(end, rhs.end));
+                for (U64 i = 0; i < N; ++i) {
+                    for (const Dir dir : Dir::list) {
+                        Tuple<N, T> result_min;
+                        Tuple<N, T> result_end;
+                        for (U64 d = 0; d < N; ++d) {
+                            if (i == d) {
+                                result_min[d] = dir == Dir::Neg ? lhs.min[d] : both.end[d];
+                                result_end[d] = dir == Dir::Neg ? both.min[d] : lhs.end[d];
+                            } else if (d > i) {
+                                result_min[d] = lhs.min[d];
+                                result_end[d] = lhs.end[d];
+                            } else {
+                                result_min[d] = both.min[d];
+                                result_end[d] = both.end[d];
+                            }
+                        }
+                        if (result_min.all_lt(result_end)) {
+                            if (iter != range.end()) {
+                                worklist.emplace_back(Volume(result_min, result_end), iter.copy());
+                            } else {
+                                result.emplace_back(result_min, result_end);
+                            }
+                        }
+                    }
+                }
+            } else {
+                if (iter != range.end()) {
+                    worklist.emplace_back(lhs, iter.copy());
+                } else {
+                    result.push_back(lhs);
+                }
+            }
+        }
+        return result;
     }
 
     template <typename Value>
