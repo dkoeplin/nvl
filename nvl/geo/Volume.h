@@ -333,9 +333,8 @@ private:
     friend struct idx_iterator;
 
     void push_diff(std::vector<Volume> &result, const Volume &rhs) const {
-        const Maybe<Volume> intersect = this->intersect(rhs);
-        if (intersect.has_value()) {
-            const Volume &both = *intersect;
+        if (this->overlaps(rhs)) {
+            const Volume both(nvl::max(min, rhs.min), nvl::min(end, rhs.end));
             for (U64 i = 0; i < N; ++i) {
                 for (const Dir dir : Dir::list) {
                     Tuple<N, T> result_min;
@@ -352,9 +351,8 @@ private:
                             result_end[d] = both.end[d];
                         }
                     }
-                    const Maybe<Volume> box = Volume::get(result_min, result_end);
-                    if (box.has_value()) {
-                        result.push_back(*box);
+                    if (result_min.all_lt(result_end)) {
+                        result.emplace_back(result_min, result_end);
                     }
                 }
             }
