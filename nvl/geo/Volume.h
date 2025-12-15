@@ -273,7 +273,7 @@ public:
 
     template <typename Value>
         requires trait::HasBBox<N, T, Value>
-    pure List<Volume> diffXXX(const Range<Value> &range) const {
+    pure List<Volume> diff(const Range<Value> &range) const {
         std::vector<Volume> result{*this};
         for (const auto &value : range) {
             const Volume value_bbox = nvl::bbox<N, T, Value>(value);
@@ -286,7 +286,7 @@ public:
         return List<Volume>(std::move(result));
     }
 
-    template <typename Value>
+    /*template <typename Value>
         requires trait::HasBBox<N, T, Value>
     pure List<Volume> diff(const Range<Value> &range) const {
         if (range.empty())
@@ -342,7 +342,7 @@ public:
             }
         }
         return result;
-    }
+    }*/
 
     template <typename Value>
         requires trait::HasBBox<N, T, Value>
