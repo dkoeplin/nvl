@@ -135,9 +135,9 @@ public:
     }
 
     template <typename... Args>
-    V &try_emplace(const K &key, Args &&...args) {
-        auto [iter, _] = parent::try_emplace(key, std::forward<Args>(args)...);
-        return iter->second;
+    std::pair<Iterator<Entry>, bool> &try_emplace(const K &key, Args &&...args) {
+        auto [iter, added] = parent::try_emplace(key, std::forward<Args>(args)...);
+        return {make_iterator<entry_iterator>(iter), added};
     }
 
     Map &erase(Iterator<Entry> iter) {

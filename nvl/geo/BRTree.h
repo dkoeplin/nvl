@@ -19,7 +19,9 @@ protected:
     using EdgeRef = Rel<Edge>;
     using ItemTree = RTree<N, Item, ItemRef, kMaxEntries, kGridExpMin>;
     using EdgeTree = RTree<N, Edge, EdgeRef, kMaxEntries, kGridExpMin>;
-    expand static Box<N> bbox(const ItemRef &item) { return nvl::bbox<N, I64, ItemRef>(item); }
+
+    // TODO: Need to formalize this better, rely just on HasBBox here.
+    expand static Box<N> bbox(const ItemRef &item) { return static_cast<const Item *>(item.ptr())->bbox(); }
 
     BRTreeEdges() = default;
     BRTreeEdges(std::initializer_list<Item> items) : items_(items), changed_(true) {}

@@ -1,6 +1,7 @@
 #pragma once
 
-#include "nvl/data/Counter.h"
+#include "nvl/data/WalkResult.h"
+#include "nvl/geo/Line.h"
 #include "nvl/geo/Polar.h"
 #include "nvl/geo/Volume.h"
 #include "nvl/macros/Aliases.h"
@@ -49,7 +50,8 @@ public:
     expand RBox &rotate(const Rotation<N> &rotation) {
         has_rotated_ = true;
         rot_ += rotation;
-        polar_ += rotation;
+        for (auto &pt : polar_)
+            pt += rotation;
         return *this;
     }
 
@@ -58,7 +60,8 @@ public:
         has_rotated_ = true;
         center_ = nvl::rotate(center_ - point, rotation) + point;
         rot_ += rotation;
-        polar_ += rotation;
+        for (auto &pt : polar_)
+            pt += rotation;
         return *this;
     }
 

@@ -17,6 +17,7 @@ namespace nvl {
 template <U64 N>
 class Polar {
 public:
+    Polar() = default;
     explicit Polar(const Rotation<N> &theta, const F64 dist) : theta_(theta), dist_(dist) {}
     explicit Polar(const Vec<N> &center, const Vec<N> &point) {
         const Vec<N> rel = point - center;
@@ -55,7 +56,7 @@ public:
 
 private:
     Rotation<N> theta_; // N-dimensional angle from center point
-    F64 dist_;          // Distance from the center point
+    F64 dist_ = 0;      // Distance from the center point
 };
 
 template <U64 N>
